@@ -788,7 +788,7 @@ class ConfigManagerUI(tk.Tk):
             mono = tkfont.nametofont("TkFixedFont")
         frame = ttk.Frame(win, padding=10)
         frame.pack(fill="both", expand=True)
-        title_label = ttk.Label(frame, text="Sprite rips to MM sprite resources v1.0", font=("TkDefaultFont", 12, "bold"))
+        title_label = ttk.Label(frame, text="Sprite rips to MM sprite resources v1.1", font=("TkDefaultFont", 12, "bold"))
         title_label.grid(row=0, column=0, sticky="w", pady=(0, 8))
         header_label = ttk.Label(frame, text="Created by Marci599 for Mario Multiverse (created by neoarc).")
         header_label.grid(row=1, column=0, sticky="w", pady=(0, 8))
@@ -836,6 +836,8 @@ class ConfigManagerUI(tk.Tk):
         frame.rowconfigure(0, weight=1)
         footer_label = ttk.Label(frame, text="After setup, launch the program, select a subject, configure\noptions, and use 'Save & Generate' to create the\nspritesheetresources into <SubjectName>/generated.")
         footer_label.grid(row=7, column=0, sticky="w", pady=(8, 0))
+        footer_tip_label = ttk.Label(frame, text="For best results, if your subject moves around in the raw\nrecording and you want to resize it, adjust each frame so it\nappears stationary before generating the spritesheet.")
+        footer_tip_label.grid(row=8, column=0, sticky="w", pady=(8, 0))
 
     def reload_subjects(self) -> None:
         current_subject = self.subject_var.get()
