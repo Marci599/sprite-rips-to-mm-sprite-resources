@@ -56,7 +56,7 @@ class ConfigManagerUI(tk.Tk):
 
         self.root_dir = resolve_storage_root()
         self.bundle_assets_dir = resolve_asset_source()
-        self._ensure_runtime_assets()
+  
 
         icon_path = self.bundle_assets_dir / "icon.ico"
         if icon_path.exists():
