@@ -42,7 +42,7 @@ def resolve_storage_root() -> Path:
 def resolve_asset_source() -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys._MEIPASS) / ASSET_BUNDLE_DIR
-    return Path(__file__).resolve().parent
+    return Path(__file__).resolve().parent / ASSET_BUNDLE_DIR
 
 
 
@@ -58,7 +58,7 @@ class ConfigManagerUI(tk.Tk):
         self.bundle_assets_dir = resolve_asset_source()
         self._ensure_runtime_assets()
 
-        icon_path = self.root_dir / "icon.ico"
+        icon_path = self.bundle_assets_dir / "icon.ico"
         if icon_path.exists():
             try:
                 self.icon_path = str(icon_path)
@@ -367,7 +367,7 @@ class ConfigManagerUI(tk.Tk):
     def discover_subjects(self):
         subjects = []
         for entry in sorted(self.root_dir.iterdir(), key=lambda item: item.name.lower()):
-            if entry.is_dir() and not entry.name.startswith((".", "_")):
+            if entry.is_dir() and not entry.name.startswith((".", "_", "assets")):
                 subjects.append(entry.name)
         return subjects
 
@@ -834,11 +834,8 @@ class ConfigManagerUI(tk.Tk):
         text_widget.configure(xscrollcommand=xscroll.set)
         frame.columnconfigure(0, weight=1)
         frame.rowconfigure(0, weight=1)
-        footer_label = ttk.Label(frame, text="After placing your subjects, launch the program, select a subject,\nconfigure options, and use 'Save & Generate' to create the\nspritesheetresources into <SubjectName>/generated.")
+        footer_label = ttk.Label(frame, text="After setup, launch the program, select a subject, configure\noptions, and use 'Save & Generate' to create the\nspritesheetresources into <SubjectName>/generated.")
         footer_label.grid(row=7, column=0, sticky="w", pady=(8, 0))
-
-        close_btn = ttk.Button(frame, text="Close", command=win.destroy)
-        close_btn.grid(row=8, column=0, pady=(8, 0))
 
     def reload_subjects(self) -> None:
         current_subject = self.subject_var.get()
@@ -867,7 +864,7 @@ class ConfigManagerUI(tk.Tk):
         self.color_threshold_var.set("")
         self.sheet_width_var.set("")
         self.sheet_height_var.set("")
-        # reset new boolean fields to defaults
+
         self.remove_background_var.set(DEFAULT_SUBJECT_CONFIG.get("remove_background", True))
         self.crop_sprites_var.set(DEFAULT_SUBJECT_CONFIG.get("crop_sprites", True))
 

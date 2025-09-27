@@ -3,3 +3,5 @@ config.json
 .venv/
 sprite_rips_to_mm_sprite_resources.exe
 -*/
+.build/
+py2exe.json
