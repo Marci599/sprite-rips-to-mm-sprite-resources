@@ -197,8 +197,8 @@ class ConfigManagerUI(tk.Tk):
         crop_check.grid(row=5, column=0, columnspan=2, sticky="w", pady=(0,6))
         self.subject_entries.append(crop_check)
 
-        ttk.Label(processing_group, text="Cropping reduces file size", foreground="gray",).grid(row=6, column=0, columnspan=2, sticky="w", pady=(0, 4))
-        ttk.Label(processing_group, text="Cropping is based on the background color.", foreground="gray",).grid(row=6, column=0, columnspan=2, sticky="w", pady=(0, 4))
+        ttk.Label(processing_group, text="Cropping reduces file size", foreground="gray",).grid(row=6, column=0, columnspan=2, sticky="w", pady=(0,0))
+        ttk.Label(processing_group, text="Cropping is based on the background color", foreground="gray",).grid(row=7, column=0, columnspan=2, sticky="w", pady=(0, 4))
 
         self.reduce_file_size_var = tk.BooleanVar(value=True)
         reduce_check = ttk.Checkbutton(
@@ -206,10 +206,10 @@ class ConfigManagerUI(tk.Tk):
             text="Reduce file size",
             variable=self.reduce_file_size_var,
         )
-        reduce_check.grid(row=7, column=0, columnspan=2, sticky="w", pady=(0,6))
+        reduce_check.grid(row=8, column=0, columnspan=2, sticky="w", pady=(0,6))
         self.subject_entries.append(reduce_check)
 
-        ttk.Label(processing_group, text="If enabled, except a bit slower generation", foreground="gray",).grid(row=8, column=0, columnspan=2, sticky="w", pady=(0, 4))
+        ttk.Label(processing_group, text="If enabled, except a bit slower generation", foreground="gray",).grid(row=9, column=0, columnspan=2, sticky="w", pady=(0, 4))
 
         sheet_group = ttk.LabelFrame(subject_groups, text="Sheet dimensions", padding=section_padding)
         sheet_group.grid(row=0, column=1, sticky="nsew", padx=(column_gap, 0))
@@ -427,7 +427,7 @@ class ConfigManagerUI(tk.Tk):
         result.setdefault("color_threshold", DEFAULT_SUBJECT_CONFIG["color_threshold"])
         result.setdefault("remove_background", DEFAULT_SUBJECT_CONFIG.get("remove_background", True))
         result.setdefault("crop_sprites", DEFAULT_SUBJECT_CONFIG.get("crop_sprites", True))
-        result.setdefault("reduce_file_size", DEFAULT_SUBJECT_CONFIG.get("reduce_file_size", True))
+        result.setdefault("reduce_file_size", DEFAULT_SUBJECT_CONFIG.get("reduce_file_size", False))
         sheet = result.setdefault("sheet", {})
         sheet.setdefault("width", None)
         sheet.setdefault("height", None)
@@ -452,7 +452,7 @@ class ConfigManagerUI(tk.Tk):
         # boolean fields
         self.remove_background_var.set(bool(self.subject_config_data.get("remove_background", True)))
         self.crop_sprites_var.set(bool(self.subject_config_data.get("crop_sprites", True)))
-        self.reduce_file_size_var.set(bool(self.subject_config_data.get("reduce_file_size", True)))
+        self.reduce_file_size_var.set(bool(self.subject_config_data.get("reduce_file_size", False)))
         sheet = self.subject_config_data.get("sheet", {})
         self.sheet_width_var.set(self._format_number(sheet.get("width")))
         self.sheet_height_var.set(self._format_number(sheet.get("height")))
@@ -887,7 +887,7 @@ class ConfigManagerUI(tk.Tk):
 
         self.remove_background_var.set(DEFAULT_SUBJECT_CONFIG.get("remove_background", True))
         self.crop_sprites_var.set(DEFAULT_SUBJECT_CONFIG.get("crop_sprites", True))
-        self.reduce_file_size_var.set(DEFAULT_SUBJECT_CONFIG.get("reduce_file_size", True))
+        self.reduce_file_size_var.set(DEFAULT_SUBJECT_CONFIG.get("reduce_file_size", False))
 
     def clear_animation_form(self) -> None:
         self.anim_rege_var.set(True)
