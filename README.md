@@ -29,6 +29,6 @@ You can download this example that contains a subject with raw frames: [V_Yoshi]
 - Unzip it and put V_Yoshi next to the pragram.
 - Note that the Jump aniamtions is just a placeholder.
 
-After setup, launch the program, select a subject, configure options, and use 'Save & Generate' to create the spritesheetresources into `<SubjectName>/generated`.
+After setup, launch the program, select a subject, configure options, and use 'Save & Generate' to create the spritesheet resources into `<SubjectName>/generated`.
 
 For best results, if your subject moves around in the raw recording and you want to resize it, adjust each frame so it appears stationary before generating the spritesheet.
