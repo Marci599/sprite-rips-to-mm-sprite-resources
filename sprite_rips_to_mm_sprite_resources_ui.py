@@ -170,11 +170,12 @@ class ConfigManagerUI(tk.Tk):
         color_entry = ttk.Entry(processing_group, textvariable=self.color_remove_var)
         color_entry.grid(row=1, column=1, sticky="ew", padx=(8, 0), pady=4)
         self.subject_entries.append(color_entry)
+        ttk.Label(processing_group, text="If already transparent, leave it blank", foreground="gray",).grid(row=2, column=0, columnspan=2, sticky="w", pady=(0, 4))
 
         self.color_threshold_var = tk.StringVar()
-        ttk.Label(processing_group, text="Color threshold").grid(row=2, column=0, sticky="w", pady=4)
+        ttk.Label(processing_group, text="Color threshold").grid(row=3, column=0, sticky="w", pady=4)
         threshold_entry = ttk.Entry(processing_group, textvariable=self.color_threshold_var)
-        threshold_entry.grid(row=2, column=1, sticky="ew", padx=(8, 0), pady=4)
+        threshold_entry.grid(row=3, column=1, sticky="ew", padx=(8, 0), pady=4)
         self.subject_entries.append(threshold_entry)
 
         # New boolean options: remove background and crop sprites
@@ -184,7 +185,7 @@ class ConfigManagerUI(tk.Tk):
             text="Remove background",
             variable=self.remove_background_var,
         )
-        remove_bg_check.grid(row=3, column=0, columnspan=2, sticky="w", pady=6)
+        remove_bg_check.grid(row=4, column=0, columnspan=2, sticky="w", pady=6)
         self.subject_entries.append(remove_bg_check)
 
         self.crop_sprites_var = tk.BooleanVar(value=True)
@@ -193,10 +194,11 @@ class ConfigManagerUI(tk.Tk):
             text="Crop sprites",
             variable=self.crop_sprites_var,
         )
-        crop_check.grid(row=4, column=0, columnspan=2, sticky="w", pady=(0,6))
+        crop_check.grid(row=5, column=0, columnspan=2, sticky="w", pady=(0,6))
         self.subject_entries.append(crop_check)
 
-        ttk.Label(processing_group, text="Cropping reduces file size", foreground="gray",).grid(row=5, column=0, columnspan=2, sticky="w", pady=(0, 4))
+        ttk.Label(processing_group, text="Cropping reduces file size", foreground="gray",).grid(row=6, column=0, columnspan=2, sticky="w", pady=(0, 4))
+        ttk.Label(processing_group, text="Cropping is based on the background color.", foreground="gray",).grid(row=6, column=0, columnspan=2, sticky="w", pady=(0, 4))
 
         self.reduce_file_size_var = tk.BooleanVar(value=True)
         reduce_check = ttk.Checkbutton(
@@ -204,10 +206,10 @@ class ConfigManagerUI(tk.Tk):
             text="Reduce file size",
             variable=self.reduce_file_size_var,
         )
-        reduce_check.grid(row=6, column=0, columnspan=2, sticky="w", pady=(0,6))
+        reduce_check.grid(row=7, column=0, columnspan=2, sticky="w", pady=(0,6))
         self.subject_entries.append(reduce_check)
 
-        ttk.Label(processing_group, text="If enabled, except a bit slower generation.", foreground="gray",).grid(row=7, column=0, columnspan=2, sticky="w", pady=(0, 4))
+        ttk.Label(processing_group, text="If enabled, except a bit slower generation", foreground="gray",).grid(row=8, column=0, columnspan=2, sticky="w", pady=(0, 4))
 
         sheet_group = ttk.LabelFrame(subject_groups, text="Sheet dimensions", padding=section_padding)
         sheet_group.grid(row=0, column=1, sticky="nsew", padx=(column_gap, 0))
@@ -225,7 +227,7 @@ class ConfigManagerUI(tk.Tk):
         sheet_height_entry.grid(row=1, column=1, sticky="ew", padx=(8, 0), pady=4)
         self.subject_entries.append(sheet_height_entry)
 
-        ttk.Label(sheet_group, text="Leave blank for automatic sizing", foreground="gray",).grid(
+        ttk.Label(sheet_group, text="For automatic sizing, leave it blank", foreground="gray",).grid(
             row=2, column=0, columnspan=2, sticky="w", pady=(4, 0)
         )
 
@@ -298,7 +300,7 @@ class ConfigManagerUI(tk.Tk):
 
         ttk.Label(
             offset_group,
-            text="Adjust the offset for every sprite within the selected animation",
+            text="Adjusts the offset for every sprite within the selected animation",
 
             foreground="gray",
         ).grid(row=1, column=0, columnspan=4, sticky="w", pady=(4, 0))
