@@ -2,6 +2,8 @@
 
 Created by Marci599 for Mario Multiverse (created by neoarc)
 
+This tool can be used to automatically generate spritesheet resources from individual recorded frames.
+
 Download latest version here: [Releases](https://github.com/Marci599/sprite-rips-to-mm-sprite-resources/releases)
 
 If you don't want to download the 25 MB .exe, use the python files from the source code.
