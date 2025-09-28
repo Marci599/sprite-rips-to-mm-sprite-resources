@@ -1,5 +1,7 @@
 Created by Marci599 for Mario Multiverse (created by neoarc)
 
+If you don't want to download the 25 MB .exe, use the python files from the source code.
+
 Structure your files as follows:
 ```
 <Name>
