@@ -656,7 +656,7 @@ class ConfigManagerUI(tk.Tk):
         if success:
             messagebox.showinfo(
                 "Save & Generate",
-                "Saved configuration and regenerated the spritesheet successfully.",
+                "Saved configuration and generated the spritesheet into <SubjectName>/generated successfully.",
             )
 
     def _run_generator_subprocess(self) -> bool:
@@ -786,7 +786,7 @@ class ConfigManagerUI(tk.Tk):
             "│     ├─ <AnimationName>\n"
             "│     └─ <AnimationName>\n"
             "├─ <SubjectName>\n"  
-            "└─ <SubjectName>\n\n"            
+            "└─ <SubjectName>"            
         )
         win = tk.Toplevel(self)
        
@@ -813,34 +813,16 @@ class ConfigManagerUI(tk.Tk):
         lin_header_label = ttk.Label(frame, text="Check GitHub repository for updates and issues:")
         lin_header_label.grid(row=2, column=0, sticky="w", pady=(0, 0))
         link_url = "https://github.com/Marci599/sprite-rips-to-mm-sprite-resources" 
-        link_label = tk.Label(frame, text=link_url, fg="blue", cursor="hand2")
+        link_label = tk.Label(frame, text="github.com/Marci599/sprite-rips-to-mm-sprite-resources", fg="blue", cursor="hand2")
         link_label.grid(row=3, column=0, sticky="w", pady=(0, 8))
 
-        def _underline_enter(event):
-            try:
-                f = tkfont.Font(link_label, link_label.cget("font"))
-                f.configure(underline=True)
-                link_label.configure(font=f)
-            except Exception:
-                pass
-
-        def _underline_leave(event):
-            try:
-                f = tkfont.Font(link_label, link_label.cget("font"))
-                f.configure(underline=False)
-                link_label.configure(font=f)
-            except Exception:
-                pass
-
-        link_label.bind("<Enter>", _underline_enter)
-        link_label.bind("<Leave>", _underline_leave)
         link_label.bind("<Button-1>", lambda e: webbrowser.open_new(link_url))
 
         structure_label = ttk.Label(frame, text="Structure your files as follows:")
         structure_label.grid(row=4, column=0, sticky="w", pady=(0, 4))
 
 
-        text_widget = tk.Text(frame, wrap="none", font=mono, height=12, width=15)
+        text_widget = tk.Text(frame, wrap="none", font=mono, height=11, width=42)
         text_widget.insert("1.0", msg)
         text_widget.config(state="disabled")
         text_widget.grid(row=5, column=0, sticky="nsew")
@@ -852,10 +834,22 @@ class ConfigManagerUI(tk.Tk):
         text_widget.configure(xscrollcommand=xscroll.set)
         frame.columnconfigure(0, weight=1)
         frame.rowconfigure(0, weight=1)
+
+        link_example_header_label = ttk.Label(frame, text="You can download this example that contains a subject with\nraw frames:")
+        link_example_header_label.grid(row=7, column=0, sticky="w", pady=(0, 0))
+        link_example_url = "https://github.com/Marci599/sprite-rips-to-mm-sprite-resources/blob/master/example.zip" 
+        link_example_label = tk.Label(frame, text="V_Yoshi", fg="blue", cursor="hand2", underline=True)
+        link_example_label.grid(row=8, column=0, sticky="w", pady=(0,0))
+
+        link_example_label.bind("<Button-1>", lambda e: webbrowser.open_new(link_example_url))
+
+        link_footer_label = ttk.Label(frame, text="- Unzip it and put V_Yoshi next to the pragram.\n- Note that the Jump aniamtions is just a placeholder.")
+        link_footer_label.grid(row=9, column=0, sticky="w", pady=(0, 0))
+
         footer_label = ttk.Label(frame, text="After setup, launch the program, select a subject, configure\noptions, and use 'Save & Generate' to create the\nspritesheetresources into <SubjectName>/generated.")
-        footer_label.grid(row=7, column=0, sticky="w", pady=(8, 0))
+        footer_label.grid(row=10, column=0, sticky="w", pady=(8, 0))
         footer_tip_label = ttk.Label(frame, text="For best results, if your subject moves around in the raw\nrecording and you want to resize it, adjust each frame so it\nappears stationary before generating the spritesheet.")
-        footer_tip_label.grid(row=8, column=0, sticky="w", pady=(8, 0))
+        footer_tip_label.grid(row=11, column=0, sticky="w", pady=(8, 0))
 
     def reload_subjects(self) -> None:
         current_subject = self.subject_var.get()
