@@ -130,21 +130,21 @@ def resize_image(image: Image.Image, percent: float) -> Image.Image:
 
 def remove_color_with_threshold(image: Image.Image, target_color: Tuple[int, int, int, int], threshold: float, reduce_file_size) -> Image.Image:
     im = image.convert("RGBA")
-    arr = np.asarray(im).copy()              # HxWx4 uint8
-    rgb = arr[..., :3].astype(np.int32)      # safe for squares
+    arr = np.asarray(im).copy()        
+    rgb = arr[..., :3].astype(np.int32)   
     alpha = arr[..., 3]
 
     tr, tg, tb, _ = target_color
     diff = rgb - np.array([tr, tg, tb], dtype=np.int32)
-    dist2 = (diff * diff).sum(axis=2)        # safe, max 195075
+    dist2 = (diff * diff).sum(axis=2)        
 
     thr2 = int(threshold * threshold)
     mask = (alpha != 0) & (dist2 <= thr2)
 
     if not reduce_file_size:
-        arr[mask, 3] = 0     # just make them transparent
+        arr[mask, 3] = 0    
     else:
-        arr[mask] = 0        # nuke RGBA
+        arr[mask] = 0     
 
     return Image.fromarray(arr, "RGBA")
 
@@ -172,7 +172,7 @@ def trim_color(image: Image.Image, trim_color: Optional[Tuple[int, int, int, int
     tr, tg, tb, ta = (int(c) for c in trim_color[:4])
 
     if ta == 0:
-        # Transparent background case: just use alpha channel
+   
         alpha = img.getchannel("A")
         bbox = alpha.getbbox()
         if not bbox:
@@ -193,7 +193,6 @@ def trim_color(image: Image.Image, trim_color: Optional[Tuple[int, int, int, int
         dist2 = dr*dr + dg*dg + db*db + da*da
         thr2 = int(threshold * threshold)
 
-        # Pixels that are NOT close to trim_color
         neq = dist2 > thr2
 
         if not np.any(neq):
@@ -435,14 +434,13 @@ def process_sprites(
         with Image.open(sprite_path) as source_image:
             image = source_image.convert("RGBA")
 
-        # 1) szín eltávolítás (ha kell)
         can_remove_color = background_color is not None and remove_background
         if can_remove_color:
             image = remove_color_with_threshold(
                 image, background_color, color_threshold, reduce_file_size
             )
 
-        if resize_to_percent != 100 or resize_to_percent != None:
+        if not (resize_to_percent == 100 or resize_to_percent == None):
             image = resize_image(image, resize_to_percent)
         original_size = image.size
 
@@ -452,8 +450,6 @@ def process_sprites(
         if crop_sprites:
             image, trim_offset = trim_color(image, crop_bg, color_threshold)
 
-
-        # 4) even dims
         image = ensure_even_dimensions(image)
 
 
@@ -463,7 +459,7 @@ def process_sprites(
         processed.append({
             "name": sprite_path.stem,
             "path": output_path,
-            "image": image,  # ha nem kell a képet visszaadni, érdemes None-ra tenni a memóriáért
+            "image": image,
             "trim_offset": trim_offset,
             "original_size": original_size,
             "animation": animation_name,
