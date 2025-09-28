@@ -5,6 +5,7 @@ import shutil
 from collections.abc import Sequence
 from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
+import numpy as np
 
 @dataclass
 class AnimationConfig:
@@ -23,7 +24,7 @@ class SubPositionValues:
 @dataclass
 class PreviousFrameValues:
     offset: Tuple[float, float]
-    sub_positions: List[SubPositionValues]
+    sub_positions: Any
     wing_style: str
 
 
@@ -54,6 +55,7 @@ DEFAULT_SUBJECT_CONFIG: Dict[str, Any] = {
     "color_threshold": 100,
     "remove_background": True,
     "crop_sprites": True,
+    "reduce_file_size": False,
     "sheet": {
         "width": None,
         "height": None
@@ -119,8 +121,6 @@ def resize_image(image: Image.Image, percent: float) -> Image.Image:
     scale = percent / 100.0
     if scale <= 0:
         raise SystemExit("resize_to_percent must be greater than zero.")
-    if abs(scale - 1.0) < 1e-9:
-        return image
     new_width = max(1, int(round(image.width * scale)))
     new_height = max(1, int(round(image.height * scale)))
     if new_width == image.width and new_height == image.height:
@@ -128,68 +128,92 @@ def resize_image(image: Image.Image, percent: float) -> Image.Image:
     return image.resize((new_width, new_height), RESAMPLE_NEAREST)
 
 
-def remove_color_with_threshold(image: Image.Image, target_color: Tuple[int, int, int, int], threshold: float) -> Image.Image:
-    if threshold < 0:
-        raise SystemExit("color_threshold must be zero or positive.")
-    pixels = image.load()
-    target_r, target_g, target_b, target_a = target_color
-    threshold_sq = threshold * threshold
-    for y in range(image.height):
-        for x in range(image.width):
-            r, g, b, a = pixels[x, y]
-            if a == 0:
-                continue
-            dr = r - target_r
-            dg = g - target_g
-            db = b - target_b
-            if float(dr * dr + dg * dg + db * db) <= threshold_sq:
-                pixels[x, y] = (0, 0, 0, 0)
-    return image
+def remove_color_with_threshold(image: Image.Image, target_color: Tuple[int, int, int, int], threshold: float, reduce_file_size) -> Image.Image:
+    im = image.convert("RGBA")
+    arr = np.asarray(im).copy()              # HxWx4 uint8
+    rgb = arr[..., :3].astype(np.int32)      # safe for squares
+    alpha = arr[..., 3]
 
+    tr, tg, tb, _ = target_color
+    diff = rgb - np.array([tr, tg, tb], dtype=np.int32)
+    dist2 = (diff * diff).sum(axis=2)        # safe, max 195075
 
-def trim_transparency(image: Image.Image, trim_color: Optional[Tuple[int, int, int, int]] = None) -> Tuple[Image.Image, Tuple[int, int]]:
-    img = image.convert("RGBA")
+    thr2 = int(threshold * threshold)
+    mask = (alpha != 0) & (dist2 <= thr2)
 
-    if trim_color is None:
-        alpha = img.getchannel("A")
-        bbox = alpha.getbbox()
+    if not reduce_file_size:
+        arr[mask, 3] = 0     # just make them transparent
     else:
-        if len(trim_color) == 3:
-            target = (int(trim_color[0]), int(trim_color[1]), int(trim_color[2]), 255)
-        else:
-            target = tuple(int(c) for c in trim_color[:4])
+        arr[mask] = 0        # nuke RGBA
 
-        mask = Image.new("L", img.size)
-        mask_pix = mask.load()
-        src_pix = img.load()
-        for y in range(img.height):
-            for x in range(img.width):
-                mask_pix[x, y] = 255 if src_pix[x, y] != target else 0
-        bbox = mask.getbbox()
+    return Image.fromarray(arr, "RGBA")
 
-    if not bbox:
-        return image, (0, 0)
+def _align_even_box(left: int, top: int, right: int, bottom: int,
+                    w: int, h: int) -> Tuple[int,int,int,int]:
 
-    left, upper, right, lower = bbox
-
-    left_aligned = max(0, left - (left % 2))
-    upper_aligned = max(0, upper - (upper % 2))
-    right_aligned = min(img.width, right + (right % 2))
-    lower_aligned = min(img.height, lower + (lower % 2))
+    left_aligned  = max(0, left  - (left  % 2))
+    top_aligned   = max(0, top   - (top   % 2))
+    right_aligned = min(w, right + (right % 2))
+    bottom_aligned= min(h, bottom+ (bottom% 2))
 
     if (right_aligned - left_aligned) % 2 == 1:
-        if right_aligned < img.width:
-            right_aligned += 1
-        elif left_aligned > 0:
-            left_aligned -= 1
-    if (lower_aligned - upper_aligned) % 2 == 1:
-        if lower_aligned < img.height:
-            lower_aligned += 1
-        elif upper_aligned > 0:
-            upper_aligned -= 1
+        if right_aligned < w: right_aligned += 1
+        elif left_aligned > 0: left_aligned -= 1
+    if (bottom_aligned - top_aligned) % 2 == 1:
+        if bottom_aligned < h: bottom_aligned += 1
+        elif top_aligned > 0:  top_aligned -= 1
 
-    cropped = img.crop((left_aligned, upper_aligned, right_aligned, lower_aligned))
-    return cropped, (left_aligned, upper_aligned)
+    return left_aligned, top_aligned, right_aligned, bottom_aligned
+
+def trim_color(image: Image.Image, trim_color: Optional[Tuple[int, int, int, int]], threshold: float) -> Tuple[Image.Image, Tuple[int, int]]:
+    img = image if image.mode == "RGBA" else image.convert("RGBA")
+    w, h = img.size
+
+    tr, tg, tb, ta = (int(c) for c in trim_color[:4])
+
+    if ta == 0:
+        # Transparent background case: just use alpha channel
+        alpha = img.getchannel("A")
+        bbox = alpha.getbbox()
+        if not bbox:
+            return image, (0, 0)
+        left, top, right, bottom = bbox
+    else:
+        arr = np.asarray(img, dtype=np.uint8)
+        r = arr[..., 0].astype(np.int32)
+        g = arr[..., 1].astype(np.int32)
+        b = arr[..., 2].astype(np.int32)
+        a = arr[..., 3]
+
+        dr = r - tr
+        dg = g - tg
+        db = b - tb
+        da = a.astype(np.int32) - ta
+
+        dist2 = dr*dr + dg*dg + db*db + da*da
+        thr2 = int(threshold * threshold)
+
+        # Pixels that are NOT close to trim_color
+        neq = dist2 > thr2
+
+        if not np.any(neq):
+            return image, (0, 0)
+
+        rows = np.any(neq, axis=1)
+        cols = np.any(neq, axis=0)
+
+        top = int(np.argmax(rows))
+        bottom = int(h - np.argmax(rows[::-1]))
+        left = int(np.argmax(cols))
+        right = int(w - np.argmax(cols[::-1]))
+
+    left, top, right, bottom = _align_even_box(left, top, right, bottom, w, h)
+
+    if left == 0 and top == 0 and right == w and bottom == h:
+        return image, (0, 0)
+
+    cropped = img.crop((left, top, right, bottom))
+    return cropped, (left, top)
 
 
 def ensure_even_dimensions(image: Image.Image) -> Image.Image:
@@ -321,16 +345,16 @@ def load_previous_sprite_metadata(path: pathlib.Path, preserve_dirs: set) -> Pre
                     continue
                 frame_entry = frames_raw[i] or {}
                 offset_str = frame_entry.get("Offset") or "0 0"
-                sub_positions_raw = frame_entry.get("SubPositions") or []
-                if sub_positions_raw is None:
-                    sub_positions_raw = []
-                sub_position_list: List[SubPositionValues] = []
-                for sub_entry in sub_positions_raw:
-                    if not isinstance(sub_entry, dict):
-                        continue
-                    sub_name_str = sub_entry.get("Name")
-                    sub_positions_str = sub_entry.get("Position")
-                    sub_position_list.append(SubPositionValues(sub_name_str, sub_positions_str))
+                sub_positions_raw = frame_entry.get("SubPositions") or None
+                # if sub_positions_raw is None:
+                #     sub_positions_raw = []
+                # sub_position_list: List[SubPositionValues] = []
+                # for sub_entry in sub_positions_raw:
+                #     if not isinstance(sub_entry, dict):
+                #         continue
+                #     sub_name_str = sub_entry.get("Name")
+                #     sub_positions_str = sub_entry.get("Position")
+                #    sub_position_list.append(SubPositionValues(sub_name_str, sub_positions_str))
                 wing_style = frame_entry.get("WingStyle")
                 if wing_style == 0:
                     wing_style = None
@@ -341,7 +365,7 @@ def load_previous_sprite_metadata(path: pathlib.Path, preserve_dirs: set) -> Pre
                 except Exception:
                     offset_tuple = (0.0, 0.0)
 
-                previous_frame_values.append(PreviousFrameValues(offset_tuple, sub_position_list, wing_style))
+                previous_frame_values.append(PreviousFrameValues(offset_tuple, sub_positions_raw, wing_style))
 
             sprite_values[name] = previous_frame_values
 
@@ -398,6 +422,7 @@ def process_sprites(
     remove_background: bool,
     crop_sprites: bool,
     output_dir: pathlib.Path,
+    reduce_file_size: bool,
     animation_name: Optional[str] = None,
     animation_offset: Tuple[float, float] = (0.0, 0.0),
     recover_trim_offset: Tuple[bool, bool] = (True, True),
@@ -409,21 +434,36 @@ def process_sprites(
     for sprite_path in sprite_paths:
         with Image.open(sprite_path) as source_image:
             image = source_image.convert("RGBA")
-        can_remove_color =background_color is not None and remove_background
+
+        # 1) szín eltávolítás (ha kell)
+        can_remove_color = background_color is not None and remove_background
         if can_remove_color:
-            image = remove_color_with_threshold(image, background_color, color_threshold)      
-        image = resize_image(image, resize_to_percent)
+            image = remove_color_with_threshold(
+                image, background_color, color_threshold, reduce_file_size
+            )
+
+        if resize_to_percent != 100 or resize_to_percent != None:
+            image = resize_image(image, resize_to_percent)
         original_size = image.size
-        trim_offset = (0,0)
+
+
+        trim_offset = (0, 0)
+        crop_bg = (0, 0, 0, 0) if can_remove_color else background_color
         if crop_sprites:
-            image, trim_offset = trim_transparency(image, (0,0,0,0) if can_remove_color else background_color)
+            image, trim_offset = trim_color(image, crop_bg, color_threshold)
+
+
+        # 4) even dims
         image = ensure_even_dimensions(image)
+
+
         output_path = target_dir / f"{sprite_path.stem}.png"
-        image.save(output_path)
+        image.save(output_path, format="PNG", optimize=False, compress_level=0)
+
         processed.append({
             "name": sprite_path.stem,
             "path": output_path,
-            "image": image,
+            "image": image,  # ha nem kell a képet visszaadni, érdemes None-ra tenni a memóriáért
             "trim_offset": trim_offset,
             "original_size": original_size,
             "animation": animation_name,
@@ -586,7 +626,6 @@ def create_sprite_sheet(
     sprites: Sequence[Dict[str, Any]],
     positions: Sequence[Tuple[int, int]],
     canvas_size: Tuple[int, int],
-    output_path: pathlib.Path,
 ) -> Image.Image:
     width, height = canvas_size
     if width <= 1 or height <= 1:
@@ -596,7 +635,6 @@ def create_sprite_sheet(
         if position is None:
             continue
         sheet.paste(sprite["image"], position, sprite["image"])
-    sheet.save(output_path)
     return sheet
 
 
@@ -605,10 +643,9 @@ def export_sprite_metadata(
     positions: Sequence[Tuple[int, int]],
     source_canvas: Tuple[int, int],
     target_canvas: Tuple[int, int],
-    output_path: pathlib.Path,
     animations: Sequence[Dict[str, Any]],
     sub_positions: str
-) -> None:
+) -> Dict[str, Any]:
     source_width, source_height = source_canvas
     target_width, target_height = target_canvas
     scale_x = target_width / source_width if source_width else 1.0
@@ -649,14 +686,14 @@ def export_sprite_metadata(
             scaled_offset_y = extra_offset_y
         offset_text = f"{scaled_offset_x} {scaled_offset_y}"
 
-        sub_position_list : List[Dict[str, Any]] = []
+        # sub_position_list : List[Dict[str, Any]] = []
         frame_sub_positions = sprite.get("sub_positions")
-        if frame_sub_positions != None:        
-            for sub_position in frame_sub_positions:
-                sub_position_list.append({
-                    "Name": sub_position.name,
-                    "Position": sub_position.position
-                })
+        # if frame_sub_positions != None:        
+        #     for sub_position in frame_sub_positions:
+        #         sub_position_list.append({
+        #             "Name": sub_position.name,
+        #             "Position": sub_position.position
+        #         })
 
         wing_style = sprite.get("wing_style")
 
@@ -665,8 +702,8 @@ def export_sprite_metadata(
                 "Rect": f"{left_scaled} {top_scaled} {right_scaled} {bottom_scaled}",
             }
         
-        if len(sub_position_list) > 0:
-            frame_values["SubPositions"] = sub_position_list
+        if frame_sub_positions != None:
+            frame_values["SubPositions"] = frame_sub_positions
         if wing_style != None:
             frame_values["WingStyle"] = wing_style
 
@@ -688,8 +725,7 @@ def export_sprite_metadata(
         "Version": "Neoarc's Sprite v2.0",
     }
 
-    with output_path.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, indent=2)
+    return payload
 
 def main() -> None:
     base_config = load_config(pathlib.Path(CONFIG_PATH))
@@ -707,6 +743,7 @@ def main() -> None:
     color_threshold = float(subject_config.get("color_threshold"))
     remove_background = bool(subject_config.get("remove_background"))
     crop_sprites = bool(subject_config.get("crop_sprites"))
+    reduce_file_size = bool(subject_config.get("reduce_file_size"))
 
     sheet_config = subject_config.get("sheet")
     forced_width = sheet_config.get("width")
@@ -740,8 +777,13 @@ def main() -> None:
     sub_positions = ""
     if len(preserve_dirs) > 0:
         previous_sprite_values = load_previous_sprite_metadata(sprite_file_path, preserve_dirs)
-        sub_positions = previous_sprite_values.sub_positions
+        if previous_sprite_values.sub_positions != None:
+            sub_positions = previous_sprite_values.sub_positions
         
+
+    processed_sprites: List[Dict[str, Any]] = []
+    animations_meta: List[Dict[str, Any]] = []
+    frame_index = 0
 
     if output_dir.exists():
         for child in list(output_dir.iterdir()):
@@ -749,16 +791,6 @@ def main() -> None:
                 continue
             if child.is_dir():
                 shutil.rmtree(child, ignore_errors=True)
-            else:
-                try:
-                    child.unlink()
-                except FileNotFoundError:
-                    pass
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    processed_sprites: List[Dict[str, Any]] = []
-    animations_meta: List[Dict[str, Any]] = []
-    frame_index = 0
 
     for animation_dir in animation_dirs:
         animation_name = animation_dir.name
@@ -776,6 +808,7 @@ def main() -> None:
                 remove_background,
                 crop_sprites,
                 output_dir,
+                reduce_file_size,
                 animation_name=animation_name,
                 animation_offset=animationConfig.offset,
                 recover_trim_offset=animationConfig.recover_cropped_offset,
@@ -810,30 +843,45 @@ def main() -> None:
     base_sheet_path.parent.mkdir(parents=True, exist_ok=True)
     sheet_path_2x.parent.mkdir(parents=True, exist_ok=True)
 
+
     sheet_image = create_sprite_sheet(
         processed_sprites,
         final_positions,
         canvas_size,
-        sheet_path_2x,
     )
 
     half_width = max(1, (sheet_image.width + 1) // 2)
     half_height = max(1, (sheet_image.height + 1) // 2)
     half_canvas_size = (half_width, half_height)
     sheet_half = sheet_image.resize(half_canvas_size, RESAMPLE_NEAREST)
-    sheet_half.save(base_sheet_path)
 
-    sprite_file_path.parent.mkdir(parents=True, exist_ok=True)
-
-    export_sprite_metadata(
+    payload = export_sprite_metadata(
         processed_sprites,
         final_positions,
         canvas_size,
         half_canvas_size,
-        sprite_file_path,
         animations_meta,
         sub_positions
     )
+
+    if output_dir.exists():
+        for child in list(output_dir.iterdir()):
+            if not child.is_dir():
+                try:
+                    child.unlink()
+                except FileNotFoundError:
+                    pass
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    sheet_image.save(sheet_path_2x, format="PNG", optimize=reduce_file_size)
+
+    sheet_half.save(base_sheet_path)
+
+    sprite_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with sprite_file_path.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2)
 
     print(f"Processed {len(processed_sprites)} sprites into {output_dir}.")
     print(f"High-res sprite sheet saved to {sheet_path_2x.resolve()} with size {canvas_size[0]}x{canvas_size[1]} pixels.")

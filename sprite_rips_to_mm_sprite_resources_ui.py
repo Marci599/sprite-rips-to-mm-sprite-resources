@@ -17,7 +17,9 @@ DEFAULT_SUBJECT_CONFIG = {
     "color_threshold": 100,
     "remove_background": True,
     "crop_sprites": True,
-    "sheet": {"width": None, "height": None},
+    "reduce_file_size": False,
+    "sheet": {"width": None, "height": None}
+
 }
 
 DEFAULT_ANIMATION_CONFIG = {
@@ -26,6 +28,7 @@ DEFAULT_ANIMATION_CONFIG = {
     "offset": {"x": 0.0, "y": 0.0},
     "recover_cropped_offset": {"x": True, "y": True},
 }
+
 
 
 
@@ -52,7 +55,7 @@ class ConfigManagerUI(tk.Tk):
 
         self.title("Sprite rips to MM sprite resources")
         
-        self.minsize(705, 505)
+        self.minsize(705, 490)
 
         self.root_dir = resolve_storage_root()
         self.bundle_assets_dir = resolve_asset_source()
@@ -195,6 +198,17 @@ class ConfigManagerUI(tk.Tk):
 
         ttk.Label(processing_group, text="Cropping reduces file size", foreground="gray",).grid(row=5, column=0, columnspan=2, sticky="w", pady=(0, 4))
 
+        self.reduce_file_size_var = tk.BooleanVar(value=True)
+        reduce_check = ttk.Checkbutton(
+            processing_group,
+            text="Reduce file size",
+            variable=self.reduce_file_size_var,
+        )
+        reduce_check.grid(row=6, column=0, columnspan=2, sticky="w", pady=(0,6))
+        self.subject_entries.append(reduce_check)
+
+        ttk.Label(processing_group, text="If enabled, except a bit slower generation.", foreground="gray",).grid(row=7, column=0, columnspan=2, sticky="w", pady=(0, 4))
+
         sheet_group = ttk.LabelFrame(subject_groups, text="Sheet dimensions", padding=section_padding)
         sheet_group.grid(row=0, column=1, sticky="nsew", padx=(column_gap, 0))
         sheet_group.columnconfigure(1, weight=1)
@@ -254,7 +268,7 @@ class ConfigManagerUI(tk.Tk):
         regen_check.grid(row=0, column=0, columnspan=2, sticky="w", pady=4)
         self.animation_form_widgets.append(regen_check)
 
-        ttk.Label(detail_frame, text="If disabled, already generated sprites will be added to the spritesheet.\nEdited offsets will remain unchanged.", foreground="gray",).grid(
+        ttk.Label(detail_frame, text="If disabled, already generated sprites will be added to the spritesheet.\nEdited offsets and sub-positions will remain unchanged.", foreground="gray",).grid(
             row=1, column=0, columnspan=2, sticky="w", pady=(4, 0)
         )
         self.animation_form_widgets.append(regen_check)
@@ -316,8 +330,7 @@ class ConfigManagerUI(tk.Tk):
 
         ttk.Label(
             recover_group,
-            text="If enabled, the offsets will be adjusted to account for any cropping that was done.\n" \
-            "If your subject moves around, disable the axis it moves on, and adjust them later.",
+            text="If enabled, the offsets will be adjusted to account for any cropping that was done.",
             foreground="gray",
         ).grid(row=1, column=0, columnspan=2, sticky="w", pady=(4, 0))
         self.animation_form_widgets.append(recover_group)
@@ -412,6 +425,7 @@ class ConfigManagerUI(tk.Tk):
         result.setdefault("color_threshold", DEFAULT_SUBJECT_CONFIG["color_threshold"])
         result.setdefault("remove_background", DEFAULT_SUBJECT_CONFIG.get("remove_background", True))
         result.setdefault("crop_sprites", DEFAULT_SUBJECT_CONFIG.get("crop_sprites", True))
+        result.setdefault("reduce_file_size", DEFAULT_SUBJECT_CONFIG.get("reduce_file_size", True))
         sheet = result.setdefault("sheet", {})
         sheet.setdefault("width", None)
         sheet.setdefault("height", None)
@@ -436,6 +450,7 @@ class ConfigManagerUI(tk.Tk):
         # boolean fields
         self.remove_background_var.set(bool(self.subject_config_data.get("remove_background", True)))
         self.crop_sprites_var.set(bool(self.subject_config_data.get("crop_sprites", True)))
+        self.reduce_file_size_var.set(bool(self.subject_config_data.get("reduce_file_size", True)))
         sheet = self.subject_config_data.get("sheet", {})
         self.sheet_width_var.set(self._format_number(sheet.get("width")))
         self.sheet_height_var.set(self._format_number(sheet.get("height")))
@@ -574,6 +589,7 @@ class ConfigManagerUI(tk.Tk):
         # boolean fields
         self.subject_config_data["remove_background"] = bool(self.remove_background_var.get())
         self.subject_config_data["crop_sprites"] = bool(self.crop_sprites_var.get())
+        self.subject_config_data["reduce_file_size"] = bool(self.reduce_file_size_var.get())
         sheet = self.subject_config_data.setdefault("sheet", {})
         sheet["width"] = self._parse_optional_number(self.sheet_width_var.get())
         sheet["height"] = self._parse_optional_number(self.sheet_height_var.get())
@@ -788,7 +804,7 @@ class ConfigManagerUI(tk.Tk):
             mono = tkfont.nametofont("TkFixedFont")
         frame = ttk.Frame(win, padding=10)
         frame.pack(fill="both", expand=True)
-        title_label = ttk.Label(frame, text="Sprite rips to MM sprite resources v1.1", font=("TkDefaultFont", 12, "bold"))
+        title_label = ttk.Label(frame, text="Sprite rips to MM sprite resources v1.0", font=("TkDefaultFont", 12, "bold"))
         title_label.grid(row=0, column=0, sticky="w", pady=(0, 8))
         header_label = ttk.Label(frame, text="Created by Marci599 for Mario Multiverse (created by neoarc).")
         header_label.grid(row=1, column=0, sticky="w", pady=(0, 8))
@@ -869,6 +885,7 @@ class ConfigManagerUI(tk.Tk):
 
         self.remove_background_var.set(DEFAULT_SUBJECT_CONFIG.get("remove_background", True))
         self.crop_sprites_var.set(DEFAULT_SUBJECT_CONFIG.get("crop_sprites", True))
+        self.reduce_file_size_var.set(DEFAULT_SUBJECT_CONFIG.get("reduce_file_size", True))
 
     def clear_animation_form(self) -> None:
         self.anim_rege_var.set(True)
