@@ -7,34 +7,6 @@ from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
 import numpy as np
 
-@dataclass
-class AnimationConfig:
-    regenerate: bool
-    delay: int
-    offset: Tuple[float, float]
-    recover_cropped_offset: Tuple[bool, bool]
-
-
-
-@dataclass
-class SubPositionValues:
-    name: str
-    position : str
-
-@dataclass
-class PreviousFrameValues:
-    offset: Tuple[float, float]
-    sub_positions: Any
-    wing_style: str
-
-
-@dataclass
-class PreviousSpriteFileValues:
-    frames: Dict[str, List[PreviousFrameValues]] 
-    sub_positions: str
-
-
-
 try:
     from PIL import Image
 except ImportError as exc:
@@ -62,6 +34,53 @@ DEFAULT_SUBJECT_CONFIG: Dict[str, Any] = {
     }
 }
 
+DEFAULT_ANIMATION_CONFIG: Dict[str, Any] = {
+    "regenerate": True,
+    "delay": 1,
+    "offset": {
+        "x": 0,
+        "y": 0
+    },
+    "recover_cropped_offset": {
+        "x": True,
+        "y": True
+    }
+}
+
+@dataclass
+class SubjectConfig:
+    resize_to_percent: float
+    background_color: Optional[Tuple[int, int, int, int]]
+    color_threshold: float
+    remove_background: bool
+    crop_sprites: bool
+    sheet_dimensions: Tuple[Optional[int], Optional[int]]
+
+@dataclass
+class AnimationConfig:
+    regenerate: bool
+    delay: int
+    offset: Tuple[float, float]
+    recover_cropped_offset: Tuple[bool, bool]
+
+#@dataclass
+#class SubPositionValues:
+#    name: str
+#    position : str
+
+#@dataclass
+#class PreviousFrameValues:
+#    offset: Tuple[float, float]
+#    sub_positions: Any
+#    wing_style: str
+
+
+@dataclass
+class PreviousSpriteFileValues:
+    #better name!!!!
+    frames: Dict[str, List[Any]] 
+    sub_positions: str
+
 
 def deep_merge(base: Dict[str, Any], overrides: Dict[str, Any]) -> Dict[str, Any]:
     for key, value in overrides.items():
@@ -78,12 +97,16 @@ def load_config(path: pathlib.Path) -> Dict[str, Any]:
             overrides = json.load(handle)
         if not isinstance(overrides, dict):
             raise SystemExit(f"Config file {path} must contain a JSON object.")
+    else:
+        raise SystemExit(f"Config file {path} must does not exists or is empty.")
     return overrides
 
 
-def parse_color(value: Optional[Any], default_alpha: int = 255) -> Tuple[int, int, int, int]:
+def parse_rgba_color(value: Optional[Any]) -> Optional[Tuple[int, int, int, int]]:
+    
     if value is None:
-        return (0, 0, 0, 0)
+        return None
+    
     if isinstance(value, str):
         trimmed = value.strip()
         if trimmed.startswith("#"):
@@ -92,7 +115,7 @@ def parse_color(value: Optional[Any], default_alpha: int = 255) -> Tuple[int, in
             r = int(trimmed[0:2], 16)
             g = int(trimmed[2:4], 16)
             b = int(trimmed[4:6], 16)
-            return (r, g, b, default_alpha)
+            return (r, g, b, 255)
         if len(trimmed) == 8:
             r = int(trimmed[0:2], 16)
             g = int(trimmed[2:4], 16)
@@ -103,18 +126,12 @@ def parse_color(value: Optional[Any], default_alpha: int = 255) -> Tuple[int, in
     if isinstance(value, Sequence):
         if len(value) == 3:
             r, g, b = value
-            return (int(r), int(g), int(b), default_alpha)
+            return (int(r), int(g), int(b), 255)
         if len(value) == 4:
             r, g, b, a = value
             return (int(r), int(g), int(b), int(a))
     raise SystemExit(f"Unsupported color value: {value}")
 
-
-def parse_rgba_color(value: Optional[Any]) -> Optional[Tuple[int, int, int, int]]:
-    if value is None:
-        return None
-    r, g, b, a = parse_color(value)
-    return (r, g, b, a)
 
 
 def resize_image(image: Image.Image, percent: float) -> Image.Image:
@@ -215,6 +232,7 @@ def trim_color(image: Image.Image, trim_color: Optional[Tuple[int, int, int, int
     return cropped, (left, top)
 
 
+#??????
 def ensure_even_dimensions(image: Image.Image) -> Image.Image:
     width, height = image.size
     new_width = width + (width % 2)
@@ -254,36 +272,29 @@ def collect_animation_directories(input_dir: pathlib.Path) -> List[pathlib.Path]
         return directories
     return [input_dir]
 
-
-
-def load_animation_offsets(animation_dir: pathlib.Path) -> AnimationConfig:
+def load_animation_config(animation_dir: pathlib.Path) -> AnimationConfig:
     config_path = animation_dir / "config.json"
-    default_offset = (0.0, 0.0)
-    default_recover = (True, True)
-    if not config_path.exists() or config_path.stat().st_size == 0:
-        return default_offset, default_recover, True
-    try:
-        with config_path.open("r", encoding="utf-8") as handle:
-            data = json.load(handle)
-    except json.JSONDecodeError as exc:
-        raise SystemExit(f"Invalid JSON in {config_path}: {exc}")
-    if not isinstance(data, dict):
-        return default_offset, default_recover, True
 
-    offset_obj = data.get("offset")
-    if isinstance(offset_obj, dict):
-        raw_x = offset_obj.get("x")
-        raw_y = offset_obj.get("y")
+    animation_config_json = json.loads(json.dumps(DEFAULT_ANIMATION_CONFIG))
+    animation_config_override_json = load_config(config_path)
+    animation_config_json = deep_merge(animation_config_json, animation_config_override_json)
+
+    offset_json = animation_config_json.get("offset")
+    if isinstance(offset_json, dict):
+        raw_x = offset_json.get("x")
+        raw_y = offset_json.get("y")
     else:
         raw_x = raw_y = 0.0
 
     def _normalize_offset(value: Any) -> float:
         if value is None:
             return 0.0
+        
         try:
             scaled = value * 2
         except TypeError as exc:
             raise SystemExit(f"Invalid offset value in {config_path}: {value!r}") from exc
+        
         try:
             return float(scaled)
         except (TypeError, ValueError) as exc:
@@ -291,27 +302,27 @@ def load_animation_offsets(animation_dir: pathlib.Path) -> AnimationConfig:
 
     offset = (_normalize_offset(raw_x), _normalize_offset(raw_y))
 
-    recover_obj = data.get("recover_cropped_offset")
+    recover_json = animation_config_json.get("recover_cropped_offset")
 
     def _normalize_recover(value: Any) -> bool:
         if isinstance(value, bool):
             return value
         if value is None:
             return True
-        return bool(value)
+        return bool(value)     
 
     recover = (True, True)
-    if isinstance(recover_obj, dict):
+    if isinstance(recover_json, dict):
         recover = (
-            _normalize_recover(recover_obj.get("x")),
-            _normalize_recover(recover_obj.get("y")),
+            _normalize_recover(recover_json.get("x")),
+            _normalize_recover(recover_json.get("y")),
         )
 
-    regenerate_value = data.get("regenerate")
+    regenerate_value = animation_config_json.get("regenerate")
   
     regenerate = True if regenerate_value is None else bool(regenerate_value)
 
-    delay = data.get("delay")
+    delay = animation_config_json.get("delay")
 
     return AnimationConfig(regenerate, delay, offset, recover)
 
@@ -322,29 +333,30 @@ def load_previous_sprite_metadata(path: pathlib.Path, preserve_dirs: set) -> Pre
         with path.open("r", encoding="utf-8") as handle:
             payload = json.load(handle)
     except (OSError, json.JSONDecodeError):
+        print("Old .sprite file not found!")
         return None
 
-    frames_raw = payload.get("Frames")
+    frames_json = payload.get("Frames")
 
-    sprite_values: Dict[str, List[PreviousFrameValues]] = {}  
+    previous_frame_values: Dict[str, List[Any]] = {}  
 
-    animations_raw = payload.get("NamedAnimations")
+    animations_json = payload.get("NamedAnimations")
 
-    for entry in animations_raw:
+    for entry in animations_json:
         name = entry.get("Name")
         if name in preserve_dirs:
             
             frames_field = entry.get("Frames")
             frames_field.strip()
-            previous_frame_values = list()
+            previous_frame_jsons = list()
 
             indices = [int(item) for item in frames_field.split(",") if item]
             for i in indices:
-                if i < 0 or i >= len(frames_raw):
+                if i < 0 or i >= len(frames_json):
                     continue
-                frame_entry = frames_raw[i] or {}
-                offset_str = frame_entry.get("Offset") or "0 0"
-                sub_positions_raw = frame_entry.get("SubPositions") or None
+                frame_json = frames_json[i] or {}
+                #offset_str = frame_entry.get("Offset") or "0 0"
+                #sub_positions_raw = frame_entry.get("SubPositions") or None
                 # if sub_positions_raw is None:
                 #     sub_positions_raw = []
                 # sub_position_list: List[SubPositionValues] = []
@@ -354,31 +366,30 @@ def load_previous_sprite_metadata(path: pathlib.Path, preserve_dirs: set) -> Pre
                 #     sub_name_str = sub_entry.get("Name")
                 #     sub_positions_str = sub_entry.get("Position")
                 #    sub_position_list.append(SubPositionValues(sub_name_str, sub_positions_str))
-                wing_style = frame_entry.get("WingStyle")
-                if wing_style == 0:
-                    wing_style = None
-                try:
-                    offset_tuple = tuple(float(value) for value in offset_str.split())
-                    if len(offset_tuple) != 2:
-                        offset_tuple = (0.0, 0.0)
-                except Exception:
-                    offset_tuple = (0.0, 0.0)
+                #wing_style = frame_entry.get("WingStyle")
+                #if wing_style == 0:
+                #    wing_style = None
+                #try:
+                #    offset_tuple = tuple(float(value) for value in offset_str.split())
+                #    if len(offset_tuple) != 2:
+                #        offset_tuple = (0.0, 0.0)
+                #except Exception:
+                #    offset_tuple = (0.0, 0.0)
 
-                previous_frame_values.append(PreviousFrameValues(offset_tuple, sub_positions_raw, wing_style))
+                previous_frame_jsons.append(frame_json)
 
-            sprite_values[name] = previous_frame_values
+            previous_frame_values[name] = previous_frame_jsons
 
     root_sub_positions_str = payload.get("SubPositions")
 
-    return PreviousSpriteFileValues(sprite_values, root_sub_positions_str)
+    return PreviousSpriteFileValues(previous_frame_values, root_sub_positions_str)
 
 
 def load_existing_sprites(
-    animation_name: str,
-    output_dir: pathlib.Path,
-    previous_frame_values: PreviousFrameValues,
+    target_dir: pathlib.Path,
+    previous_frame_values: Any,
+    animation_config : AnimationConfig
 ) -> Optional[List[Dict[str, Any]]]:
-    target_dir = output_dir / animation_name
     if not target_dir.exists() or not target_dir.is_dir():
         return None
 
@@ -394,19 +405,20 @@ def load_existing_sprites(
         with Image.open(sprite_path) as source_image:
             image = source_image.convert("RGBA")
 
-        sprites.append({
-            "name": sprite_path.stem,
+        sprite_dict = {
             "path": sprite_path,
             "image": image,
-            "trim_offset": (0, 0),
+            "recover_cropped_offset": (False, False),
             "original_size": image.size,
-            "animation": animation_name,
-            "animation_offset": previous_frame_values[idx].offset,
-            "sub_positions": previous_frame_values[idx].sub_positions,
-            "wing_style": previous_frame_values[idx].wing_style,
-            "recover_trim_offset": (False, False),
-            "align_to_center": False,
-        })
+            "offset": animation_config.offset,
+            "trim_offset": (0, 0)
+        }
+       
+        if previous_frame_values != None:
+            sprite_dict["old_frame_json"] = previous_frame_values[idx]
+
+        sprites.append(sprite_dict)
+    
     return sprites
 
 def collect_sprite_paths(directory: pathlib.Path) -> List[pathlib.Path]:
@@ -415,57 +427,48 @@ def collect_sprite_paths(directory: pathlib.Path) -> List[pathlib.Path]:
 
 def process_sprites(
     sprite_paths: Sequence[pathlib.Path],
-    resize_to_percent: float,
-    background_color: Optional[Tuple[int, int, int, int]],
-    color_threshold: float,
-    remove_background: bool,
-    crop_sprites: bool,
     output_dir: pathlib.Path,
     reduce_file_size: bool,
-    animation_name: Optional[str] = None,
-    animation_offset: Tuple[float, float] = (0.0, 0.0),
-    recover_trim_offset: Tuple[bool, bool] = (True, True),
+    subject_config : SubjectConfig,
+    animation_config : AnimationConfig
 ) -> List[Dict[str, Any]]:
     processed: List[Dict[str, Any]] = []
-    target_dir = output_dir if animation_name is None else output_dir / animation_name
-    target_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     for sprite_path in sprite_paths:
         with Image.open(sprite_path) as source_image:
             image = source_image.convert("RGBA")
 
-        can_remove_color = background_color is not None and remove_background
+        can_remove_color = subject_config.background_color is not None and subject_config.remove_background
         if can_remove_color:
             image = remove_color_with_threshold(
-                image, background_color, color_threshold, reduce_file_size
+                image, subject_config.background_color, subject_config.color_threshold, reduce_file_size
             )
 
-        if not (resize_to_percent == 100 or resize_to_percent == None):
-            image = resize_image(image, resize_to_percent)
+        if not (subject_config.resize_to_percent == 100 or subject_config.resize_to_percent == None):
+            image = resize_image(image, subject_config.resize_to_percent)
         original_size = image.size
 
 
         trim_offset = (0, 0)
-        crop_bg = (0, 0, 0, 0) if can_remove_color else background_color
-        if crop_sprites:
-            image, trim_offset = trim_color(image, crop_bg, color_threshold)
+        crop_bg = (0, 0, 0, 0) if can_remove_color else subject_config.background_color
+        if subject_config.crop_sprites:
+            image, trim_offset = trim_color(image, crop_bg, subject_config.color_threshold)
 
         image = ensure_even_dimensions(image)
 
 
-        output_path = target_dir / f"{sprite_path.stem}.png"
+        output_path = output_dir / f"{sprite_path.stem}.png"
         image.save(output_path, format="PNG", optimize=False, compress_level=0)
 
+
         processed.append({
-            "name": sprite_path.stem,
             "path": output_path,
             "image": image,
             "trim_offset": trim_offset,
             "original_size": original_size,
-            "animation": animation_name,
-            "animation_offset": animation_offset,
-            "recover_trim_offset": recover_trim_offset,
-            "align_to_center": True,
+            "offset": animation_config.offset,
+            "recover_cropped_offset": animation_config.recover_cropped_offset,
         })
 
     return processed
@@ -651,60 +654,59 @@ def export_sprite_metadata(
     for sprite, position in zip(sprites, positions):
         left, top = position
         width, height = sprite["image"].size
-       
-        trim_left, trim_top = sprite["trim_offset"]
-        align_to_center = sprite.get("align_to_center", True)
-        recover_trim_offset = sprite.get("recover_trim_offset", (True, True))
         original_width, original_height = sprite["original_size"]
-        recover_x, recover_y = recover_trim_offset
-
+       
         left_scaled = round_half_up(left * scale_x)
         top_scaled = round_half_up(top * scale_y)
         right_scaled = round_away_from_zero((left + width) * scale_x)
         bottom_scaled = round_away_from_zero((top + height) * scale_y)
 
-        if not recover_x:
-            trim_left = 0
-            original_width = abs(right_scaled - left_scaled) * 2
-        if not recover_y:
-            trim_top = 0
-            original_height = abs(bottom_scaled - top_scaled) * 2
-        
-        extra_offset_x, extra_offset_y = sprite.get("animation_offset", (0, 0))
+        old_frame_json = sprite.get("old_frame_json", None)
+        if old_frame_json == None:
+            trim_left, trim_top = sprite["trim_offset"]
+            recover_cropped_offset = sprite["recover_cropped_offset"]
+            recover_x, recover_y = recover_cropped_offset
+            if not recover_x:
+                trim_left = 0
+                original_width = abs(right_scaled - left_scaled) * 2
+            if not recover_y:
+                trim_top = 0
+                original_height = abs(bottom_scaled - top_scaled) * 2
 
-        if align_to_center:
+            extra_offset_x, extra_offset_y = sprite["offset"]
             origin_offset_x = original_width / 2.0 - trim_left + extra_offset_x
             origin_offset_y = original_height - trim_top + extra_offset_y
             scaled_offset_x = round_away_from_zero(origin_offset_x * scale_x)
             scaled_offset_y = round_away_from_zero(origin_offset_y * scale_y)
+            
+            offset_text = f"{scaled_offset_x} {scaled_offset_y}"
+
+            frame_values = {
+                "Offset": offset_text
+            }
+        
         else:
-            scaled_offset_x = extra_offset_x
-            scaled_offset_y = extra_offset_y
-        offset_text = f"{scaled_offset_x} {scaled_offset_y}"
+            print("Using old frames.")
+            frame_values = old_frame_json
+
+        frame_values["Rect"] = f"{left_scaled} {top_scaled} {right_scaled} {bottom_scaled}"
 
         # sub_position_list : List[Dict[str, Any]] = []
-        frame_sub_positions = sprite.get("sub_positions")
+        #frame_sub_positions = sprite.get("sub_positions")
         # if frame_sub_positions != None:        
         #     for sub_position in frame_sub_positions:
         #         sub_position_list.append({
         #             "Name": sub_position.name,
         #             "Position": sub_position.position
         #         })
-
-        wing_style = sprite.get("wing_style")
-
-        frame_values = {
-                "Offset": offset_text,
-                "Rect": f"{left_scaled} {top_scaled} {right_scaled} {bottom_scaled}",
-            }
         
-        if frame_sub_positions != None:
-            frame_values["SubPositions"] = frame_sub_positions
-        if wing_style != None:
-            frame_values["WingStyle"] = wing_style
+        #if frame_sub_positions != None:
+        #    frame_values["SubPositions"] = frame_sub_positions
+
 
         frames.append(frame_values)
 
+    frame_index = 0
     named_animations = []
     for animation in animations:
         frame_str = ",".join(str(index) for index in animation["frames"])
@@ -713,6 +715,7 @@ def export_sprite_metadata(
             "Frames": frame_str,
             "Delay": int(animation["delay"]),
         })
+        frame_index += len(sprites)
 
     payload = {
         "Frames": frames,
@@ -729,23 +732,26 @@ def main() -> None:
     if not subject_name:
         raise SystemExit("The 'subject' field must be specified in the main config.json.")
 
-    subject_config_path = pathlib.Path(subject_name) / "config.json"
-    subject_config = json.loads(json.dumps(DEFAULT_SUBJECT_CONFIG))
-    subject_config_override = load_config(subject_config_path)
-    subject_config = deep_merge(subject_config, subject_config_override)
+    subject_config_json_path = pathlib.Path(subject_name) / "config.json"
+    subject_config_json = json.loads(json.dumps(DEFAULT_SUBJECT_CONFIG))
+    subject_config_json_override = load_config(subject_config_json_path)
+    subject_config_json = deep_merge(subject_config_json, subject_config_json_override)
 
-    resize_to_percent = float(subject_config.get("resize_to_percent"))
-    background_color = parse_rgba_color(subject_config.get("background_color"))
-    color_threshold = float(subject_config.get("color_threshold"))
-    remove_background = bool(subject_config.get("remove_background"))
-    crop_sprites = bool(subject_config.get("crop_sprites"))
-    reduce_file_size = bool(subject_config.get("reduce_file_size"))
+    resize_to_percent = float(subject_config_json.get("resize_to_percent"))
+    background_color = parse_rgba_color(subject_config_json.get("background_color"))
+    color_threshold = float(subject_config_json.get("color_threshold"))
+    remove_background = bool(subject_config_json.get("remove_background"))
+    crop_sprites = bool(subject_config_json.get("crop_sprites"))
 
-    sheet_config = subject_config.get("sheet")
+    sheet_config = subject_config_json.get("sheet")
     forced_width = sheet_config.get("width")
     forced_height = sheet_config.get("height")
     forced_width = int(forced_width) if forced_width is not None else None
     forced_height = int(forced_height) if forced_height is not None else None
+
+    subject_config = SubjectConfig(resize_to_percent, background_color, color_threshold, remove_background, crop_sprites, (forced_width, forced_height))
+
+    reduce_file_size = bool(subject_config_json.get("reduce_file_size"))
 
     input_dir = pathlib.Path(subject_name) / "raw"
 
@@ -754,30 +760,29 @@ def main() -> None:
 
     output_dir = pathlib.Path(subject_name) / "generated"
 
-    base_sheet_path = output_dir / f"{subject_name}.png"
-    sheet_path_2x = append_suffix_to_filename(base_sheet_path, "@2x")
-    sprite_file_path = base_sheet_path.with_suffix(".sprite") if base_sheet_path.suffix else base_sheet_path.with_name(base_sheet_path.name + ".sprite")
-
-
+    spritesheet_path = output_dir / (subject_name + ".png")
+    spritesheet_path_2x = output_dir / (subject_name + "@2x.png")
+    sprite_file_path = output_dir / (subject_name + ".sprite")
 
     animation_dirs = collect_animation_directories(input_dir)
 
-    settings_by_dir: Dict[AnimationConfig] = {}
+    animation_config_by_dir: Dict[AnimationConfig] = {}
     preserve_dirs = set()
     for animation_dir in animation_dirs:
-        settings = load_animation_offsets(animation_dir)
-        settings_by_dir[animation_dir] = settings
+        settings = load_animation_config(animation_dir)
+        animation_config_by_dir[animation_dir] = settings
         if not settings.regenerate:
             preserve_dirs.add(animation_dir.name)
 
     sub_positions = ""
     if len(preserve_dirs) > 0:
-        previous_sprite_values = load_previous_sprite_metadata(sprite_file_path, preserve_dirs)
-        if previous_sprite_values.sub_positions != None:
-            sub_positions = previous_sprite_values.sub_positions
+        previous_sprite_file = load_previous_sprite_metadata(sprite_file_path, preserve_dirs)
+        if previous_sprite_file != None and previous_sprite_file.sub_positions != None:
+            sub_positions = previous_sprite_file.sub_positions
         
 
     processed_sprites: List[Dict[str, Any]] = []
+
     animations_meta: List[Dict[str, Any]] = []
     frame_index = 0
 
@@ -790,32 +795,28 @@ def main() -> None:
 
     for animation_dir in animation_dirs:
         animation_name = animation_dir.name
-        animationConfig = settings_by_dir[animation_dir]   
+        animation_config = animation_config_by_dir[animation_dir]   
 
         sprites: Optional[List[Dict[str, Any]]]
-        if animationConfig.regenerate:
+        if animation_config.regenerate:
             sprite_paths = collect_sprite_paths(animation_dir)
   
             sprites = process_sprites(
                 sprite_paths,
-                resize_to_percent,
-                background_color,
-                color_threshold,
-                remove_background,
-                crop_sprites,
-                output_dir,
+                output_dir / animation_name,
                 reduce_file_size,
-                animation_name=animation_name,
-                animation_offset=animationConfig.offset,
-                recover_trim_offset=animationConfig.recover_cropped_offset,
+                subject_config,
+                animation_config
             )
         else:
 
-            previous_frame_values = previous_sprite_values.frames[animation_name]
+            previous_frame_values = None
+            if previous_sprite_file != None:
+                previous_frame_values = previous_sprite_file.frames[animation_name]
             sprites = load_existing_sprites(
-                animation_name,
-                output_dir,
-                previous_frame_values
+                output_dir / animation_name,
+                previous_frame_values,
+                animation_config
             )
 
         processed_sprites.extend(sprites)
@@ -825,9 +826,10 @@ def main() -> None:
         animations_meta.append({
             "name": animation_name,
             "frames": frame_range,
-            "delay": animationConfig.delay,
+            "delay": animation_config.delay,
         })
         frame_index += len(sprites)
+
 
     layout_info = select_layout(processed_sprites, forced_width, forced_height)
     final_positions = layout_info["positions"]
@@ -836,8 +838,8 @@ def main() -> None:
 
     canvas_size = (layout_info["canvas_width"], layout_info["canvas_height"])
 
-    base_sheet_path.parent.mkdir(parents=True, exist_ok=True)
-    sheet_path_2x.parent.mkdir(parents=True, exist_ok=True)
+    spritesheet_path.parent.mkdir(parents=True, exist_ok=True)
+    spritesheet_path_2x.parent.mkdir(parents=True, exist_ok=True)
 
 
     sheet_image = create_sprite_sheet(
@@ -870,18 +872,16 @@ def main() -> None:
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    sheet_image.save(sheet_path_2x, format="PNG", optimize=reduce_file_size)
+    sheet_image.save(spritesheet_path_2x, format="PNG", optimize=reduce_file_size)
 
-    sheet_half.save(base_sheet_path)
-
-    sprite_file_path.parent.mkdir(parents=True, exist_ok=True)
+    sheet_half.save(spritesheet_path)
 
     with sprite_file_path.open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=2)
 
     print(f"Processed {len(processed_sprites)} sprites into {output_dir}.")
-    print(f"High-res sprite sheet saved to {sheet_path_2x.resolve()} with size {canvas_size[0]}x{canvas_size[1]} pixels.")
-    print(f"Half-res sprite sheet saved to {base_sheet_path.resolve()} with size {half_canvas_size[0]}x{half_canvas_size[1]} pixels.")
+    print(f"High-res sprite sheet saved to {spritesheet_path_2x.resolve()} with size {canvas_size[0]}x{canvas_size[1]} pixels.")
+    print(f"Half-res sprite sheet saved to {spritesheet_path.resolve()} with size {half_canvas_size[0]}x{half_canvas_size[1]} pixels.")
     print(f"Offset metadata saved to {sprite_file_path.resolve()}.")
 if __name__ == "__main__":
     main()

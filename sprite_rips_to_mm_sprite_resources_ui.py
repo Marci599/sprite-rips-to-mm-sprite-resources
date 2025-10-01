@@ -198,7 +198,7 @@ class ConfigManagerUI(tk.Tk):
         self.subject_entries.append(crop_check)
 
         ttk.Label(processing_group, text="Cropping reduces file size", foreground="gray",).grid(row=6, column=0, columnspan=2, sticky="w", pady=(0,0))
-        ttk.Label(processing_group, text="Cropping is based on the background color", foreground="gray",).grid(row=7, column=0, columnspan=2, sticky="w", pady=(0, 4))
+        ttk.Label(processing_group, text="Cropping is based on the bg color and threshold", foreground="gray",).grid(row=7, column=0, columnspan=2, sticky="w", pady=(0, 4))
 
         self.reduce_file_size_var = tk.BooleanVar(value=True)
         reduce_check = ttk.Checkbutton(
