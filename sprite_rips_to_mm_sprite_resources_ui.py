@@ -629,6 +629,7 @@ class ConfigManagerUI(tk.Tk):
         self.subject_store[self.current_subject_name] = stored
 
     def save_all(self, show_message: bool = True) -> bool:
+        self.refresh_animation_list()
         self._snapshot_current_subject()
         self._apply_root_form_to_data()
         try:
@@ -645,6 +646,7 @@ class ConfigManagerUI(tk.Tk):
         return True
 
     def save_and_generate(self) -> None:
+
         if not self.save_all(show_message=False):
             return
 

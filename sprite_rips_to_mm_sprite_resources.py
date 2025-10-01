@@ -98,7 +98,7 @@ def load_config(path: pathlib.Path) -> Dict[str, Any]:
         if not isinstance(overrides, dict):
             raise SystemExit(f"Config file {path} must contain a JSON object.")
     else:
-        raise SystemExit(f"Config file {path} must does not exists or is empty.")
+        raise SystemExit(f"Config file {path} does not exists or is empty.")
     return overrides
 
 
@@ -766,12 +766,12 @@ def main() -> None:
 
     animation_dirs = collect_animation_directories(input_dir)
 
-    animation_config_by_dir: Dict[AnimationConfig] = {}
+    animation_config_by_dir: Dict[pathlib.Path, AnimationConfig] = {}
     preserve_dirs = set()
     for animation_dir in animation_dirs:
-        settings = load_animation_config(animation_dir)
-        animation_config_by_dir[animation_dir] = settings
-        if not settings.regenerate:
+        animation_config = load_animation_config(animation_dir)
+        animation_config_by_dir[animation_dir] = animation_config
+        if not animation_config.regenerate:
             preserve_dirs.add(animation_dir.name)
 
     sub_positions = ""
