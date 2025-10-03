@@ -339,7 +339,7 @@ class ConfigManagerUI(tk.Tk):
         self.reduce_file_size_check.pack(side="left")
         ttk.Label(
             bottom_frame,
-            text="If enabled, expecpt a bit slower generation",
+            text="If enabled, expect a bit slower generation",
             foreground="gray",
         ).pack(side="left", padx=(8, 0))
         self.save_and_generate_button = ttk.Button(
@@ -1001,9 +1001,9 @@ class ConfigManagerUI(tk.Tk):
         self.is_hd_theme_var.set(self._resolve_is_hd_for_theme(new_theme))
         if previous_theme is None and new_theme is not None:
             display_name = new_theme
-            messagebox.showinfo("Game Theme Selected", f"Game theme '{display_name}' is now active. Subjects will be loaded from that folder.")
+            messagebox.showwarning("Enabled Game Theme structure", f"Subjects will be loaded from Game Theme folders.\nIf needed, please reconstruct your folders as follows: root/<GameThemeName>/<SubjectName>")
         elif previous_theme is not None and new_theme is None:
-            messagebox.showinfo("Game Theme Cleared", "Game theme cleared. Subjects will be loaded from the root directory.")
+            messagebox.showwarning("Disabled Game Theme structure", "Subjects will be loaded from the root directory.\nIf needed, please reconstruct your folders as follows: root/<SubjectName>")
         self.populate_subject_options()
         subjects = list(self.subject_options)
         if not subjects:
@@ -1089,7 +1089,7 @@ class ConfigManagerUI(tk.Tk):
             mono = tkfont.nametofont("TkFixedFont")
         frame = ttk.Frame(win, padding=10)
         frame.pack(fill="both", expand=True)
-        title_label = ttk.Label(frame, text="Frames to MM sprite resources v1.2", font=("TkDefaultFont", 12, "bold"))
+        title_label = ttk.Label(frame, text="Frames to MM sprite resources v1.2.1", font=("TkDefaultFont", 12, "bold"))
         title_label.grid(row=0, column=0, sticky="w", pady=(0, 8))
         header_label = ttk.Label(frame, text="Created by Marci599 for Mario Multiverse (created by neoarc).")
         header_label.grid(row=1, column=0, sticky="w", pady=(0, 8))
