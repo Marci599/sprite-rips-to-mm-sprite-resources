@@ -23,13 +23,13 @@ CONFIG_PATH = "config.json"
 GAME_THEME_CONFIG_FILENAME = "config.json"
 
 DEFAULT_MAIN_CONFIG: Dict[str, Any] = {
-    "subject": None,
     "game_theme": None,
     "reduce_file_size": False,
 }
 
 DEFAULT_GAME_THEME_CONFIG: Dict[str, Any] = {
     "subject": None,
+    "is_hd": True
 }
 
 
@@ -193,7 +193,7 @@ def _align_even_box(left: int, top: int, right: int, bottom: int,
 
     return left_aligned, top_aligned, right_aligned, bottom_aligned
 
-def trim_color(image: Image.Image, trim_color: Optional[Tuple[int, int, int, int]], threshold: float) -> Tuple[Image.Image, Tuple[int, int]]:
+def trim_color(image: Image.Image, trim_color: Optional[Tuple[int, int, int, int]], threshold: float, is_hd: bool) -> Tuple[Image.Image, Tuple[int, int]]:
     img = image if image.mode == "RGBA" else image.convert("RGBA")
     w, h = img.size
 
@@ -234,7 +234,8 @@ def trim_color(image: Image.Image, trim_color: Optional[Tuple[int, int, int, int
         left = int(np.argmax(cols))
         right = int(w - np.argmax(cols[::-1]))
 
-    left, top, right, bottom = _align_even_box(left, top, right, bottom, w, h)
+    if is_hd:
+        left, top, right, bottom = _align_even_box(left, top, right, bottom, w, h)
 
     if left == 0 and top == 0 and right == w and bottom == h:
         return image, (0, 0)
@@ -243,7 +244,6 @@ def trim_color(image: Image.Image, trim_color: Optional[Tuple[int, int, int, int
     return cropped, (left, top)
 
 
-#??????
 def ensure_even_dimensions(image: Image.Image) -> Image.Image:
     width, height = image.size
     new_width = width + (width % 2)
@@ -283,7 +283,7 @@ def collect_animation_directories(input_dir: pathlib.Path) -> List[pathlib.Path]
         return directories
     return [input_dir]
 
-def load_animation_config(animation_dir: pathlib.Path) -> AnimationConfig:
+def load_animation_config(animation_dir: pathlib.Path, is_hd) -> AnimationConfig:
     config_path = animation_dir / "config.json"
 
     animation_config_json = json.loads(json.dumps(DEFAULT_ANIMATION_CONFIG))
@@ -311,7 +311,9 @@ def load_animation_config(animation_dir: pathlib.Path) -> AnimationConfig:
         except (TypeError, ValueError) as exc:
             raise SystemExit(f"Invalid offset value in {config_path}: {value!r}") from exc
 
-    offset = (_normalize_offset(raw_x), _normalize_offset(raw_y))
+    offset = (raw_x, raw_y)
+    if is_hd:
+        offset = (_normalize_offset(raw_x), _normalize_offset(raw_y))
 
     recover_json = animation_config_json.get("recover_cropped_offset")
 
@@ -440,8 +442,9 @@ def process_sprites(
     sprite_paths: Sequence[pathlib.Path],
     output_dir: pathlib.Path,
     reduce_file_size: bool,
-    subject_config : SubjectConfig,
-    animation_config : AnimationConfig
+    subject_config: SubjectConfig,
+    animation_config: AnimationConfig,
+    is_hd: bool
 ) -> List[Dict[str, Any]]:
     processed: List[Dict[str, Any]] = []
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -464,9 +467,10 @@ def process_sprites(
         trim_offset = (0, 0)
         crop_bg = (0, 0, 0, 0) if can_remove_color else subject_config.background_color
         if subject_config.crop_sprites:
-            image, trim_offset = trim_color(image, crop_bg, subject_config.color_threshold)
+            image, trim_offset = trim_color(image, crop_bg, subject_config.color_threshold, is_hd)
 
-        image = ensure_even_dimensions(image)
+        if is_hd:
+            image = ensure_even_dimensions(image)
 
 
         output_path = output_dir / f"{sprite_path.stem}.png"
@@ -487,9 +491,13 @@ def process_sprites(
 
 def layout_for_width(
     sprites: Sequence[Dict[str, Any]],
-    gap: int,
     width_limit: int,
+    is_hd : bool
 ) -> Dict[str, Any]:
+    gap = 1
+    if is_hd:
+        gap = LAYOUT_GAP
+        
     if width_limit <= 0:
         raise SystemExit("width_limit must be greater than zero.")
     if not sprites:
@@ -505,7 +513,7 @@ def layout_for_width(
 
     for index, sprite in enumerate(sprites):
         sprite_width, sprite_height = sprite["image"].size
-        projected_width = sprite_width if not current_indices else ensure_even_value(current_width + gap) + sprite_width
+        projected_width = sprite_width if not current_indices else current_width + gap + sprite_width
         if current_indices and projected_width > width_limit:
             rows.append({
                 "indices": current_indices,
@@ -517,7 +525,7 @@ def layout_for_width(
             current_height = 0
             projected_width = sprite_width
         if current_indices:
-            current_width = ensure_even_value(current_width + gap)
+            current_width = current_width + gap
         current_indices.append(index)
         current_width += sprite_width
         current_height = max(current_height, sprite_height)
@@ -533,14 +541,19 @@ def layout_for_width(
     sheet_height = 0
     for row_index, row in enumerate(rows):
         if row_index > 0:
-            sheet_height = ensure_even_value(sheet_height + gap)
+            sheet_height = sheet_height + gap
+            if is_hd:
+                sheet_height = ensure_even_value(sheet_height)
+        
         sheet_height += row["height"]
 
     positions: List[Optional[Tuple[int, int]]] = [None] * len(sprites)
     y_offset = 0
     for row_index, row in enumerate(rows):
         if row_index > 0:
-            y_offset = ensure_even_value(y_offset + gap)
+            y_offset = y_offset + gap
+            if is_hd:
+                y_offset = ensure_even_value(y_offset)
         x_offset = 0
         for item_index, sprite_index in enumerate(row["indices"]):
             sprite_image = sprites[sprite_index]["image"]
@@ -548,7 +561,9 @@ def layout_for_width(
             positions[sprite_index] = (x_offset, y_position)
             x_offset += sprite_image.width
             if item_index < len(row["indices"]) - 1:
-                x_offset = ensure_even_value(x_offset + gap)
+                x_offset = x_offset + gap
+                if is_hd:
+                    x_offset = ensure_even_value(x_offset)
         y_offset += row["height"]
 
     return {"width": sheet_width, "height": sheet_height, "positions": positions}
@@ -556,9 +571,12 @@ def layout_for_width(
 
 def auto_layout(
     sprites: Sequence[Dict[str, Any]],
-    gap: int,
+    is_hd: bool,
     max_height: Optional[int] = None,
 ) -> Dict[str, Any]:
+    gap = 1
+    if is_hd:
+        gap = LAYOUT_GAP
     if not sprites:
         return {"width": 0, "height": 0, "positions": []}
     widths = [sprite["image"].width for sprite in sprites]
@@ -575,7 +593,7 @@ def auto_layout(
 
     for width_limit in sorted(candidate_widths):
         try:
-            layout = layout_for_width(sprites, gap, int(round(width_limit)))
+            layout = layout_for_width(sprites, int(round(width_limit)), is_hd)
         except ValueError:
             continue
         if max_height is not None and layout["height"] > max_height:
@@ -597,8 +615,8 @@ def select_layout(
     sprites: Sequence[Dict[str, Any]],
     forced_width: Optional[int],
     forced_height: Optional[int],
+    is_hd: bool
 ) -> Dict[str, Any]:
-    gap = LAYOUT_GAP
     if not sprites:
         canvas_width = forced_width or 0
         canvas_height = forced_height or 0
@@ -610,7 +628,7 @@ def select_layout(
             "positions": [],
         }
     if forced_width is not None:
-        layout = layout_for_width(sprites, gap, forced_width)
+        layout = layout_for_width(sprites, forced_width, is_hd)
         if forced_height is not None and layout["height"] > forced_height:
             raise SystemExit("Sprites do not fit within the requested sheet height.")
         canvas_width = forced_width
@@ -622,7 +640,7 @@ def select_layout(
             "canvas_height": canvas_height,
             "positions": list(layout["positions"]),
         }
-    layout = auto_layout(sprites, gap, max_height=forced_height)
+    layout = auto_layout(sprites, is_hd, max_height=forced_height)
     canvas_height = forced_height if forced_height is not None else layout["height"]
     return {
         "layout_width": layout["width"],
@@ -652,12 +670,13 @@ def export_sprite_metadata(
     sprites: Sequence[Dict[str, Any]],
     positions: Sequence[Tuple[int, int]],
     source_canvas: Tuple[int, int],
-    target_canvas: Tuple[int, int],
     animations: Sequence[Dict[str, Any]],
-    sub_positions: str
+    sub_positions: str,
+    is_hd: bool
 ) -> Dict[str, Any]:
     source_width, source_height = source_canvas
-    target_width, target_height = target_canvas
+    target_width = source_width / 2
+    target_height = source_height / 2
     scale_x = target_width / source_width if source_width else 1.0
     scale_y = target_height / source_height if source_height else 1.0
 
@@ -667,10 +686,16 @@ def export_sprite_metadata(
         width, height = sprite["image"].size
         original_width, original_height = sprite["original_size"]
        
-        left_scaled = round_half_up(left * scale_x)
-        top_scaled = round_half_up(top * scale_y)
-        right_scaled = round_away_from_zero((left + width) * scale_x)
-        bottom_scaled = round_away_from_zero((top + height) * scale_y)
+        left_scaled = left
+        top_scaled = top
+        right_scaled = left + width
+        bottom_scaled = top + height
+
+        if is_hd:
+            left_scaled = round_half_up(left_scaled * scale_x)
+            top_scaled = round_half_up(top_scaled * scale_y)
+            right_scaled = round_away_from_zero(right_scaled * scale_x)
+            bottom_scaled = round_away_from_zero(bottom_scaled * scale_y)
 
         old_frame_json = sprite.get("old_frame_json", None)
         if old_frame_json == None:
@@ -679,18 +704,34 @@ def export_sprite_metadata(
             recover_x, recover_y = recover_cropped_offset
             if not recover_x:
                 trim_left = 0
-                original_width = abs(right_scaled - left_scaled) * 2
+                original_width = abs(right_scaled - left_scaled)
+                if is_hd:
+                    original_width *= 2
+
             if not recover_y:
                 trim_top = 0
-                original_height = abs(bottom_scaled - top_scaled) * 2
+                original_height = abs(bottom_scaled - top_scaled)
+                if is_hd:
+                    original_height *= 2
+        
+
+    
 
             extra_offset_x, extra_offset_y = sprite["offset"]
-            origin_offset_x = original_width / 2.0 - trim_left + extra_offset_x
-            origin_offset_y = original_height - trim_top + extra_offset_y
-            scaled_offset_x = round_away_from_zero(origin_offset_x * scale_x)
-            scaled_offset_y = round_away_from_zero(origin_offset_y * scale_y)
-            
-            offset_text = f"{scaled_offset_x} {scaled_offset_y}"
+            origin_offset_x = original_width / 2.0 - trim_left
+            origin_offset_y = original_height - trim_top
+
+            if is_hd:
+                origin_offset_x += extra_offset_x
+                origin_offset_y += extra_offset_y
+                origin_offset_x = round_away_from_zero(origin_offset_x * scale_x)
+                origin_offset_y = round_away_from_zero(origin_offset_y * scale_y)
+            else:
+                origin_offset_x += extra_offset_x
+                origin_offset_y += extra_offset_y
+                origin_offset_x = round_away_from_zero(origin_offset_x)
+                origin_offset_y = round_away_from_zero(origin_offset_y)
+            offset_text = f"{origin_offset_x} {origin_offset_y}"
 
             frame_values = {
                 "Offset": offset_text
@@ -744,6 +785,7 @@ def main() -> None:
 
     game_theme = base_config_json.get("game_theme")
     subject_name = base_config_json.get("subject")
+    is_hd = base_config_json.get("is_hd", True)
 
     if game_theme:
         theme_config_json = json.loads(json.dumps(DEFAULT_GAME_THEME_CONFIG))
@@ -753,11 +795,12 @@ def main() -> None:
             theme_config_json_override = load_config(theme_config_json_path)
             theme_config_json = deep_merge(theme_config_json, theme_config_json_override)
         theme_subject = theme_config_json.get("subject")
+        is_hd = theme_config_json.get("is_hd", True)
         if theme_subject:
             subject_name = theme_subject
 
     if not subject_name:
-        raise SystemExit("The 'subject' field must be specified in the main config.json.")
+        raise SystemExit("The 'subject' field must be specified in the config.json.")
 
     subject_path = pathlib.Path(subject_name)
     if game_theme:
@@ -790,8 +833,7 @@ def main() -> None:
 
     output_dir = subject_path / "generated"
 
-    spritesheet_path = output_dir / (subject_name + ".png")
-    spritesheet_path_2x = output_dir / (subject_name + "@2x.png")
+
     sprite_file_path = output_dir / (subject_name + ".sprite")
 
     animation_dirs = collect_animation_directories(input_dir)
@@ -799,7 +841,7 @@ def main() -> None:
     animation_config_by_dir: Dict[pathlib.Path, AnimationConfig] = {}
     preserve_dirs = set()
     for animation_dir in animation_dirs:
-        animation_config = load_animation_config(animation_dir)
+        animation_config = load_animation_config(animation_dir, is_hd)
         animation_config_by_dir[animation_dir] = animation_config
         if not animation_config.regenerate:
             preserve_dirs.add(animation_dir.name)
@@ -836,7 +878,8 @@ def main() -> None:
                 output_dir / animation_name,
                 reduce_file_size,
                 subject_config,
-                animation_config
+                animation_config,
+                is_hd
             )
         else:
 
@@ -861,15 +904,12 @@ def main() -> None:
         frame_index += len(sprites)
 
 
-    layout_info = select_layout(processed_sprites, forced_width, forced_height)
+    layout_info = select_layout(processed_sprites, forced_width, forced_height, is_hd)
     final_positions = layout_info["positions"]
     if any(position is None for position in final_positions):
         raise SystemExit("Failed to generate positions for every sprite.")
 
     canvas_size = (layout_info["canvas_width"], layout_info["canvas_height"])
-
-    spritesheet_path.parent.mkdir(parents=True, exist_ok=True)
-    spritesheet_path_2x.parent.mkdir(parents=True, exist_ok=True)
 
 
     sheet_image = create_sprite_sheet(
@@ -878,18 +918,13 @@ def main() -> None:
         canvas_size,
     )
 
-    half_width = max(1, (sheet_image.width + 1) // 2)
-    half_height = max(1, (sheet_image.height + 1) // 2)
-    half_canvas_size = (half_width, half_height)
-    sheet_half = sheet_image.resize(half_canvas_size, RESAMPLE_NEAREST)
-
     payload = export_sprite_metadata(
         processed_sprites,
         final_positions,
         canvas_size,
-        half_canvas_size,
         animations_meta,
-        sub_positions
+        sub_positions,
+        is_hd
     )
 
     if output_dir.exists():
@@ -902,16 +937,28 @@ def main() -> None:
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    spritesheet_path = output_dir / (subject_name + ".png")
+    spritesheet_path_2x = spritesheet_path
+    spritesheet_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if is_hd:
+        half_width = max(1, (sheet_image.width + 1) // 2)
+        half_height = max(1, (sheet_image.height + 1) // 2)
+        half_canvas_size = (half_width, half_height)
+        sheet_half = sheet_image.resize(half_canvas_size, RESAMPLE_NEAREST)
+        sheet_half.save(spritesheet_path)
+        spritesheet_path_2x = output_dir / (subject_name + "@2x.png")
+        print(f"Half-res sprite sheet saved to {spritesheet_path.resolve()} with size {half_canvas_size[0]}x{half_canvas_size[1]} pixels.")
+
     sheet_image.save(spritesheet_path_2x, format="PNG", optimize=reduce_file_size)
 
-    sheet_half.save(spritesheet_path)
+
 
     with sprite_file_path.open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=2)
 
     print(f"Processed {len(processed_sprites)} sprites into {output_dir}.")
     print(f"High-res sprite sheet saved to {spritesheet_path_2x.resolve()} with size {canvas_size[0]}x{canvas_size[1]} pixels.")
-    print(f"Half-res sprite sheet saved to {spritesheet_path.resolve()} with size {half_canvas_size[0]}x{half_canvas_size[1]} pixels.")
     print(f"Offset metadata saved to {sprite_file_path.resolve()}.")
 if __name__ == "__main__":
     main()

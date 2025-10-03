@@ -25,7 +25,7 @@ DEFAULT_ANIMATION_CONFIG = {
 }
 ASSET_BUNDLE_DIR = "assets"
 GAME_THEME_CONFIG_FILENAME = "config.json"
-DEFAULT_GAME_THEME_CONFIG = {"subject": None, "is_hd_theme": True}
+DEFAULT_GAME_THEME_CONFIG = {"subject": None, "is_hd": True}
 def resolve_storage_root() -> Path:
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
@@ -37,7 +37,10 @@ def resolve_asset_source() -> Path:
 class ConfigManagerUI(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("Sprite rips to MM sprite resources")
+
+        self.bind("<FocusIn>", self._on_window_focus_in, add="+")
+
+        self.title("Frames to MM sprite resources")
         
         self.minsize(705, 490)
         self.root_dir = resolve_storage_root()
@@ -51,14 +54,14 @@ class ConfigManagerUI(tk.Tk):
             except Exception:
                 self.icon_path = None
         self.root_config_path = self.root_dir / "config.json"
-        self.root_config = self._read_json(self.root_config_path, {"subject": None, "game_theme": None, "is_hd_theme": True, "reduce_file_size": False})
+        self.root_config = self._read_json(self.root_config_path, {"subject": None, "game_theme": None, "is_hd": True, "reduce_file_size": False})
         if not isinstance(self.root_config, dict):
-            self.root_config = {"subject": None, "game_theme": None, "is_hd_theme": True, "reduce_file_size": False}
+            self.root_config = {"subject": None, "game_theme": None, "is_hd": True, "reduce_file_size": False}
         self._root_config_has_reduce = "reduce_file_size" in self.root_config
         self.root_config.setdefault("subject", None)
         self.root_config.setdefault("game_theme", None)
         self.root_config.setdefault("reduce_file_size", False)
-        self.root_config.setdefault("is_hd_theme", True)
+        self.root_config.setdefault("is_hd", True)
         self.subject_config_path = None
         self.subject_config_data = {}
         self.animation_data = {}
@@ -70,7 +73,7 @@ class ConfigManagerUI(tk.Tk):
         self.game_theme_options = []
         self.theme_config_cache = {}
         self._none_subject_memory = self.root_config.get("subject") or None
-        raw_is_hd = self.root_config.get("is_hd_theme")
+        raw_is_hd = self.root_config.get("is_hd")
         self._none_is_hd_memory = self._normalize_is_hd_value(raw_is_hd)
         initial_game_theme = self.root_config.get("game_theme")
         self.current_game_theme = initial_game_theme if initial_game_theme else None
@@ -80,10 +83,27 @@ class ConfigManagerUI(tk.Tk):
         self._sync_root_subject_field()
         self.subject_var = tk.StringVar()
         self.reduce_file_size_var = tk.BooleanVar(value=bool(self.root_config.get("reduce_file_size", False)))
+        self._integer_validate_callback = None
+        self._signed_integer_validate_callback = None
+        self._is_setting_background_color = False
+        self._last_valid_background_color = ''
+        self.color_preview = None
+        self._color_preview_rect = None
+        self._default_color_preview_fill = ''
+        self.offset_group = None
+        self.offset_x_entry = None
+        self.offset_y_entry = None
+        self.recover_group = None
+        self.recover_x_check = None
+        self.recover_y_check = None
         self._build_ui()
         self.populate_game_theme_options()
         self._initialize_selection()
         self.notebook.bind("<<NotebookTabChanged>>", self.on_notebook_tab_changed)
+
+    def _on_window_focus_in(self, event: tk.Event) -> None:
+        self.reload_subjects()
+
     def _ensure_runtime_assets(self) -> None:
         if not getattr(sys, "frozen", False):
             return
@@ -108,6 +128,9 @@ class ConfigManagerUI(tk.Tk):
         column_gap = outer_padding // 2
         self.subject_entries = []
         self.animation_form_widgets = []
+        self._animation_form_enabled = False
+        self._integer_validate_callback = self.register(self._validate_integer_input)
+        self._signed_integer_validate_callback = self.register(self._validate_signed_integer_input)
         subject_header = ttk.Frame(self)
         subject_header.pack(fill="x", padx=outer_padding, pady=(outer_padding, 0))
         subject_header.columnconfigure(1, weight=1)
@@ -145,21 +168,31 @@ class ConfigManagerUI(tk.Tk):
         processing_group = ttk.LabelFrame(subject_groups, text="Processing", padding=section_padding)
         processing_group.grid(row=0, column=0, sticky="nsew", padx=(0, column_gap))
         processing_group.columnconfigure(1, weight=1)
+        processing_group.columnconfigure(2, weight=0)
         self.resize_var = tk.StringVar()
         ttk.Label(processing_group, text="Resize to percent").grid(row=0, column=0, sticky="w", pady=4)
         resize_entry = ttk.Entry(processing_group, textvariable=self.resize_var)
-        resize_entry.grid(row=0, column=1, sticky="ew", padx=(8, 0), pady=4)
+        resize_entry.grid(row=0, column=1, sticky="ew", padx=(8, 0), pady=4, columnspan=2)
+        resize_entry.configure(validate="key", validatecommand=(self._integer_validate_callback, "%P"))
         self.subject_entries.append(resize_entry)
         self.color_remove_var = tk.StringVar()
         ttk.Label(processing_group, text="Background color").grid(row=1, column=0, sticky="w", pady=4)
         color_entry = ttk.Entry(processing_group, textvariable=self.color_remove_var)
         color_entry.grid(row=1, column=1, sticky="ew", padx=(8, 0), pady=4)
+        color_entry.bind("<FocusOut>", self._on_background_color_focus_out)
+        self.color_remove_var.trace_add("write", self._on_background_color_change)
+        self.color_preview = tk.Canvas(processing_group, width=20, height=20, highlightthickness=1, highlightbackground="#b3b3b3")
+        self._default_color_preview_fill = self.color_preview.cget("background")
+        self._color_preview_rect = self.color_preview.create_rectangle(0, 0, 20, 20, outline="", fill=self._default_color_preview_fill)
+        self.color_preview.grid(row=1, column=2, padx=(0, 0), pady=4, sticky="ew")
+        self._update_background_color_preview(None)
         self.subject_entries.append(color_entry)
-        ttk.Label(processing_group, text="If already transparent, leave it blank", foreground="gray",).grid(row=2, column=0, columnspan=2, sticky="w", pady=(0, 4))
+        ttk.Label(processing_group, text="If already transparent, leave it blank", foreground="gray",).grid(row=2, column=0, columnspan=3, sticky="w", pady=(0, 4))
         self.color_threshold_var = tk.StringVar()
         ttk.Label(processing_group, text="Color threshold").grid(row=3, column=0, sticky="w", pady=4)
         threshold_entry = ttk.Entry(processing_group, textvariable=self.color_threshold_var)
-        threshold_entry.grid(row=3, column=1, sticky="ew", padx=(8, 0), pady=4)
+        threshold_entry.grid(row=3, column=1, sticky="ew", padx=(8, 0), pady=4, columnspan=2)
+        threshold_entry.configure(validate="key", validatecommand=(self._integer_validate_callback, "%P"))
         self.subject_entries.append(threshold_entry)
         # New boolean options: remove background and crop sprites
         self.remove_background_var = tk.BooleanVar(value=True)
@@ -168,7 +201,7 @@ class ConfigManagerUI(tk.Tk):
             text="Remove background",
             variable=self.remove_background_var,
         )
-        remove_bg_check.grid(row=4, column=0, columnspan=2, sticky="w", pady=6)
+        remove_bg_check.grid(row=4, column=0, columnspan=3, sticky="w", pady=6)
         self.subject_entries.append(remove_bg_check)
         self.crop_sprites_var = tk.BooleanVar(value=True)
         crop_check = ttk.Checkbutton(
@@ -176,10 +209,10 @@ class ConfigManagerUI(tk.Tk):
             text="Crop sprites",
             variable=self.crop_sprites_var,
         )
-        crop_check.grid(row=5, column=0, columnspan=2, sticky="w", pady=(0,6))
+        crop_check.grid(row=5, column=0, columnspan=3, sticky="w", pady=(0,6))
         self.subject_entries.append(crop_check)
         ttk.Label(processing_group, text="Cropping reduces file size", foreground="gray",).grid(row=6, column=0, columnspan=2, sticky="w", pady=(0,0))
-        ttk.Label(processing_group, text="Cropping is based on the bg color and threshold", foreground="gray",).grid(row=7, column=0, columnspan=2, sticky="w", pady=(0, 4))
+        ttk.Label(processing_group, text="Cropping is based on the bg color and threshold", foreground="gray",).grid(row=7, column=0, columnspan=3, sticky="w", pady=(0, 4))
         sheet_group = ttk.LabelFrame(subject_groups, text="Sheet dimensions", padding=section_padding)
         sheet_group.grid(row=0, column=1, sticky="nsew", padx=(column_gap, 0))
         sheet_group.columnconfigure(1, weight=1)
@@ -187,11 +220,13 @@ class ConfigManagerUI(tk.Tk):
         ttk.Label(sheet_group, text="Width").grid(row=0, column=0, sticky="w", pady=4)
         sheet_width_entry = ttk.Entry(sheet_group, textvariable=self.sheet_width_var)
         sheet_width_entry.grid(row=0, column=1, sticky="ew", padx=(8, 0), pady=4)
+        sheet_width_entry.configure(validate="key", validatecommand=(self._integer_validate_callback, "%P"))
         self.subject_entries.append(sheet_width_entry)
         self.sheet_height_var = tk.StringVar()
         ttk.Label(sheet_group, text="Height").grid(row=1, column=0, sticky="w", pady=4)
         sheet_height_entry = ttk.Entry(sheet_group, textvariable=self.sheet_height_var)
         sheet_height_entry.grid(row=1, column=1, sticky="ew", padx=(8, 0), pady=4)
+        sheet_height_entry.configure(validate="key", validatecommand=(self._integer_validate_callback, "%P"))
         self.subject_entries.append(sheet_height_entry)
         ttk.Label(sheet_group, text="For automatic sizing, leave it blank", foreground="gray",).grid(
             row=2, column=0, columnspan=2, sticky="w", pady=(4, 0)
@@ -224,7 +259,7 @@ class ConfigManagerUI(tk.Tk):
         detail_frame.pack(side="left", fill="both", expand=True, padx=(outer_padding, 0))
         detail_frame.columnconfigure(1, weight=1)
         self.anim_rege_var = tk.BooleanVar(value=True)
-        regen_check = ttk.Checkbutton(detail_frame, text="Regenerate", variable=self.anim_rege_var)
+        regen_check = ttk.Checkbutton(detail_frame, text="Regenerate", variable=self.anim_rege_var, command=self._on_animation_regenerate_change)
         regen_check.grid(row=0, column=0, columnspan=2, sticky="w", pady=4)
         self.animation_form_widgets.append(regen_check)
         ttk.Label(detail_frame, text="If disabled, already generated sprites will be added to the spritesheet.\nEdited offsets and sub-positions will remain unchanged.", foreground="gray",).grid(
@@ -235,20 +270,26 @@ class ConfigManagerUI(tk.Tk):
         ttk.Label(detail_frame, text="Delay").grid(row=2, column=0, sticky="w", pady=4)
         delay_entry = ttk.Entry(detail_frame, textvariable=self.anim_delay_var)
         delay_entry.grid(row=2, column=1, sticky="ew", padx=(8, 0), pady=4)
+        delay_entry.configure(validate="key", validatecommand=(self._integer_validate_callback, "%P"))
         self.animation_form_widgets.append(delay_entry)
         offset_group = ttk.LabelFrame(detail_frame, text="Offset", padding=section_padding)
         offset_group.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(12, 0))
         offset_group.columnconfigure(1, weight=1)
         offset_group.columnconfigure(3, weight=1)
+        self.offset_group = offset_group
         self.anim_offset_x_var = tk.StringVar()
         ttk.Label(offset_group, text="X").grid(row=0, column=0, sticky="w", pady=4)
         offset_x_entry = ttk.Entry(offset_group, textvariable=self.anim_offset_x_var)
         offset_x_entry.grid(row=0, column=1, sticky="ew", padx=(8, column_gap), pady=4)
+        offset_x_entry.configure(validate="key", validatecommand=(self._signed_integer_validate_callback, "%P"))
+        self.offset_x_entry = offset_x_entry
         self.animation_form_widgets.append(offset_x_entry)
         self.anim_offset_y_var = tk.StringVar()
         ttk.Label(offset_group, text="Y").grid(row=0, column=2, sticky="w", pady=4)
         offset_y_entry = ttk.Entry(offset_group, textvariable=self.anim_offset_y_var)
         offset_y_entry.grid(row=0, column=3, sticky="ew", padx=(8, 0), pady=4)
+        offset_y_entry.configure(validate="key", validatecommand=(self._signed_integer_validate_callback, "%P"))
+        self.offset_y_entry = offset_y_entry
         self.animation_form_widgets.append(offset_y_entry)
         ttk.Label(
             offset_group,
@@ -260,6 +301,7 @@ class ConfigManagerUI(tk.Tk):
         recover_group.grid(row=4, column=0, columnspan=2, sticky="ew", pady=(12, 0))
         recover_group.columnconfigure(0, weight=1)
         recover_group.columnconfigure(1, weight=1)
+        self.recover_group = recover_group
         self.anim_recover_x_var = tk.BooleanVar(value=True)
         recover_x_check = ttk.Checkbutton(
             recover_group,
@@ -267,6 +309,7 @@ class ConfigManagerUI(tk.Tk):
             variable=self.anim_recover_x_var,
         )
         recover_x_check.grid(row=0, column=0, sticky="w", pady=4, padx=(0, column_gap))
+        self.recover_x_check = recover_x_check
         self.animation_form_widgets.append(recover_x_check)
         self.anim_recover_y_var = tk.BooleanVar(value=True)
         recover_y_check = ttk.Checkbutton(
@@ -275,6 +318,7 @@ class ConfigManagerUI(tk.Tk):
             variable=self.anim_recover_y_var,
         )
         recover_y_check.grid(row=0, column=1, sticky="w", pady=4, padx=(column_gap, 0))
+        self.recover_y_check = recover_y_check
         self.animation_form_widgets.append(recover_y_check)
         ttk.Label(
             recover_group,
@@ -386,7 +430,7 @@ class ConfigManagerUI(tk.Tk):
         if not game_theme:
             return self._none_is_hd_memory
         config = self._get_theme_config(game_theme)
-        return self._normalize_is_hd_value(config.get("is_hd_theme"))
+        return self._normalize_is_hd_value(config.get("is_hd"))
 
     def _set_none_subject(self, value) -> None:
         normalized = value if value else None
@@ -399,15 +443,15 @@ class ConfigManagerUI(tk.Tk):
     def _sync_root_subject_field(self) -> None:
         if self.current_game_theme is None:
             self.root_config["subject"] = self._none_subject_memory
-            self.root_config["is_hd_theme"] = self._none_is_hd_memory
+            self.root_config["is_hd"] = self._none_is_hd_memory
         else:
             self.root_config["subject"] = None
-            self.root_config["is_hd_theme"] = None
+            self.root_config["is_hd"] = None
     def _build_theme_config_payload(self, game_theme: str) -> dict:
         config = self._get_theme_config(game_theme)
         return {
             "subject": config.get("subject") if config.get("subject") else None,
-            "is_hd_theme": self._normalize_is_hd_value(config.get("is_hd_theme")),
+            "is_hd": self._normalize_is_hd_value(config.get("is_hd")),
         }
     def _subject_store_key(self, game_theme, subject):
         return (game_theme or None, subject)
@@ -424,12 +468,12 @@ class ConfigManagerUI(tk.Tk):
                 config = {}
             config = copy.deepcopy(config)
             config.setdefault("subject", None)
-            config.setdefault("is_hd_theme", True)
+            config.setdefault("is_hd", True)
             self.theme_config_cache[game_theme] = config
             return config
         config = copy.deepcopy(cached)
         config.setdefault("subject", None)
-        config.setdefault("is_hd_theme", True)
+        config.setdefault("is_hd", True)
         return config
 
     def _get_theme_selected_subject(self, game_theme: str):
@@ -454,9 +498,9 @@ class ConfigManagerUI(tk.Tk):
             return
         normalized = self._normalize_is_hd_value(value)
         config = self._get_theme_config(game_theme)
-        if self._normalize_is_hd_value(config.get("is_hd_theme")) == normalized:
+        if self._normalize_is_hd_value(config.get("is_hd")) == normalized:
             return
-        config["is_hd_theme"] = normalized
+        config["is_hd"] = normalized
         self.theme_config_cache[game_theme] = config
 
     def load_subject(self, subject: str) -> None:
@@ -496,7 +540,7 @@ class ConfigManagerUI(tk.Tk):
     def _ensure_subject_defaults(self, data: dict) -> dict:
         result = copy.deepcopy(data) if isinstance(data, dict) else {}
         result.pop("subject", None)
-        result.pop("is_hd_theme", None)
+        result.pop("is_hd", None)
         result.setdefault("resize_to_percent", DEFAULT_SUBJECT_CONFIG["resize_to_percent"])
         result.setdefault("background_color", DEFAULT_SUBJECT_CONFIG["background_color"])
         result.setdefault("color_threshold", DEFAULT_SUBJECT_CONFIG["color_threshold"])
@@ -530,7 +574,7 @@ class ConfigManagerUI(tk.Tk):
         return result
     def refresh_subject_form(self) -> None:
         self.resize_var.set(self._format_number(self.subject_config_data.get("resize_to_percent")))
-        self.color_remove_var.set(str(self.subject_config_data.get("background_color", "")))
+        self._set_background_color_value(self.subject_config_data.get("background_color"))
         self.color_threshold_var.set(self._format_number(self.subject_config_data.get("color_threshold")))
         # boolean fields
         self.remove_background_var.set(bool(self.subject_config_data.get("remove_background", True)))
@@ -568,6 +612,7 @@ class ConfigManagerUI(tk.Tk):
         data = info["data"]
         self.current_animation = name
         self.anim_rege_var.set(bool(data.get("regenerate", True)))
+        self._update_regenerate_dependents_state()
         self.anim_delay_var.set(self._format_number(data.get("delay")))
         offset = data.get("offset", {})
         self.anim_offset_x_var.set(self._format_number(offset.get("x")))
@@ -648,7 +693,8 @@ class ConfigManagerUI(tk.Tk):
         self.subject_config_data["resize_to_percent"] = self._parse_number(
             self.resize_var.get(), DEFAULT_SUBJECT_CONFIG["resize_to_percent"]
         )
-        self.subject_config_data["background_color"] = self.color_remove_var.get().strip()
+        color_value = self._finalize_background_color_value()
+        self.subject_config_data["background_color"] = color_value
         self.subject_config_data["color_threshold"] = self._parse_number(
             self.color_threshold_var.get(), DEFAULT_SUBJECT_CONFIG["color_threshold"]
         )
@@ -702,6 +748,7 @@ class ConfigManagerUI(tk.Tk):
         }
         key = self._subject_store_key(self.current_game_theme, self.current_subject_name)
         self.subject_store[key] = stored
+
     def save_all(self, show_message: bool = True) -> bool:
         self.refresh_animation_list()
         self._snapshot_current_subject()
@@ -809,6 +856,101 @@ class ConfigManagerUI(tk.Tk):
             except json.JSONDecodeError as exc:
                 messagebox.showerror("JSON Error", f"Failed to parse {path.name}:\n{exc}")
         return copy.deepcopy(default) if default is not None else {}
+    def _normalize_background_color_value(self, value: object) -> str:
+        text = str(value).strip() if value is not None else ''
+        if not text:
+            return ''
+        if text.startswith('#'):
+            text = text[1:]
+        text = text.upper()
+        if len(text) in (3, 4):
+            text = ''.join(ch * 2 for ch in text)
+        if len(text) not in (6, 8):
+            raise ValueError
+        valid = set('0123456789ABCDEF')
+        if any(ch not in valid for ch in text):
+            raise ValueError
+        return '#' + text
+
+    def _set_background_color_value(self, value: object) -> None:
+        try:
+            normalized = self._normalize_background_color_value(value) if value else ''
+        except ValueError:
+            normalized = ''
+        self._last_valid_background_color = normalized
+        if hasattr(self, 'color_remove_var') and isinstance(self.color_remove_var, tk.StringVar):
+            self._is_setting_background_color = True
+            try:
+                self.color_remove_var.set(normalized)
+            finally:
+                self._is_setting_background_color = False
+        self._update_background_color_preview(normalized or None, True)
+
+    def _update_background_color_preview(self, color_value, is_valid: bool = True) -> None:
+        if getattr(self, 'color_preview', None) is None or getattr(self, '_color_preview_rect', None) is None:
+            return
+        fill = self._default_color_preview_fill or self.color_preview.cget('background')
+        if color_value:
+            fill = str(color_value)[:7]
+        self.color_preview.itemconfig(self._color_preview_rect, fill=fill)
+        border = "#b3b3b300" if is_valid else '#cc4c4c'
+        self.color_preview.configure(highlightbackground=border)
+
+    def _on_background_color_change(self, *_: object) -> None:
+        if self._is_setting_background_color:
+            return
+        value = self.color_remove_var.get().strip() if hasattr(self, 'color_remove_var') else ''
+        if not value:
+            self._update_background_color_preview(None, True)
+            return
+        try:
+            normalized = self._normalize_background_color_value(value)
+        except ValueError:
+            self._update_background_color_preview(None, False)
+        else:
+            self._update_background_color_preview(normalized, True)
+
+    def _on_background_color_focus_out(self, event: object) -> None:
+        value = self.color_remove_var.get() if hasattr(self, 'color_remove_var') else ''
+        text = value.strip() if isinstance(value, str) else ''
+        if not text:
+            self._set_background_color_value('')
+            return
+        try:
+            normalized = self._normalize_background_color_value(text)
+        except ValueError:
+            normalized = self._last_valid_background_color or ''
+        self._set_background_color_value(normalized)
+
+    def _finalize_background_color_value(self) -> str:
+        value = self.color_remove_var.get() if hasattr(self, 'color_remove_var') else ''
+        text = value.strip() if isinstance(value, str) else ''
+        if not text:
+            self._set_background_color_value('')
+            return ''
+        try:
+            normalized = self._normalize_background_color_value(text)
+        except ValueError:
+            normalized = self._last_valid_background_color or ''
+        self._set_background_color_value(normalized)
+        return self._last_valid_background_color
+
+    def _validate_integer_input(self, proposed: str) -> bool:
+        if proposed is None:
+            return False
+        if proposed == '':
+            return True
+        return proposed.isdigit()
+
+    def _validate_signed_integer_input(self, proposed: str) -> bool:
+        if proposed is None:
+            return False
+        if proposed in ('', '-'):
+            return True
+        if proposed.startswith('-'):
+            return proposed[1:].isdigit()
+        return proposed.isdigit()
+
     def _parse_number(self, value: object, default: object) -> object:
         text = str(value).strip() if value is not None else ""
         if not text:
@@ -934,7 +1076,7 @@ class ConfigManagerUI(tk.Tk):
             mono = tkfont.nametofont("TkFixedFont")
         frame = ttk.Frame(win, padding=10)
         frame.pack(fill="both", expand=True)
-        title_label = ttk.Label(frame, text="Sprite rips to MM sprite resources v1.2", font=("TkDefaultFont", 12, "bold"))
+        title_label = ttk.Label(frame, text="Frames to MM sprite resources v1.2", font=("TkDefaultFont", 12, "bold"))
         title_label.grid(row=0, column=0, sticky="w", pady=(0, 8))
         header_label = ttk.Label(frame, text="Created by Marci599 for Mario Multiverse (created by neoarc).")
         header_label.grid(row=1, column=0, sticky="w", pady=(0, 8))
@@ -989,10 +1131,11 @@ class ConfigManagerUI(tk.Tk):
         else:
             self._set_none_subject(preferred_subject)
         self.load_subject(preferred_subject)
+        self.reload_animation_directories()
     
     def clear_subject_form(self) -> None:
         self.resize_var.set("")
-        self.color_remove_var.set("")
+        self._set_background_color_value("")
         self.color_threshold_var.set("")
         self.sheet_width_var.set("")
         self.sheet_height_var.set("")
@@ -1000,6 +1143,7 @@ class ConfigManagerUI(tk.Tk):
         self.crop_sprites_var.set(DEFAULT_SUBJECT_CONFIG.get("crop_sprites", True))
     def clear_animation_form(self) -> None:
         self.anim_rege_var.set(True)
+        self._update_regenerate_dependents_state()
         self.anim_delay_var.set("")
         self.anim_offset_x_var.set("")
         self.anim_offset_y_var.set("")
@@ -1020,9 +1164,32 @@ class ConfigManagerUI(tk.Tk):
         for entry in self.subject_entries:
             entry.state(["!disabled"])
     def update_animation_form_state(self, enabled: bool) -> None:
+        self._animation_form_enabled = enabled
         state = ["!disabled"] if enabled else ["disabled"]
         for widget in self.animation_form_widgets:
             widget.state(state)
+        if enabled:
+            self._update_regenerate_dependents_state()
+
+    def _on_animation_regenerate_change(self, *_: object) -> None:
+        self._update_regenerate_dependents_state()
+
+    def _update_regenerate_dependents_state(self) -> None:
+        if not getattr(self, '_animation_form_enabled', False):
+            return
+        dependents = [
+            getattr(self, 'offset_group', None),
+            getattr(self, 'offset_x_entry', None),
+            getattr(self, 'offset_y_entry', None),
+            getattr(self, 'recover_group', None),
+            getattr(self, 'recover_x_check', None),
+            getattr(self, 'recover_y_check', None),
+        ]
+        enabled = bool(self.anim_rege_var.get())
+        state = ["!disabled"] if enabled else ["disabled"]
+        for widget in dependents:
+            if widget is not None:
+                widget.state(state)
 def main() -> None:
     app = ConfigManagerUI()
     app.mainloop()
