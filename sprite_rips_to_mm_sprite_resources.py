@@ -20,6 +20,18 @@ except AttributeError:
 SUPPORTED_EXTENSIONS = {".png"}
 LAYOUT_GAP = 2
 CONFIG_PATH = "config.json"
+GAME_THEME_CONFIG_FILENAME = "config.json"
+
+DEFAULT_MAIN_CONFIG: Dict[str, Any] = {
+    "subject": None,
+    "game_theme": None,
+    "reduce_file_size": False,
+}
+
+DEFAULT_GAME_THEME_CONFIG: Dict[str, Any] = {
+    "subject": None,
+}
+
 
 DEFAULT_SUBJECT_CONFIG: Dict[str, Any] = {
     "resize_to_percent": 100,
@@ -27,7 +39,6 @@ DEFAULT_SUBJECT_CONFIG: Dict[str, Any] = {
     "color_threshold": 100,
     "remove_background": True,
     "crop_sprites": True,
-    "reduce_file_size": False,
     "sheet": {
         "width": None,
         "height": None
@@ -727,16 +738,35 @@ def export_sprite_metadata(
     return payload
 
 def main() -> None:
-    base_config = load_config(pathlib.Path(CONFIG_PATH))
-    subject_name = base_config.get("subject")
+    base_config_json = json.loads(json.dumps(DEFAULT_MAIN_CONFIG))
+    base_config_json_overrides = load_config(pathlib.Path(CONFIG_PATH))
+    base_config_json = deep_merge(base_config_json, base_config_json_overrides)
+
+    game_theme = base_config_json.get("game_theme")
+    subject_name = base_config_json.get("subject")
+
+    if game_theme:
+        theme_config_json = json.loads(json.dumps(DEFAULT_GAME_THEME_CONFIG))
+        theme_dir = pathlib.Path(game_theme)
+        theme_config_json_path = theme_dir / GAME_THEME_CONFIG_FILENAME
+        if theme_config_json_path.exists():
+            theme_config_json_override = load_config(theme_config_json_path)
+            theme_config_json = deep_merge(theme_config_json, theme_config_json_override)
+        theme_subject = theme_config_json.get("subject")
+        if theme_subject:
+            subject_name = theme_subject
+
     if not subject_name:
         raise SystemExit("The 'subject' field must be specified in the main config.json.")
 
-    subject_config_json_path = pathlib.Path(subject_name) / "config.json"
+    subject_path = pathlib.Path(subject_name)
+    if game_theme:
+        subject_path = pathlib.Path(game_theme) / subject_path
+
+    subject_config_json_path = subject_path / "config.json"
     subject_config_json = json.loads(json.dumps(DEFAULT_SUBJECT_CONFIG))
     subject_config_json_override = load_config(subject_config_json_path)
     subject_config_json = deep_merge(subject_config_json, subject_config_json_override)
-
     resize_to_percent = float(subject_config_json.get("resize_to_percent"))
     background_color = parse_rgba_color(subject_config_json.get("background_color"))
     color_threshold = float(subject_config_json.get("color_threshold"))
@@ -751,14 +781,14 @@ def main() -> None:
 
     subject_config = SubjectConfig(resize_to_percent, background_color, color_threshold, remove_background, crop_sprites, (forced_width, forced_height))
 
-    reduce_file_size = bool(subject_config_json.get("reduce_file_size"))
+    reduce_file_size = bool(base_config_json["reduce_file_size"])
 
-    input_dir = pathlib.Path(subject_name) / "raw"
+    input_dir = subject_path / "raw"
 
     if not input_dir.exists():
         raise SystemExit(f"Input directory not found: {input_dir}")
 
-    output_dir = pathlib.Path(subject_name) / "generated"
+    output_dir = subject_path / "generated"
 
     spritesheet_path = output_dir / (subject_name + ".png")
     spritesheet_path_2x = output_dir / (subject_name + "@2x.png")
@@ -885,3 +915,4 @@ def main() -> None:
     print(f"Offset metadata saved to {sprite_file_path.resolve()}.")
 if __name__ == "__main__":
     main()
+
