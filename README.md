@@ -4,7 +4,7 @@ Created by Marci599 for Mario Multiverse (created by neoarc)
 
 This tool can be used to automatically generate spritesheet resources from individual recorded frames.
 
-Let's say you want to use sprites from existing 3D games (like NSMBWii or NSMBU), or if you want to implement your own 3D renders into MM, this tool can significantly speed up the implementation process.
+Let's say you want to use sprites from existing 3D games (like NSMB, NSMBWii or NSMBU), or if you want to implement your own 3D renders into MM, this tool can significantly speed up the implementation process.
 
 Download latest version here: [Releases](https://github.com/Marci599/sprite-rips-to-mm-sprite-resources/releases)
 
@@ -14,10 +14,10 @@ If you don't want to download the 25 MB .exe, use the python files from the sour
 
 ![Animation2](https://github.com/user-attachments/assets/898ad1a7-28e2-4b4d-a899-ae5f3af36b0a)
 
-Structure your files as follows:
+If you are **not** planning to work with different Game Themes, structure your files as follows:
 ```
 <Name>
-├─ sprite_rips_to_mm_sprite_resources.exe
+├─ FramesToMMSpriteResources.exe
 ├─ <SubjectName>
 │  └─ raw
 │     ├─ <AnimationName>
@@ -29,10 +29,28 @@ Structure your files as follows:
 └─ <SubjectName>
 ```
 
+If you plan to work with different Game Themes, then structure your files as follows:
+```
+<Name>
+├─ FramesToMMSpriteResources.exe
+├─ <GameThemeName>
+│  ├─ <SubjectName>
+│  │  └─ raw
+│  │     ├─ <AnimationName>
+│  │     │  ├─ frame001.png
+│  │     │  └─ frame002.png
+│  │     ├─ <AnimationName>
+│  │     └─ <AnimationName>
+│  ├─ <SubjectName>
+│  └─ <SubjectName>
+├─ <GameThemeName>
+└─ <GameThemeName>
+```
+
 You can download this example that contains a subject with raw frames: [V_Yoshi](https://github.com/Marci599/sprite-rips-to-mm-sprite-resources/blob/master/example.zip)
 - Unzip it and put V_Yoshi next to the pragram.
 - Note that the Jump aniamtions is just a placeholder.
 
-After setup, launch the program, select a subject, configure options, and use 'Save & Generate' to create the spritesheet resources into `<SubjectName>/generated`.
+After setup, launch the program, select a theme (if you set up your layout for themes), then select a subject, configure options, and use 'Save & Generate' to create the spritesheet resources into `<SubjectName>/generated`.
 
-For best results, if your subject moves around in the raw recording and you want to resize it, adjust each frame so it appears stationary before generating the spritesheet.
+For best results, if your subject moves around in the raw recording and you want to resize it, adjust each raw frame so it appears stationary before generating the spritesheet.
