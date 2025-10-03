@@ -33,7 +33,7 @@ If you plan to work with different Game Themes, then structure your files as fol
 ```
 <Name>
 ├─ FramesToMMSpriteResources.exe
-├─ <ThemeName>
+├─ <GameThemeName>
 │  ├─ <SubjectName>
 │  │  └─ raw
 │  │     ├─ <AnimationName>
@@ -43,8 +43,8 @@ If you plan to work with different Game Themes, then structure your files as fol
 │  │     └─ <AnimationName>
 │  ├─ <SubjectName>
 │  └─ <SubjectName>
-├─ <ThemeName>
-└─ <ThemeName>
+├─ <GameThemeName>
+└─ <GameThemeName>
 ```
 
 You can download this example that contains a subject with raw frames: [V_Yoshi](https://github.com/Marci599/sprite-rips-to-mm-sprite-resources/blob/master/example.zip)
