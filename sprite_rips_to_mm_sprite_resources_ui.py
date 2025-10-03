@@ -141,7 +141,7 @@ class ConfigManagerUI(tk.Tk):
         ttk.Label(subject_header, text="Game Theme:").grid(row=0, column=0, sticky="w")
         self.game_theme_combo = ttk.Combobox(subject_header, textvariable=self.game_theme_var, state="readonly")
         self.game_theme_combo.grid(row=0, column=1, sticky="ew", padx=(6, 6))
-        self.is_hd_check = ttk.Checkbutton(subject_header, text="is HD", variable=self.is_hd_theme_var, command=self.on_hd_theme_toggle)
+        self.is_hd_check = ttk.Checkbutton(subject_header, text="Is HD", variable=self.is_hd_theme_var, command=self.on_hd_theme_toggle)
         self.is_hd_check.grid(row=0, column=2, sticky="w", padx=(6, 6))
         self.game_theme_combo.bind("<<ComboboxSelected>>", self.on_game_theme_change)
         ttk.Label(subject_header, text="Subject:").grid(row=0, column=3, sticky="w")
@@ -183,6 +183,7 @@ class ConfigManagerUI(tk.Tk):
         self.color_remove_var.trace_add("write", self._on_background_color_change)
         self.color_preview = tk.Canvas(processing_group, width=20, height=20, highlightthickness=1, highlightbackground="#b3b3b3")
         self._default_color_preview_fill = self.color_preview.cget("background")
+        self._default_color_preview_border = self.color_preview.cget("highlightbackground")
         self._color_preview_rect = self.color_preview.create_rectangle(0, 0, 20, 20, outline="", fill=self._default_color_preview_fill)
         self.color_preview.grid(row=1, column=2, padx=(0, 0), pady=4, sticky="ew")
         self._update_background_color_preview(None)
@@ -259,7 +260,7 @@ class ConfigManagerUI(tk.Tk):
         detail_frame.pack(side="left", fill="both", expand=True, padx=(outer_padding, 0))
         detail_frame.columnconfigure(1, weight=1)
         self.anim_rege_var = tk.BooleanVar(value=True)
-        regen_check = ttk.Checkbutton(detail_frame, text="Regenerate", variable=self.anim_rege_var, command=self._on_animation_regenerate_change)
+        regen_check = ttk.Checkbutton(detail_frame, text="Regenerate sprites", variable=self.anim_rege_var, command=self._on_animation_regenerate_change)
         regen_check.grid(row=0, column=0, columnspan=2, sticky="w", pady=4)
         self.animation_form_widgets.append(regen_check)
         ttk.Label(detail_frame, text="If disabled, already generated sprites will be added to the spritesheet.\nEdited offsets and sub-positions will remain unchanged.", foreground="gray",).grid(
@@ -338,7 +339,7 @@ class ConfigManagerUI(tk.Tk):
         self.reduce_file_size_check.pack(side="left")
         ttk.Label(
             bottom_frame,
-            text="If enabled, except a bit slower generation",
+            text="If enabled, expecpt a bit slower generation",
             foreground="gray",
         ).pack(side="left", padx=(8, 0))
         self.save_and_generate_button = ttk.Button(
@@ -872,6 +873,14 @@ class ConfigManagerUI(tk.Tk):
             raise ValueError
         return '#' + text
 
+    def _is_transparent_background_color(self, value: str) -> bool:
+        if not value:
+            return False
+        text = str(value).strip()
+        if len(text) != 9 or not text.startswith('#'):
+            return False
+        return text[7:].upper() == '00'
+
     def _set_background_color_value(self, value: object) -> None:
         try:
             normalized = self._normalize_background_color_value(value) if value else ''
@@ -884,16 +893,19 @@ class ConfigManagerUI(tk.Tk):
                 self.color_remove_var.set(normalized)
             finally:
                 self._is_setting_background_color = False
-        self._update_background_color_preview(normalized or None, True)
+        preview_value = normalized if normalized and not self._is_transparent_background_color(normalized) else None
+        self._update_background_color_preview(preview_value, True)
 
     def _update_background_color_preview(self, color_value, is_valid: bool = True) -> None:
         if getattr(self, 'color_preview', None) is None or getattr(self, '_color_preview_rect', None) is None:
             return
         fill = self._default_color_preview_fill or self.color_preview.cget('background')
         if color_value:
-            fill = str(color_value)[:7]
+            value_str = str(color_value)
+            if not self._is_transparent_background_color(value_str):
+                fill = value_str[:7]
         self.color_preview.itemconfig(self._color_preview_rect, fill=fill)
-        border = "#b3b3b300" if is_valid else '#cc4c4c'
+        border = getattr(self, '_default_color_preview_border', '#b3b3b3') if is_valid else '#cc4c4c'
         self.color_preview.configure(highlightbackground=border)
 
     def _on_background_color_change(self, *_: object) -> None:
@@ -908,7 +920,8 @@ class ConfigManagerUI(tk.Tk):
         except ValueError:
             self._update_background_color_preview(None, False)
         else:
-            self._update_background_color_preview(normalized, True)
+            preview_value = None if self._is_transparent_background_color(normalized) else normalized
+            self._update_background_color_preview(preview_value, True)
 
     def _on_background_color_focus_out(self, event: object) -> None:
         value = self.color_remove_var.get() if hasattr(self, 'color_remove_var') else ''
@@ -1084,7 +1097,7 @@ class ConfigManagerUI(tk.Tk):
         lin_header_label.grid(row=2, column=0, sticky="w", pady=(0, 0))
         link_url = "https://github.com/Marci599/sprite-rips-to-mm-sprite-resources" 
         link_label = tk.Label(frame, text="github.com/Marci599/sprite-rips-to-mm-sprite-resources", fg="blue", cursor="hand2")
-        link_label.grid(row=3, column=0, sticky="w", pady=(0, 8))
+        link_label.grid(row=3, column=0, sticky="w", pady=(0, 0))
         link_label.bind("<Button-1>", lambda e: webbrowser.open_new(link_url))
     def reload_subjects(self) -> None:
         self._snapshot_current_subject()
