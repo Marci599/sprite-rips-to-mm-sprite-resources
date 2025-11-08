@@ -7,8 +7,6 @@ from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
 import numpy as np
 import copy
-from concurrent.futures import ProcessPoolExecutor, as_completed
-import os
 
 try:
     from PIL import Image
