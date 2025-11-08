@@ -6,6 +6,9 @@ from collections.abc import Sequence
 from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
 import numpy as np
+import copy
+from concurrent.futures import ProcessPoolExecutor, as_completed
+import os
 
 try:
     from PIL import Image
@@ -286,7 +289,7 @@ def collect_animation_directories(input_dir: pathlib.Path) -> List[pathlib.Path]
 def load_animation_config(animation_dir: pathlib.Path, is_hd) -> AnimationConfig:
     config_path = animation_dir / "config.json"
 
-    animation_config_json = json.loads(json.dumps(DEFAULT_ANIMATION_CONFIG))
+    animation_config_json = copy.deepcopy(DEFAULT_ANIMATION_CONFIG)
     animation_config_override_json = load_config(config_path)
     animation_config_json = deep_merge(animation_config_json, animation_config_override_json)
 
@@ -419,7 +422,6 @@ def load_existing_sprites(
             image = source_image.convert("RGBA")
 
         sprite_dict = {
-            "path": sprite_path,
             "image": image,
             "recover_cropped_offset": (False, False),
             "original_size": image.size,
@@ -474,11 +476,10 @@ def process_sprites(
 
 
         output_path = output_dir / f"{sprite_path.stem}.png"
-        image.save(output_path, format="PNG", optimize=False, compress_level=0)
+        image.save(output_path, format="PNG", optimize=reduce_file_size, compress_level=0)
 
 
         processed.append({
-            "path": output_path,
             "image": image,
             "trim_offset": trim_offset,
             "original_size": original_size,
@@ -779,7 +780,7 @@ def export_sprite_metadata(
     return payload
 
 def main() -> None:
-    base_config_json = json.loads(json.dumps(DEFAULT_MAIN_CONFIG))
+    base_config_json = copy.deepcopy(DEFAULT_MAIN_CONFIG)
     base_config_json_overrides = load_config(pathlib.Path(CONFIG_PATH))
     base_config_json = deep_merge(base_config_json, base_config_json_overrides)
 
@@ -788,7 +789,7 @@ def main() -> None:
     is_hd = base_config_json.get("is_hd", True)
 
     if game_theme:
-        theme_config_json = json.loads(json.dumps(DEFAULT_GAME_THEME_CONFIG))
+        theme_config_json = copy.deepcopy(DEFAULT_GAME_THEME_CONFIG)
         theme_dir = pathlib.Path(game_theme)
         theme_config_json_path = theme_dir / GAME_THEME_CONFIG_FILENAME
         if theme_config_json_path.exists():
