@@ -1,18 +1,20 @@
+using Microsoft.UI;
+using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Microsoft.UI;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
+using System.Xml.Linq;
 using Windows.UI;
-using System.Numerics;
-using System.Diagnostics;
 
 namespace FramesToMMSpriteResource
 {
@@ -22,10 +24,9 @@ namespace FramesToMMSpriteResource
         public string Path { get; set; }
         public string IconGlyph { get; set; }
 
-        public TreeItem(string text, string iconGlyph, string path)
+        public TreeItem(string text, string iconGlyph)
         {
             Text = text;
-            Path = path;
             IconGlyph = iconGlyph;
         }
     }
@@ -53,7 +54,13 @@ namespace FramesToMMSpriteResource
         }
     }
 
-    public class GameThemeConfig
+    public abstract class ParentConfig
+    {
+        [JsonPropertyName("is_expanded")]
+        public bool isExpanded = false;
+    }
+
+    public class GameThemeConfig : ParentConfig
     {
         [JsonPropertyName("is_hd")]
         public bool isHd = true;
@@ -70,7 +77,7 @@ namespace FramesToMMSpriteResource
         }
     }
 
-    public class SubjectConfig
+    public class SubjectConfig : ParentConfig
     {
         [JsonPropertyName("resize_to_percent")]
         public int resizeToPercent = 100;
@@ -180,19 +187,45 @@ namespace FramesToMMSpriteResource
         {
             InitializeComponent();
 
-    
+            AppWindow.Resize(new Windows.Graphics.SizeInt32(1000, 625));
+            AppWindow.SetIcon("Assets/icon.ico");
+
+            AppWindow.TitleBar.PreferredTheme = TitleBarTheme.UseDefaultAppMode;
+
+            OverlappedPresenter presenter = OverlappedPresenter.Create();
+            presenter.PreferredMinimumWidth = 750;
+            presenter.PreferredMinimumHeight = 400;
+
+            AppWindow.SetPresenter(presenter);
+
 
             programConfig = LoadConfig();
+
+
+            SaveBarBorder.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, SaveBarBorderVisibilityChanged);
+
             SetUpTreeViewAndConfigs();
 
-            this.Activated += MainWindow_Activated;
+            Activated += MainWindow_Activated;
+
+            
+        }
 
 
+        private void SaveBarBorderVisibilityChanged(DependencyObject sender, DependencyProperty dp)
+        {
+            if (((UIElement)sender).Visibility == Visibility.Visible)
+            {
+                PrimaryInfoBar.CornerRadius = new CornerRadius(8, 8, 0, 0);
+            }
+            else
+            {
+                PrimaryInfoBar.CornerRadius = new CornerRadius(8, 8, 8, 8);
+            }
         }
 
         private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
         {
-            // A WindowActivationState jelzi, hogy mi történt az ablakkal
             if (args.WindowActivationState != WindowActivationState.Deactivated)
             {
                 if (activated)
@@ -202,10 +235,72 @@ namespace FramesToMMSpriteResource
                     ReloadTreeViewAndConfigs();
                 }
                 activated = true;
-
+            }
+            else
+            {
+                Debug.WriteLine("DISACTIVE WINDOW!");
+                SaveAllConfigs();
             }
         }
 
+        void SaveAllConfigs()
+        {
+            SaveJson(Path.Combine(workingPath, CONFIG_FILENAME), programConfig);
+
+            var gameThemeDirs = Directory.GetDirectories(workingPath);
+
+            foreach (var gameThemeDir in gameThemeDirs)
+            {
+                string gameThemeName = Path.GetFileName(gameThemeDir);
+
+                var gameThemeConfigPath = Path.Combine(gameThemeDir, CONFIG_FILENAME);
+
+                SaveJson(gameThemeConfigPath, programConfig.GameThemeConfigs[gameThemeName]);
+
+                var subjectDirs = Directory.GetDirectories(gameThemeDir);
+                foreach (var subjectDir in subjectDirs)
+                {
+                    string subjectName = Path.GetFileName(subjectDir);
+
+                    var subjectConfigPath = Path.Combine(subjectDir, CONFIG_FILENAME);
+
+                    SaveJson(subjectConfigPath, programConfig.GameThemeConfigs[gameThemeName].SubjectConfigs[subjectName]);
+
+                    var animationDirs = Directory.GetDirectories(Path.Combine(subjectDir, "raw"));
+                    foreach (var animationDir in animationDirs)
+                    {
+                        string animationName = Path.GetFileName(animationDir);
+
+                        var animationConfigPath = Path.Combine(animationDir, CONFIG_FILENAME);
+
+                        SaveJson(animationConfigPath, programConfig.GameThemeConfigs[gameThemeName].SubjectConfigs[subjectName].AnimationConfigs[animationName]);
+                    }
+                }
+            }          
+        }
+
+        JsonSerializerOptions jsonOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            IncludeFields = true
+        };
+
+        private void SaveJson(string filePath, object classToSave)
+        {
+            try
+            {
+
+                var json = JsonSerializer.Serialize(classToSave, jsonOptions);
+                File.WriteAllText(filePath, json);
+            }
+            catch (Exception ex)
+            {
+                var title = "Config save Failed";
+                var filename = string.IsNullOrEmpty(filePath) ? "" : Path.GetFileName(filePath);
+                SetInfoBar(InfoBarSeverity.Error, title, $"Could not save {filename}\n{ex.Message}");
+            }
+        }
 
         private T LoadJson<T>(string filePath, string? errorTitle = null) where T : new()
         {
@@ -216,14 +311,7 @@ namespace FramesToMMSpriteResource
 
                 var json = File.ReadAllText(filePath);
 
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                    ReadCommentHandling = JsonCommentHandling.Skip,
-                    IncludeFields = true
-                };
-
-                var obj = JsonSerializer.Deserialize<T>(json, options);
+                var obj = JsonSerializer.Deserialize<T>(json, jsonOptions);
      
     
                 return obj ?? new T();
@@ -244,69 +332,7 @@ namespace FramesToMMSpriteResource
             var exeDir = AppContext.BaseDirectory ?? Environment.CurrentDirectory;
             var configPath = Path.Combine(exeDir, CONFIG_FILENAME);
 
-            // Delegates all loading and error handling to LoadJson<T>.
             return LoadJson<ProgramConfig>(configPath, CONFIG_FAIL_TEXT);
-        }
-
-        private void UpdateColorPreview(string? colorValue = null)
-        {
-            if (ColorPreviewBorder == null)
-                return;
-
-            try
-            {
-                if (string.IsNullOrEmpty(colorValue))
-                {
-                    ColorPreviewBorder.Background = new SolidColorBrush(Colors.White);
-                }
-                else
-                {
-                    var normalized = NormalizeBackgroundColor(colorValue);
-                    if (normalized.Length >= 7)
-                    {
-                        var hexColor = normalized.Substring(0, 7);
-                        var color = HexToColor(hexColor);
-                        ColorPreviewBorder.Background = new SolidColorBrush(color);
-                    }
-                }
-            }
-            catch
-            {
-                ColorPreviewBorder.Background = new SolidColorBrush(Colors.White);
-            }
-        }
-
-        private string NormalizeBackgroundColor(string? value)
-        {
-            if (string.IsNullOrEmpty(value))
-                return "";
-
-            var text = value.Trim();
-            if (text.StartsWith("#"))
-                text = text.Substring(1);
-
-            text = text.ToUpper();
-
-            if (text.Length == 3 || text.Length == 4)
-                text = string.Concat(text.Select(ch => $"{ch}{ch}"));
-
-            if (text.Length != 6 && text.Length != 8)
-                throw new ArgumentException("Invalid color format");
-
-            var validChars = new HashSet<char>("0123456789ABCDEF");
-            if (text.Any(ch => !validChars.Contains(ch)))
-                throw new ArgumentException("Invalid hex characters");
-
-            return "#" + text;
-        }
-
-        private Color HexToColor(string hex)
-        {
-            hex = hex.TrimStart('#');
-            var r = byte.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
-            var g = byte.Parse(hex.Substring(2, 2), System.Globalization.NumberStyles.HexNumber);
-            var b = byte.Parse(hex.Substring(4, 2), System.Globalization.NumberStyles.HexNumber);
-            return Color.FromArgb(255, r, g, b);
         }
 
         void ReloadTreeViewAndConfigs()
@@ -314,6 +340,10 @@ namespace FramesToMMSpriteResource
             programConfig = LoadConfig();
             programConfig.GameThemeConfigs = new Dictionary<string, GameThemeConfig>();
             TreeViewControl.RootNodes.Clear();
+            if (!PrimaryInfoBar.IsClosable)
+            {
+                PrimaryInfoBar.IsOpen = false;
+            }
             SetUpTreeViewAndConfigs();
         }
 
@@ -322,6 +352,8 @@ namespace FramesToMMSpriteResource
             if (TreeViewControl != null)
             {
                 TreeViewControl.ItemInvoked += TreeViewControl_ItemInvoked;
+                TreeViewControl.Expanding += TreeViewControl_Expanding;
+                TreeViewControl.Collapsed += TreeViewControl_Collapsed;
 
                 // only populate once
                 if (TreeViewControl.RootNodes.Count == 0)
@@ -336,23 +368,18 @@ namespace FramesToMMSpriteResource
                     if (!Directory.Exists(workingPath))
                     {
                         SetInfoBar(InfoBarSeverity.Error, "Working path is incorrect", $"Working path does not exist:\n{workingPath}", false);
-                        TreeViewPlaceHolderStackPanel.Visibility = Visibility.Visible;
                         TreeViewPlaceHolderButton.Visibility = Visibility.Collapsed;
                         TreeViewPlaceHolderText.Text = "Cannot display hierarchy";
-                        ReduceFileSizeCheckBox.IsEnabled = false;
-                        SaveAndGenerateButton.IsEnabled = false;
-                        ReduceFileSizeCheckBoxTexts.Opacity = 0.5;
+                        UnallowGeneration();
+                        OpenSettings();
                         return;
                     }
 
                     if (Directory.GetDirectories(workingPath).Length == 0)
                     {
-                        TreeViewPlaceHolderStackPanel.Visibility = Visibility.Visible;
                         TreeViewPlaceHolderText.Text = "Empty working directory";
                         TreeViewPlaceHolderButton.Visibility = Visibility.Visible;
-                        ReduceFileSizeCheckBox.IsEnabled = false;
-                        SaveAndGenerateButton.IsEnabled = false;
-                        ReduceFileSizeCheckBoxTexts.Opacity = 0.5;
+                        UnallowGeneration();
                         OpenSettings();
                         return;
                     }
@@ -360,75 +387,93 @@ namespace FramesToMMSpriteResource
                     if (isUsingGameThemes())
                     {
 
-                        TreeViewPlaceHolderStackPanel.Visibility = Visibility.Collapsed;
-                        ReduceFileSizeCheckBox.IsEnabled = true;
-                        SaveAndGenerateButton.IsEnabled = true;
-                        ReduceFileSizeCheckBoxTexts.Opacity = 1;
+                        AllowGeneration();
                         var gameThemeDirs = Directory.GetDirectories(workingPath);
 
                         foreach (var gameThemeDir in gameThemeDirs)
                         {
                             string gameThemeName = Path.GetFileName(gameThemeDir);
 
-                            var gameThemeConfigPath = Path.Combine(gameThemeDir, CONFIG_FILENAME);
-                            GameThemeConfig gameThemeConfig = LoadJson<GameThemeConfig>(gameThemeConfigPath, CONFIG_FAIL_TEXT);
-
-                            var gameThemeTreeItem = new TreeViewNode { Content = new TreeItem(gameThemeName, "\uE913", "") };
-
-                            var subjectDirs = Directory.GetDirectories(gameThemeDir);
-                            foreach (var subjectDir in subjectDirs)
-                            {
-                                string subjectName = Path.GetFileName(subjectDir);
-
-                                var subjectConfigPath = Path.Combine(gameThemeDir, CONFIG_FILENAME);
-                                SubjectConfig subjectConfig = LoadJson<SubjectConfig>(subjectConfigPath, CONFIG_FAIL_TEXT);
-
-                                var subjectTreeItem = new TreeViewNode { Content = new TreeItem(subjectName, "\uF158", "") };
-
-                                var animationDirs = Directory.GetDirectories(Path.Combine(subjectDir, "raw"));
-                                foreach (var animationDir in animationDirs)
-                                {
-                                    string animationName = Path.GetFileName(animationDir);
-
-                                    var animationConfigPath = Path.Combine(animationDir, CONFIG_FILENAME);
-                                    AnimationConfig animationConfig = LoadJson<AnimationConfig>(animationConfigPath, CONFIG_FAIL_TEXT);
-
-                                    subjectConfig.AnimationConfigs[animationName] = animationConfig;
-
-                                    var animationTreeItem = new TreeViewNode { Content = new TreeItem(animationName, "\uE805", "") };
-                                    subjectTreeItem.Children.Add(animationTreeItem);
-                                }
-
-                                gameThemeConfig.SubjectConfigs[subjectName] = subjectConfig;
-
-                                gameThemeTreeItem.Children.Add(subjectTreeItem);
-                            }
-
-                            programConfig.GameThemeConfigs[gameThemeName] = gameThemeConfig;
-
-                            TreeViewControl.RootNodes.Add(gameThemeTreeItem);
+                            SetUpSubjectTreeViewAndConfigs(gameThemeDir, gameThemeName);
                         }
                     }
                     else
                     {
-                        if (areSubjectsCorrect())
+                        if (areSubjectsCorrect(workingPath))
                         {
+                            AllowGeneration();
 
+                            SetUpSubjectTreeViewAndConfigs(workingPath, "Game Theme");
                         }
                         else
                         {
+                            UnallowGeneration();
                             SetInfoBar(InfoBarSeverity.Error, "Wrong hierarchy or missing folders", "The way you've set your files and folders up is wrong...", false);
-                            TreeViewPlaceHolderStackPanel.Visibility = Visibility.Visible;
-                            TreeViewPlaceHolderButton.Visibility = Visibility.Collapsed;
                             TreeViewPlaceHolderText.Text = "Cannot display hierarchy";
-                            ReduceFileSizeCheckBox.IsEnabled = false;
-                            SaveAndGenerateButton.IsEnabled = false;
-                            ReduceFileSizeCheckBoxTexts.Opacity = 0.5;
+                            TreeViewPlaceHolderButton.Visibility = Visibility.Collapsed;
                             OpenSettings();
                         }
                     }
                 }
             }
+        }
+
+        void SetUpSubjectTreeViewAndConfigs(string gameThemeDir, string gameThemeName)
+        {
+            var gameThemeConfigPath = Path.Combine(gameThemeDir, CONFIG_FILENAME);
+            GameThemeConfig gameThemeConfig = LoadJson<GameThemeConfig>(gameThemeConfigPath, CONFIG_FAIL_TEXT);
+
+            var gameThemeTreeItem = new TreeViewNode { Content = new TreeItem(gameThemeName, "\uE913"), IsExpanded = gameThemeConfig.isExpanded };
+
+            var subjectDirs = Directory.GetDirectories(gameThemeDir);
+            foreach (var subjectDir in subjectDirs)
+            {
+                string subjectName = Path.GetFileName(subjectDir);
+
+                var subjectConfigPath = Path.Combine(subjectDir, CONFIG_FILENAME);
+                SubjectConfig subjectConfig = LoadJson<SubjectConfig>(subjectConfigPath, CONFIG_FAIL_TEXT);
+
+                var subjectTreeItem = new TreeViewNode { Content = new TreeItem(subjectName, "\uF158"), IsExpanded = subjectConfig.isExpanded };
+
+                var animationDirs = Directory.GetDirectories(Path.Combine(subjectDir, "raw"));
+                foreach (var animationDir in animationDirs)
+                {
+                    string animationName = Path.GetFileName(animationDir);
+
+                    var animationConfigPath = Path.Combine(animationDir, CONFIG_FILENAME);
+                    AnimationConfig animationConfig = LoadJson<AnimationConfig>(animationConfigPath, CONFIG_FAIL_TEXT);
+
+                    subjectConfig.AnimationConfigs[animationName] = animationConfig;
+
+                    var animationTreeItem = new TreeViewNode { Content = new TreeItem(animationName, "\uE805")};
+                    subjectTreeItem.Children.Add(animationTreeItem);
+                }
+
+                gameThemeConfig.SubjectConfigs[subjectName] = subjectConfig;
+
+                gameThemeTreeItem.Children.Add(subjectTreeItem);
+            }
+
+            programConfig.GameThemeConfigs[gameThemeName] = gameThemeConfig;
+
+            TreeViewControl.RootNodes.Add(gameThemeTreeItem);
+        }
+
+        void UnallowGeneration()
+        {
+            TreeViewPlaceHolderStackPanel.Visibility = Visibility.Visible;
+            ReduceFileSizeCheckBox.IsEnabled = false;
+            SaveAndGenerateButton.IsEnabled = false;
+            ReduceFileSizeCheckBoxTexts.Opacity = 0.5;
+
+        }
+
+        void AllowGeneration()
+        {
+            TreeViewPlaceHolderStackPanel.Visibility = Visibility.Collapsed;
+            ReduceFileSizeCheckBox.IsEnabled = true;
+            SaveAndGenerateButton.IsEnabled = true;
+            ReduceFileSizeCheckBoxTexts.Opacity = 1;
         }
 
         private bool isUsingGameThemes()
@@ -439,21 +484,8 @@ namespace FramesToMMSpriteResource
 
                 foreach (var first in firstLevelDirs)
                 {
-                    // Second-level directories under each first-level dir
-                    var secondLevelDirs = Directory.GetDirectories(first);
-                    if (secondLevelDirs.Length == 0)
-                    {
+                    if (!areSubjectsCorrect(first))
                         return false;
-                    }
-
-                    foreach (var second in secondLevelDirs)
-                    {
-                        var rawPath = Path.Combine(second, "raw");
-                        if (!Directory.Exists(rawPath))
-                        {
-                            return false;
-                        }
-                    }
                 }
 
                 return true;
@@ -464,11 +496,15 @@ namespace FramesToMMSpriteResource
             }
         }
 
-        private bool areSubjectsCorrect()
+        private bool areSubjectsCorrect(string path)
         {
             try
             {
-                var firstLevelDirs = Directory.GetDirectories(workingPath);
+                var firstLevelDirs = Directory.GetDirectories(path);
+                if (firstLevelDirs.Length == 0)
+                {
+                    return false;
+                }
 
                 foreach (var first in firstLevelDirs)
                 {
@@ -489,36 +525,85 @@ namespace FramesToMMSpriteResource
 
         private void TreeViewControl_ItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args)
         {
-            // args.InvokedItem is the Content object we set (a FrameworkElement)
-            var invokedElement = args.InvokedItem as FrameworkElement;
-            var key = invokedElement?.Tag as string;
+            TreeViewNode node = args.InvokedItem as TreeViewNode;
 
-            if (string.IsNullOrEmpty(key))
-            {
-                // fallback if something else (strings)
-                key = (args.InvokedItem as string) ?? "";
-            }
+            int depth = GetNodeDepth(node);
 
-            switch (key.ToLowerInvariant())
+            GameThemePanel.Visibility = Visibility.Collapsed;
+            SubjectPanel.Visibility = Visibility.Collapsed;
+            AnimationsPanel.Visibility = Visibility.Collapsed;
+            HelpPanel.Visibility = Visibility.Collapsed;
+
+
+            switch (depth)
             {
-                case "subject":
-                    SubjectPanel.Visibility = Visibility.Visible;
-                    AnimationsPanel.Visibility = Visibility.Collapsed;
-                    HelpPanel.Visibility = Visibility.Collapsed;
+                case 0: // root (game theme)
+                    GameThemePanel.Visibility = Visibility.Visible;
+                    SaveBarBorder.Visibility = Visibility.Collapsed;
+                    var gameThemeConfig = programConfig.GameThemeConfigs[(node.Content as TreeItem).Text];
+                    IsHdCheckBox.IsChecked = gameThemeConfig.isHd;
                     break;
-                case "animations":
-                case "walk":
-                case "idle":
-                    SubjectPanel.Visibility = Visibility.Collapsed;
+                case 1: // subject
+                    SubjectPanel.Visibility = Visibility.Visible;
+                    SaveBarBorder.Visibility = Visibility.Visible;
+                    break;
+                default: // depth >= 2 => animation
                     AnimationsPanel.Visibility = Visibility.Visible;
-                    HelpPanel.Visibility = Visibility.Collapsed;
-                    break;
-                default:
-                    SubjectPanel.Visibility = Visibility.Visible;
-                    AnimationsPanel.Visibility = Visibility.Collapsed;
-                    HelpPanel.Visibility = Visibility.Collapsed;
+                    SaveBarBorder.Visibility = Visibility.Visible;
                     break;
             }
+
+            SettingsToggleButton.IsChecked = false;
+        }
+
+        private void TreeViewControl_Expanding(TreeView sender, TreeViewExpandingEventArgs args)
+        {
+            TreeViewNode node = args.Node;
+
+            int depth = GetNodeDepth(node);
+
+            switch (depth)
+            {
+                case 0: // root (game theme)
+                    programConfig.GameThemeConfigs[(node.Content as TreeItem).Text].isExpanded = true;                 
+                    break;
+                case 1: // subject
+                    programConfig.GameThemeConfigs[(node.Parent.Content as TreeItem).Text].SubjectConfigs[(node.Content as TreeItem).Text].isExpanded = true;
+                    break;
+                default: // depth >= 2 => animation
+                    break;
+            }
+        }
+
+        private void TreeViewControl_Collapsed(TreeView sender, TreeViewCollapsedEventArgs args)
+        {
+            TreeViewNode node = args.Node;
+
+            int depth = GetNodeDepth(node);
+
+            switch (depth)
+            {
+                case 0: // root (game theme)
+                    programConfig.GameThemeConfigs[(node.Content as TreeItem).Text].isExpanded = false;
+                    break;
+                case 1: // subject
+                    programConfig.GameThemeConfigs[(node.Parent.Content as TreeItem).Text].SubjectConfigs[(node.Content as TreeItem).Text].isExpanded = false;
+                    break;
+                default: // depth >= 2 => animation
+                    break;
+            }
+        }
+
+        private int GetNodeDepth(TreeViewNode node)
+        {
+            int depth = -1;
+            var n = node;
+            while (n.Parent != null)
+            {
+                depth++;
+                n = n.Parent;
+            }
+            return depth;
         }
 
         private void ClickSettings(object sender, RoutedEventArgs e)
@@ -530,112 +615,12 @@ namespace FramesToMMSpriteResource
         {
             SubjectPanel.Visibility = Visibility.Collapsed;
             AnimationsPanel.Visibility = Visibility.Collapsed;
+            GameThemePanel.Visibility = Visibility.Collapsed;
             HelpPanel.Visibility = Visibility.Visible;
             TreeViewControl.SelectedNode = null;
-        }
+            SaveBarBorder.Visibility = Visibility.Collapsed;
 
-        private void ValidateNumericInput(TextBox textBox)
-        {
-            var text = textBox.Text;
-            if (string.IsNullOrEmpty(text))
-                return;
-
-            var filtered = new string(text.Where(char.IsDigit).ToArray());
-            if (filtered != text)
-                textBox.Text = filtered;
-        }
-
-        private void ValidateSignedNumericInput(TextBox textBox)
-        {
-            var text = textBox.Text;
-            if (string.IsNullOrEmpty(text) || text == "-")
-                return;
-
-            if (text.StartsWith("-"))
-            {
-                var rest = new string(text.Substring(1).Where(char.IsDigit).ToArray());
-                textBox.Text = "-" + rest;
-            }
-            else
-            {
-                var filtered = new string(text.Where(char.IsDigit).ToArray());
-                if (filtered != text)
-                    textBox.Text = filtered;
-            }
-        }
-
-        private void ColorTextBox_LostFocus(object sender, RoutedEventArgs e)
-        {
-            var text = ColorTextBox!.Text.Trim();
-            if (string.IsNullOrEmpty(text))
-            {
-                _lastValidBackgroundColor = "";
-            }
-            else
-            {
-                try
-                {
-                    _lastValidBackgroundColor = NormalizeBackgroundColor(text);
-                }
-                catch
-                {
-                    _lastValidBackgroundColor = _lastValidBackgroundColor ?? "";
-                }
-            }
-
-            _isSettingBackgroundColor = true;
-            ColorTextBox.Text = _lastValidBackgroundColor;
-            _isSettingBackgroundColor = false;
-            UpdateColorPreview(_lastValidBackgroundColor);
-        }
-
-        private void ColorTextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (_isSettingBackgroundColor)
-                return;
-
-            var value = ColorTextBox!.Text.Trim();
-            if (string.IsNullOrEmpty(value))
-            {
-                UpdateColorPreview("");
-            }
-            else
-            {
-                try
-                {
-                    var normalized = NormalizeBackgroundColor(value);
-                    UpdateColorPreview(normalized);
-                }
-                catch
-                {
-                    UpdateColorPreview("");
-                }
-            }
-        }
-
-        private void SaveButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (SaveAll())
-            {
-                SetInfoBar(InfoBarSeverity.Success, "Saved", "Configuration files have been saved.");
-            }
-        }
-
-        
-
-        private bool SaveAll()
-        {
-            try
-            {
-
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                SetInfoBar(InfoBarSeverity.Error, "Save Failed", $"Could not save configuration files\n{ex.Message}");
-                return false;
-            }
+            SettingsToggleButton.IsChecked = true;
         }
 
         private void SetInfoBar(InfoBarSeverity severity, string title, string message, bool isClosable = true)
@@ -644,7 +629,10 @@ namespace FramesToMMSpriteResource
             PrimaryInfoBar.Message = message;
             PrimaryInfoBar.Severity = severity;
             PrimaryInfoBar.IsClosable = isClosable;
+    
             SaveBarBorder.CornerRadius = new CornerRadius(0, 0, 8, 8);
+  
+            PrimaryInfoBar.IsOpen = true;
         }
 
         private void ClickPrimaryInfoBar(InfoBar sender, object args)

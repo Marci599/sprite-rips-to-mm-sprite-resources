@@ -28,7 +28,7 @@
             </Grid.RowDefinitions>
 
 
-            <TreeView x:Name="TreeViewControl" Grid.Row="0" Margin="0 16 0 0" MinWidth="200">
+            <TreeView x:Name="TreeViewControl" Grid.Row="0" Margin="0 2 0 0" MinWidth="200">
                 <TreeView.ItemContainerStyle>
                     <Style TargetType="TreeViewItem">
 
@@ -43,15 +43,15 @@
                     </DataTemplate>
                 </TreeView.ItemTemplate>
             </TreeView>
-            <StackPanel Grid.Row="1" VerticalAlignment="Bottom" Spacing="4" Padding="4" HorizontalAlignment="Stretch">
+            <StackPanel Grid.Row="1" VerticalAlignment="Bottom" Spacing="0" Padding="4" HorizontalAlignment="Stretch">
 
-                <Rectangle Style="{StaticResource GroupDividerStyle}" Margin="8 0 8 0"/>
-                <Button Style="{StaticResource SubtleButtonStyle}" Padding="16 10 16 10" HorizontalAlignment="Stretch" HorizontalContentAlignment="left" Click="ClickSettings">
+                <Rectangle Style="{StaticResource GroupDividerStyle}" Margin="8 -4 8 4"/>
+                <ToggleButton x:Name="SettingsToggleButton" Style="{StaticResource TreeLikeNavToggleButtonStyle}" Padding="16 10 16 10" HorizontalAlignment="Stretch" HorizontalContentAlignment="left" Click="ClickSettings">
                     <StackPanel Orientation="Horizontal" Spacing="14">
                         <FontIcon Glyph="&#xE713;" Opacity="0.67" FontSize="18"/>
                         <TextBlock Text="Settings &amp; Help"/>
                     </StackPanel>
-                </Button>
+                </ToggleButton>
             </StackPanel>
 
             <StackPanel x:Name="TreeViewPlaceHolderStackPanel" VerticalAlignment="Center" Spacing="12">
@@ -69,11 +69,25 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <TextBlock Text="NSMBU ▸ V_Yoshi" Grid.Row="0" Padding="20" FontSize="26" FontWeight="SemiBold"/>
+            <TextBlock Text="NSMBU ▸ V_Yoshi" Grid.Row="0" Padding="10 5 20 20" FontSize="26" FontWeight="SemiBold"/>
             <Border Grid.Row="1" Background="{ThemeResource LayerFillColorDefaultBrush}" CornerRadius="20 0 0 0">
                 <Grid>
+                    <!-- GameTheme Panel (default visible) -->
+                    <Grid x:Name="GameThemePanel" Visibility="Visible">
+                        <ScrollViewer>
+                            <StackPanel Padding="20 14 20 20">
+                                <StackPanel Spacing="4">
+                                    <CheckBox x:Name="IsHdCheckBox" Content="Is HD" IsChecked="True"/>
+                                    <TextBlock Text="If enabled @2x pngs will be generated and .sprites files will be adjusted for that."  Style="{StaticResource HelperTextStyle}"/>
+                                </StackPanel>
+                                <Grid
+                                  Height="{Binding ActualHeight, ElementName=SaveBarBorder}"
+                                  IsHitTestVisible="False"/>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
                     <!-- Subject Panel (default visible) -->
-                    <Grid x:Name="SubjectPanel" Visibility="Visible">
+                    <Grid x:Name="SubjectPanel" Visibility="Collapsed">
                         <ScrollViewer>
                             <StackPanel Padding="20 20 20 20">
                                 <Grid ColumnSpacing="10">
@@ -109,8 +123,8 @@
                                             <CheckBox x:Name="RemoveBackgroundCheckBox" Content="Remove background" IsChecked="True"/>
                                             <StackPanel Spacing="4">
                                                 <CheckBox x:Name="CropSpritesCheckBox" Content="Crop sprites" IsChecked="True"/>
-                                                <TextBlock Text="Cropping reduces file size" Foreground="Gray" FontSize="12"/>
-                                                <TextBlock Text="Cropping is based on the bg color and threshold" Foreground="Gray" FontSize="12"/>
+                                                <TextBlock Text="Cropping reduces file size"  Style="{StaticResource HelperTextStyle}"/>
+                                                <TextBlock Text="Cropping is based on the bg color and threshold"  Style="{StaticResource HelperTextStyle}"/>
                                             </StackPanel>
 
                                         </StackPanel>
@@ -132,17 +146,20 @@
                                         </StackPanel>
                                     </Border>
                                 </Grid>
+                                <Grid
+                                  Height="{Binding ActualHeight, ElementName=SaveBarBorder}"
+                                  IsHitTestVisible="False"/>
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>
 
                     <!-- Animations Panel (hidden by default) -->
-                    <Grid x:Name="AnimationsPanel" Visibility="Collapsed" Padding="20 0 20 20">
+                    <Grid x:Name="AnimationsPanel" Visibility="Collapsed">
                         <ScrollViewer>
-                            <StackPanel x:Name="AnimationDetailPanel" Spacing="10">
+                            <StackPanel x:Name="AnimationDetailPanel" Spacing="10" Padding="20 14 20 20">
                                 <StackPanel Spacing="4">
-                                    <CheckBox x:Name="RegenerateCheckBox" Content="Regenerate frame propreties" IsChecked="True"/>
-                                    <TextBlock Text="If disabled, manually modified offsets and sub-positions will remain unchanged." Foreground="Gray" FontSize="12" TextWrapping="Wrap"/>
+                                    <CheckBox x:Name="RegenerateCheckBox" Content="Regenerate frame properties" IsChecked="True"/>
+                                    <TextBlock Text="If disabled, manually modified offsets and sub-positions will remain unchanged."  Style="{StaticResource HelperTextStyle}"/>
                                 </StackPanel>
 
                                 <TextBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay"/>
@@ -162,7 +179,7 @@
                                                 <TextBox Grid.Column="1" x:Name="OffsetYTextBox" PlaceholderText="0" Header="Y"/>
 
                                             </Grid>
-                                            <TextBlock Text="Adjusts the offset for every sprite within the selected animation" Foreground="Gray" FontSize="12" TextWrapping="Wrap"/>
+                                            <TextBlock Text="Adjusts the offset for every sprite within the selected animation"  Style="{StaticResource HelperTextStyle}"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
@@ -180,10 +197,13 @@
                                                 <CheckBox Grid.Column="0" x:Name="RecoverXCheckBox" Content="X" IsChecked="True"/>
                                                 <CheckBox Grid.Column="1" x:Name="RecoverYCheckBox" Content="Y" IsChecked="True"/>
                                             </Grid>
-                                            <TextBlock Text="By using the offset values of the frame properties" Foreground="Gray" FontSize="12" TextWrapping="Wrap"/>
+                                            <TextBlock Text="If enabled, the offsets will be adjusted to account for any cropping that was done."  Style="{StaticResource HelperTextStyle}"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
+                                <Grid
+                                  Height="{Binding ActualHeight, ElementName=SaveBarBorder}"
+                                  IsHitTestVisible="False"/>
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>
@@ -208,7 +228,7 @@
 
                                             <StackPanel Spacing="4">
                                                 <TextBox Grid.Column="0" PlaceholderText="Default" Header="Working directory path"/>
-                                                <TextBlock Text="To use the same directory the program is in, leave it blank" Foreground="Gray" FontSize="12"/>
+                                                <TextBlock Text="To use the same directory the program is in, leave it blank"  Style="{StaticResource HelperTextStyle}"/>
                                             </StackPanel>
 
                                         </StackPanel>
@@ -223,7 +243,9 @@
 
                                             <TextBlock Text="Created by Marci599 for Mario Multiverse (created by neoarc)."/>
                                             <TextBlock Text="Check GitHub repository for help, updates and issues:"/>
-                                            <HyperlinkButton Content = "github.com/Marci599/sprite-rips-to-mm-sprite-resources" NavigateUri = "https://github.com/Marci599/sprite-rips-to-mm-sprite-resources" Margin="-12 -6 -12 -4"/>
+                                            <HyperlinkButton NavigateUri = "https://github.com/Marci599/sprite-rips-to-mm-sprite-resources" Margin="-12 -6 -12 -4">
+                                                <TextBlock Text="github.com/Marci599/sprite-rips-to-mm-sprite-resources"/>
+                                            </HyperlinkButton>
 
 
                                         </StackPanel>
