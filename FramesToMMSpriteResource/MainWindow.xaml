@@ -68,15 +68,34 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
+            <BreadcrumbBar
+                x:Name="HeaderBreadcrumbBar"
+                Grid.Row="0"
+                Margin="0 2 0 20">
+                <BreadcrumbBar.Resources>
+                    <!-- Ez vezérli a kis nyíl méretét -->
+                    <x:Double x:Key="BreadcrumbBarChevronFontSize">18</x:Double>
+      
+                </BreadcrumbBar.Resources>
+                <BreadcrumbBar.ItemTemplate>
+                    <DataTemplate x:DataType="x:String">
+                        <TextBlock
+                            Margin="10 0 10 0"
+                            Text="{x:Bind}"
+                            FontSize="26"
+                            FontWeight="SemiBold"
+                            VerticalAlignment="Center"/>
+                    </DataTemplate>
+                </BreadcrumbBar.ItemTemplate>
+            </BreadcrumbBar>
 
-            <TextBlock Text="NSMBU ▸ V_Yoshi" Grid.Row="0" Padding="10 5 20 20" FontSize="26" FontWeight="SemiBold"/>
             <Border Grid.Row="1" Background="{ThemeResource LayerFillColorDefaultBrush}" CornerRadius="20 0 0 0">
                 <Grid>
                     <!-- GameTheme Panel (default visible) -->
                     <Grid x:Name="GameThemePanel" Visibility="Visible">
                         <ScrollViewer>
                             <StackPanel Padding="20 14 20 20">
-                                <StackPanel Spacing="4">
+                                <StackPanel Spacing="4" MaxWidth="1000">
                                     <CheckBox x:Name="IsHdCheckBox" Content="Is HD" IsChecked="True"/>
                                     <TextBlock Text="If enabled @2x pngs will be generated and .sprites files will be adjusted for that."  Style="{StaticResource HelperTextStyle}"/>
                                 </StackPanel>
@@ -90,7 +109,7 @@
                     <Grid x:Name="SubjectPanel" Visibility="Collapsed">
                         <ScrollViewer>
                             <StackPanel Padding="20 20 20 20">
-                                <Grid ColumnSpacing="10">
+                                <Grid ColumnSpacing="10" MaxWidth="1000">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="*"/>
@@ -103,7 +122,7 @@
 
                                             <Rectangle Style="{StaticResource GroupDividerStyle}"/>
 
-                                            <TextBox x:Name="ResizeTextBox" PlaceholderText="100" Header="Resize to percent"/>
+                                            <NumberBox x:Name="ResizeTextBox" PlaceholderText="100" Header="Resize to percent"/>
 
                                             <StackPanel Spacing="4">
                                                 <Grid>
@@ -112,13 +131,13 @@
                                                         <ColumnDefinition Width="32"/>
                                                     </Grid.ColumnDefinitions>
                                                     <TextBox x:Name="ColorTextBox" Grid.Column="0" PlaceholderText="#00000000" Header="Background color" Style="{StaticResource InsetTextBoxStyle}" CornerRadius="4 0 0 4"/>
-                                                    <Border x:Name="ColorPreviewBorder" Grid.Column="1" Background="White" CornerRadius="0 4 4 0" Height="32" VerticalAlignment="Bottom"/>
+                                                    <Border x:Name="ColorPreviewBorder" Grid.Column="1" BorderThickness="1" Background="White" CornerRadius="0 4 4 0" Height="32" VerticalAlignment="Bottom"/>
                                                 </Grid>
 
                                                 <TextBlock Text="If already transparent, leave it blank" Style="{StaticResource HelperTextStyle}"/>
                                             </StackPanel>
 
-                                            <TextBox x:Name="ThresholdTextBox" PlaceholderText="100" Header="Color threshold"/>
+                                            <NumberBox x:Name="ThresholdTextBox" PlaceholderText="100" Header="Color threshold"/>
 
                                             <CheckBox x:Name="RemoveBackgroundCheckBox" Content="Remove background" IsChecked="True"/>
                                             <StackPanel Spacing="4">
@@ -136,10 +155,10 @@
                                             <TextBlock Text="Sheet dimensions" Style="{StaticResource SectionHeaderStyle}"/>
                                             <Rectangle Style="{StaticResource GroupDividerStyle}"/>
 
-                                            <TextBox x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width"/>
+                                            <NumberBox x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width"/>
 
                                             <StackPanel Spacing="4">
-                                                <TextBox x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height"/>
+                                                <NumberBox x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height"/>
                                                 <TextBlock Text="For automatic sizing, leave it blank" Style="{StaticResource HelperTextStyle}"/>
                                             </StackPanel>
 
@@ -157,14 +176,14 @@
                     <Grid x:Name="AnimationsPanel" Visibility="Collapsed">
                         <ScrollViewer>
                             <StackPanel x:Name="AnimationDetailPanel" Spacing="10" Padding="20 14 20 20">
-                                <StackPanel Spacing="4">
+                                <StackPanel Spacing="4" MaxWidth="1000">
                                     <CheckBox x:Name="RegenerateCheckBox" Content="Regenerate frame properties" IsChecked="True"/>
                                     <TextBlock Text="If disabled, manually modified offsets and sub-positions will remain unchanged."  Style="{StaticResource HelperTextStyle}"/>
                                 </StackPanel>
 
-                                <TextBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay"/>
+                                <NumberBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay" MaxWidth="1000"/>
 
-                                <Border Style="{StaticResource CardBorderStyle}">
+                                <Border Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
                                     <StackPanel Spacing="12">
                                         <TextBlock Text="Offset" Style="{StaticResource SectionHeaderStyle}"/>
                                         <Rectangle Style="{StaticResource GroupDividerStyle}"/>
@@ -175,8 +194,8 @@
                                                     <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
 
-                                                <TextBox Grid.Column="0" x:Name="OffsetXTextBox" PlaceholderText="0" Header="X"/>
-                                                <TextBox Grid.Column="1" x:Name="OffsetYTextBox" PlaceholderText="0" Header="Y"/>
+                                                <NumberBox Grid.Column="0" x:Name="OffsetXTextBox" PlaceholderText="0" Header="X"/>
+                                                <NumberBox Grid.Column="1" x:Name="OffsetYTextBox" PlaceholderText="0" Header="Y"/>
 
                                             </Grid>
                                             <TextBlock Text="Adjusts the offset for every sprite within the selected animation"  Style="{StaticResource HelperTextStyle}"/>
@@ -184,7 +203,7 @@
                                     </StackPanel>
                                 </Border>
 
-                                <Border Style="{StaticResource CardBorderStyle}">
+                                <Border Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
                                     <StackPanel Spacing="12">
                                         <TextBlock Text="Recover cropped offset" Style="{StaticResource SectionHeaderStyle}"/>
                                         <Rectangle Style="{StaticResource GroupDividerStyle}"/>
@@ -212,7 +231,7 @@
                     <Grid x:Name="HelpPanel" Visibility="Collapsed">
                         <ScrollViewer>
                             <StackPanel Padding="20 20 20 20">
-                                <Grid ColumnSpacing="10">
+                                <Grid ColumnSpacing="10" MaxWidth="1000">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="*"/>
@@ -227,7 +246,7 @@
 
 
                                             <StackPanel Spacing="4">
-                                                <TextBox Grid.Column="0" PlaceholderText="Default" Header="Working directory path"/>
+                                                <TextBox x:Name="WorkingPathTextBox" Grid.Column="0" PlaceholderText="Default" Header="Working directory path"/>
                                                 <TextBlock Text="To use the same directory the program is in, leave it blank"  Style="{StaticResource HelperTextStyle}"/>
                                             </StackPanel>
 
