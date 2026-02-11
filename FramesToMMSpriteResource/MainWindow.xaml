@@ -28,7 +28,7 @@
             </Grid.RowDefinitions>
 
 
-            <TreeView x:Name="TreeViewControl" Grid.Row="0" Margin="0 2 0 0" MinWidth="200">
+            <TreeView x:Name="TreeViewControl" Grid.Row="0" Margin="0 2 0 0" MinWidth="200" CanReorderItems="False" CanDragItems="False">
                 <TreeView.ItemContainerStyle>
                     <Style TargetType="TreeViewItem">
 
@@ -46,11 +46,32 @@
             <StackPanel Grid.Row="1" VerticalAlignment="Bottom" Spacing="0" Padding="4" HorizontalAlignment="Stretch">
 
                 <Rectangle Style="{StaticResource GroupDividerStyle}" Margin="8 -4 8 4"/>
-                <ToggleButton x:Name="SettingsToggleButton" Style="{StaticResource TreeLikeNavToggleButtonStyle}" Padding="16 10 16 10" HorizontalAlignment="Stretch" HorizontalContentAlignment="left" Click="ClickSettings">
-                    <StackPanel Orientation="Horizontal" Spacing="14">
-                        <FontIcon Glyph="&#xE713;" Opacity="0.67" FontSize="18"/>
-                        <TextBlock Text="Settings &amp; Help"/>
-                    </StackPanel>
+                <ToggleButton x:Name="SettingsToggleButton" Style="{StaticResource TreeLikeNavToggleButtonStyle}" Padding="16 10 14 10" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Click="ClickSettings">
+                    <Grid ColumnSpacing="14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <FontIcon
+                            Grid.Column="0"
+                            Glyph="&#xE713;"
+                            Opacity="0.67"
+                            FontSize="18"/>
+
+                        <TextBlock
+                            Grid.Column="1"
+                            Text="Settings &amp; Help"
+                            VerticalAlignment="Center"/>
+
+                        <InfoBadge
+                            x:Name="UpdateBadge"
+                            Grid.Column="2"
+                            Style="{StaticResource AttentionIconInfoBadgeStyle}"
+                            VerticalAlignment="Center"
+                            Visibility="Collapsed"/>
+                    </Grid>
                 </ToggleButton>
             </StackPanel>
 
@@ -73,7 +94,6 @@
                 Grid.Row="0"
                 Margin="0 2 0 20">
                 <BreadcrumbBar.Resources>
-                    <!-- Ez vezérli a kis nyíl méretét -->
                     <x:Double x:Key="BreadcrumbBarChevronFontSize">18</x:Double>
       
                 </BreadcrumbBar.Resources>
@@ -97,11 +117,11 @@
                             <StackPanel Padding="20 14 20 20">
                                 <StackPanel Spacing="4" MaxWidth="1000">
                                     <CheckBox x:Name="IsHdCheckBox" Content="Is HD" IsChecked="True"/>
-                                    <TextBlock Text="If enabled @2x pngs will be generated and .sprites files will be adjusted for that."  Style="{StaticResource HelperTextStyle}"/>
+                                    <TextBlock Text="If enabled @2x pngs will be generated and .sprites files will be adjusted for that"  Style="{StaticResource HelperTextStyle}"/>
                                 </StackPanel>
                                 <Grid
-                                  Height="{Binding ActualHeight, ElementName=SaveBarBorder}"
-                                  IsHitTestVisible="False"/>
+                                    Height="{Binding ActualHeight, ElementName=BottomBarStackPanel}"
+                                    IsHitTestVisible="False"/>
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>
@@ -122,7 +142,7 @@
 
                                             <Rectangle Style="{StaticResource GroupDividerStyle}"/>
 
-                                            <NumberBox x:Name="ResizeTextBox" PlaceholderText="100" Header="Resize to percent"/>
+                                            <NumberBox x:Name="ResizeTextBox" PlaceholderText="100" Header="Resize to percent" Minimum="1"/>
 
                                             <StackPanel Spacing="4">
                                                 <Grid>
@@ -137,7 +157,7 @@
                                                 <TextBlock Text="If already transparent, leave it blank" Style="{StaticResource HelperTextStyle}"/>
                                             </StackPanel>
 
-                                            <NumberBox x:Name="ThresholdTextBox" PlaceholderText="100" Header="Color threshold"/>
+                                            <NumberBox x:Name="ThresholdTextBox" PlaceholderText="100" Header="Color threshold" Minimum="0"/>
 
                                             <CheckBox x:Name="RemoveBackgroundCheckBox" Content="Remove background" IsChecked="True"/>
                                             <StackPanel Spacing="4">
@@ -155,10 +175,10 @@
                                             <TextBlock Text="Sheet dimensions" Style="{StaticResource SectionHeaderStyle}"/>
                                             <Rectangle Style="{StaticResource GroupDividerStyle}"/>
 
-                                            <NumberBox x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width"/>
+                                            <NumberBox x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width" Minimum="1"/>
 
                                             <StackPanel Spacing="4">
-                                                <NumberBox x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height"/>
+                                                <NumberBox x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height" Minimum="1"/>
                                                 <TextBlock Text="For automatic sizing, leave it blank" Style="{StaticResource HelperTextStyle}"/>
                                             </StackPanel>
 
@@ -166,8 +186,8 @@
                                     </Border>
                                 </Grid>
                                 <Grid
-                                  Height="{Binding ActualHeight, ElementName=SaveBarBorder}"
-                                  IsHitTestVisible="False"/>
+                                    Height="{Binding ActualHeight, ElementName=BottomBarStackPanel}"
+                                    IsHitTestVisible="False"/>
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>
@@ -178,10 +198,10 @@
                             <StackPanel x:Name="AnimationDetailPanel" Spacing="10" Padding="20 14 20 20">
                                 <StackPanel Spacing="4" MaxWidth="1000">
                                     <CheckBox x:Name="RegenerateCheckBox" Content="Regenerate frame properties" IsChecked="True"/>
-                                    <TextBlock Text="If disabled, manually modified offsets and sub-positions will remain unchanged."  Style="{StaticResource HelperTextStyle}"/>
+                                    <TextBlock Text="If disabled, manually modified offsets and sub-positions will remain unchanged"  Style="{StaticResource HelperTextStyle}"/>
                                 </StackPanel>
 
-                                <NumberBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay" MaxWidth="1000"/>
+                                <NumberBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay" MaxWidth="1000" Minimum="-1"/>
 
                                 <Border Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
                                     <StackPanel Spacing="12">
@@ -216,12 +236,12 @@
                                                 <CheckBox Grid.Column="0" x:Name="RecoverXCheckBox" Content="X" IsChecked="True"/>
                                                 <CheckBox Grid.Column="1" x:Name="RecoverYCheckBox" Content="Y" IsChecked="True"/>
                                             </Grid>
-                                            <TextBlock Text="If enabled, the offsets will be adjusted to account for any cropping that was done."  Style="{StaticResource HelperTextStyle}"/>
+                                            <TextBlock Text="If enabled, the offsets will be adjusted to account for any cropping that was done"  Style="{StaticResource HelperTextStyle}"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
                                 <Grid
-                                  Height="{Binding ActualHeight, ElementName=SaveBarBorder}"
+                                  Height="{Binding ActualHeight, ElementName=BottomBarStackPanel}"
                                   IsHitTestVisible="False"/>
                             </StackPanel>
                         </ScrollViewer>
@@ -230,14 +250,14 @@
                     <!-- HelpPanel -->
                     <Grid x:Name="HelpPanel" Visibility="Collapsed">
                         <ScrollViewer>
-                            <StackPanel Padding="20 20 20 20">
+                            <StackPanel Padding="20 20 20 20" Spacing="10">
                                 <Grid ColumnSpacing="10" MaxWidth="1000">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- Processing Group -->
+   
                                     <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
                                         <StackPanel Spacing="12">
                                             <TextBlock Text="Settings" Style="{StaticResource SectionHeaderStyle}"/>
@@ -253,23 +273,32 @@
                                         </StackPanel>
                                     </Border>
 
-                                    <!-- Sheet Dimensions Group -->
+                        
                                     <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}">
                                         <StackPanel Spacing="12">
-                                            <TextBlock Text="Frames to MM sprite resources v2.0.0" Style="{StaticResource SectionHeaderStyle}"/>
+                                            <TextBlock x:Name="ProgramNameTextBlock" Text="Frames to MM sprite resources v" Style="{StaticResource SectionHeaderStyle}"/>
                                             <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-
-
-                                            <TextBlock Text="Created by Marci599 for Mario Multiverse (created by neoarc)."/>
+                                            <TextBlock Text="Created by Marci599 for Mario Multiverse.&#x0a;Mario Multiverse (SFMB) created by neoarc."/>
                                             <TextBlock Text="Check GitHub repository for help, updates and issues:"/>
-                                            <HyperlinkButton NavigateUri = "https://github.com/Marci599/sprite-rips-to-mm-sprite-resources" Margin="-12 -6 -12 -4">
+                                            <HyperlinkButton NavigateUri = "https://github.com/Marci599/sprite-rips-to-mm-sprite-resources" Margin="-12 -14 -12 -4" Padding="11 0 11 4" MinHeight="0">
                                                 <TextBlock Text="github.com/Marci599/sprite-rips-to-mm-sprite-resources"/>
                                             </HyperlinkButton>
-
-
                                         </StackPanel>
                                     </Border>
                                 </Grid>
+                                <InfoBar x:Name="UpdateInfoBar" IsOpen="False" Severity="Informational" MaxWidth="1000" Title="Update available" Message="Download the latest version of this program for an improved experience" IsClosable="False">
+                                    <InfoBar.ActionButton>
+                                        <Button HorizontalAlignment="Right" Click="UpdateButton_Click">
+                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                <TextBlock Text="Download"/>
+                                                <FontIcon Glyph="&#xE8AD;" Opacity="0.67" FontSize="14"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </InfoBar.ActionButton>
+                                </InfoBar>
+                                <Grid
+                                    Height="{Binding ActualHeight, ElementName=BottomBarStackPanel}"
+                                    IsHitTestVisible="False"/>
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>
@@ -279,11 +308,12 @@
 
             <!-- Bottom Section -->
             
-            <StackPanel VerticalAlignment="Bottom" Grid.Row="1" Margin="12">
+            <StackPanel x:Name="BottomBarStackPanel" VerticalAlignment="Bottom" Grid.Row="1" Margin="12">
                 <InfoBar
                     x:Name="PrimaryInfoBar"
                     IsOpen="False"
-           
+     
+             
                
                     CornerRadius="8 8 0 0"
                     CloseButtonClick="ClickPrimaryInfoBar"/>
@@ -313,7 +343,7 @@
                         </Grid>
                         
        
-                        <Button x:Name="SaveAndGenerateButton" Grid.Column="4" Content="Generate Subject" MinWidth="120"/>
+                        <Button x:Name="GenerateButton" Grid.Column="4" Content="Generate Subject" MinWidth="120" Click="GenerateButton_Click"/>
                     </Grid>
                 </Border>
             </StackPanel>
