@@ -214,8 +214,8 @@
                                                     <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
 
-                                                <NumberBox Grid.Column="0" x:Name="OffsetXTextBox" PlaceholderText="0" Header="X"/>
-                                                <NumberBox Grid.Column="1" x:Name="OffsetYTextBox" PlaceholderText="0" Header="Y"/>
+                                                <NumberBox Grid.Column="0" x:Name="OffsetXTextBox" PlaceholderText="0" Header="X" Value="0"/>
+                                                <NumberBox Grid.Column="1" x:Name="OffsetYTextBox" PlaceholderText="0" Header="Y" Value="0"/>
 
                                             </Grid>
                                             <TextBlock Text="Adjusts the offset for every sprite within the selected animation"  Style="{StaticResource HelperTextStyle}"/>

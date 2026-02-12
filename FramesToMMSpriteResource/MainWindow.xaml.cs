@@ -25,6 +25,50 @@ namespace FramesToMMSpriteResource
         public string IconGlyph { get; set; } = iconGlyph;
     }
 
+    public struct IntVector2
+    {
+        public int X { get; }
+        public int Y { get; }
+
+        public IntVector2(int x, int y)
+        {
+            X = x;
+            Y = y;
+        }
+
+        public int SqrMagnitude => X * X + Y * Y;
+
+        public bool Equals(IntVector2 other)
+            => X == other.X && Y == other.Y;
+
+        public override bool Equals(object? obj)
+            => obj is IntVector2 other && Equals(other);
+
+        public override int GetHashCode()
+            => HashCode.Combine(X, Y);
+
+        public static bool operator ==(IntVector2 left, IntVector2 right)
+            => left.Equals(right);
+
+        public static bool operator !=(IntVector2 left, IntVector2 right)
+            => !left.Equals(right);
+
+        public override string ToString()
+            => $"({X}, {Y})";
+    }
+
+    public struct UIntVector2
+    {
+        public UIntVector2(uint x, uint y) { X = x; Y = y; }
+
+        public uint X { get; }
+        public uint Y { get; }
+
+        uint sqrMagnitude
+        {
+            get { return X * X + Y * Y; }
+        }
+    }
     enum ItemDepth
     {
         GameTheme = 0,
@@ -531,7 +575,7 @@ namespace FramesToMMSpriteResource
             ReduceFileSizeCheckBoxTexts.Opacity = 1;
         }
 
-        private bool IsUsingGameThemes()
+        private static bool IsUsingGameThemes()
         {
             try
             {
@@ -719,37 +763,37 @@ namespace FramesToMMSpriteResource
 
         private void OffsetYTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
         {
-            (currentConfig as AnimationConfig)!.Offset = new Vector2((currentConfig as AnimationConfig)!.Offset!.Value.X, (float)sender.Value);
+            (currentConfig as AnimationConfig)!.Offset = new Vector2((currentConfig as AnimationConfig)!.Offset!.Value.X, double.IsNaN(sender.Value) ? 0 : (int)sender.Value);
         }
 
         private void OffsetXTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
         {
-            (currentConfig as AnimationConfig)!.Offset = new Vector2((float)sender.Value, (currentConfig as AnimationConfig)!.Offset!.Value.Y);
+            (currentConfig as AnimationConfig)!.Offset = new Vector2(double.IsNaN(sender.Value) ? 0 : (int)sender.Value, (currentConfig as AnimationConfig)!.Offset!.Value.Y);
         }
 
         private void DelayTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
         {
-            (currentConfig as AnimationConfig)!.Delay = (int)sender.Value;
+            (currentConfig as AnimationConfig)!.Delay = double.IsNaN(sender.Value) ? 1 : (int)sender.Value;
         }
 
         private void SheetHeightTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
         {
-            (currentConfig as SubjectConfig)!.Sheet.Height = (int)sender.Value;
+            (currentConfig as SubjectConfig)!.Sheet.Height = double.IsNaN(sender.Value) ? null : (int)sender.Value;
         }
 
         private void SheetWidthTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
         {
-            (currentConfig as SubjectConfig)!.Sheet.Width = (int)sender.Value;
+            (currentConfig as SubjectConfig)!.Sheet.Width = double.IsNaN(sender.Value) ? null : (int)sender.Value;
         }
 
         private void ThresholdTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
         {
-            (currentConfig as SubjectConfig)!.ColorTreshold = (int)sender.Value;
+            (currentConfig as SubjectConfig)!.ColorTreshold = double.IsNaN(sender.Value) ? 100 : (int)sender.Value;
         }
 
         private void ResizeTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
         {
-            (currentConfig as SubjectConfig)!.ResizeToPercent = (int)sender.Value;
+            (currentConfig as SubjectConfig)!.ResizeToPercent = double.IsNaN(sender.Value) ? 100 : (int)sender.Value;
         }
 
         private void ClickRecoverYCheckBox(object sender, RoutedEventArgs e)
@@ -1011,16 +1055,18 @@ namespace FramesToMMSpriteResource
         [System.Text.RegularExpressions.GeneratedRegex(@"\A[0-9A-F]+\z")]
         private static partial System.Text.RegularExpressions.Regex ColorRegex();
 
-        private void GenerateButton_Click(object sender, RoutedEventArgs e)
+        private async void GenerateButton_Click(object sender, RoutedEventArgs e)
         {
-            string? result = Processer.StartProcess();
-            if(result == null)
+            SetInfoBar(InfoBarSeverity.Informational, "Generating", $"{programConfig.SelectedNode![1]} is being generated", false);
+            await Task.Delay(1);
+            try
             {
+                Processer.StartProcess();
                 SetInfoBar(InfoBarSeverity.Success, "Successfully generated", $"Spritesheet generated into {programConfig.SelectedNode![1]}/generated");
             }
-            else
+            catch (Exception er)
             {
-                SetInfoBar(InfoBarSeverity.Error, "Generation failed", result);
+                SetInfoBar(InfoBarSeverity.Error, "Generation failed", er.Message);
             }
         }
     }
