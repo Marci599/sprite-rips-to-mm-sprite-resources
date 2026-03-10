@@ -35,14 +35,14 @@ namespace FramesToMMSpriteResource
 
     public class RecoverCroppedOffset
     {
-        public bool x = true;
-        public bool y = true;
+        public bool X = true;
+        public bool Y = true;
 
         public RecoverCroppedOffset() { }
         public RecoverCroppedOffset(bool x, bool y)
         {
-            this.x = x;
-            this.y = y;
+            this.X = x;
+            this.Y = y;
         }
     }
 }

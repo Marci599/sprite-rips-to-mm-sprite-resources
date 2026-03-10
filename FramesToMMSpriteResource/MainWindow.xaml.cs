@@ -16,6 +16,7 @@ using Windows.ApplicationModel;
 
 using Windows.Media.Playback;
 using Windows.Media.Core;
+using Microsoft.UI.Xaml.Input;
 
 namespace FramesToMMSpriteResource
 {
@@ -190,6 +191,7 @@ namespace FramesToMMSpriteResource
                 WorkingPathTextBox.TextChanged -= WorkingPathTextBox_LostFocus;
                 ReduceFileSizeCheckBox.Click += ReduceFileSizeCheckBox_Click;
                 WorkingPathTextBox.TextChanged += WorkingPathTextBox_LostFocus;
+       
             }
             else
             {
@@ -208,7 +210,7 @@ namespace FramesToMMSpriteResource
 
         private void BreadcrumbBar_ItemClicked(BreadcrumbBar sender, BreadcrumbBarItemClickedEventArgs args)
         {
-            TreeViewControl.Focus(FocusState.Programmatic);
+     
 
             int clickedIndex = args.Index;
             
@@ -286,7 +288,11 @@ namespace FramesToMMSpriteResource
 
         async void WaitThenSave()
         {
-            await Task.Delay(1);
+ 
+            TreeViewControl.Focus(FocusState.Programmatic);
+         
+            await Task.Delay(30);
+     
             SaveAllConfigs();
         }
 
@@ -373,8 +379,7 @@ namespace FramesToMMSpriteResource
             catch (Exception ex)
             {
                 var title = "Config failed to load";
-                var filename = string.IsNullOrEmpty(filePath) ? "" : Path.GetFileName(filePath);
-                SetInfoBar(InfoBarSeverity.Error, title, $"Could not load {filename}\n{ex.Message}");
+                SetInfoBar(InfoBarSeverity.Error, title, $"Could not load {filePath}\n{ex.Message}");
 
                 return new T();
             }
@@ -408,6 +413,7 @@ namespace FramesToMMSpriteResource
             if (TreeViewControl != null)
             {
                 TreeViewControl.ItemInvoked += TreeViewControl_ItemInvoked;
+                TreeViewControl.PointerPressed += TreeViewControl_PointerPressed;
                 TreeViewControl.Expanding += TreeViewControl_Expanding;
                 TreeViewControl.Collapsed += TreeViewControl_Collapsed;
 
@@ -629,7 +635,8 @@ namespace FramesToMMSpriteResource
 
         async void WaitThenDisplayCorrectPanel(TreeViewNode node)
         {
-            await Task.Delay(1);
+            TreeViewControl.Focus(FocusState.Programmatic);
+            await Task.Delay(30);
             DisplayCorrectPanel(node);
         }
 
@@ -707,13 +714,11 @@ namespace FramesToMMSpriteResource
                     UpdateBreadcrumb(gameThemeName, subjectName, animationName);
                     var animationConfig = (currentConfig as AnimationConfig)!;
                     animationConfig.RecoverCroppedOffset ??= new RecoverCroppedOffset();
-                    if (animationConfig.Offset == null)
-                    {
-                        animationConfig.Offset = new Vector2(0,0);
-                    }
+                    animationConfig.Offset ??= new Vector2(0, 0);
+              
                     RegenerateCheckBox.IsChecked = animationConfig.Regenerate;
-                    RecoverXCheckBox.IsChecked = animationConfig.RecoverCroppedOffset.x;
-                    RecoverYCheckBox.IsChecked = animationConfig.RecoverCroppedOffset.y;
+                    RecoverXCheckBox.IsChecked = animationConfig.RecoverCroppedOffset.X;
+                    RecoverYCheckBox.IsChecked = animationConfig.RecoverCroppedOffset.Y;
 
                     DelayTextBox.Text = animationConfig.Delay.ToString();
                     OffsetXTextBox.Text = animationConfig.Offset.Value.X.ToString();
@@ -798,12 +803,12 @@ namespace FramesToMMSpriteResource
 
         private void ClickRecoverYCheckBox(object sender, RoutedEventArgs e)
         {
-            (currentConfig as AnimationConfig)!.RecoverCroppedOffset.y = (sender as CheckBox)!.IsChecked!.Value;
+            (currentConfig as AnimationConfig)!.RecoverCroppedOffset.Y = (sender as CheckBox)!.IsChecked!.Value;
         }
 
         private void ClickRecoverXCheckBox(object sender, RoutedEventArgs e)
         {
-            (currentConfig as AnimationConfig)!.RecoverCroppedOffset.x = (sender as CheckBox)!.IsChecked!.Value;
+            (currentConfig as AnimationConfig)!.RecoverCroppedOffset.X = (sender as CheckBox)!.IsChecked!.Value;
         }
 
         private void ClickRegenerateCheckBox(object sender, RoutedEventArgs e)
@@ -1067,6 +1072,41 @@ namespace FramesToMMSpriteResource
             catch (Exception er)
             {
                 SetInfoBar(InfoBarSeverity.Error, "Generation failed", er.Message);
+            }
+        }
+
+        private async void TreeViewControl_PointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            if (e.GetCurrentPoint(TreeViewControl).Properties.IsRightButtonPressed)
+            {
+                var originalSource = e.OriginalSource as DependencyObject;
+                while (originalSource != null && originalSource is not TreeViewItem)
+                    originalSource = VisualTreeHelper.GetParent(originalSource);
+
+                if (originalSource is TreeViewItem item)
+                {
+                    var node = TreeViewControl.NodeFromContainer(item);
+                    if (node != null)
+                    {
+                        string? configPath = null;
+                        switch (GetNodeDepth(node))
+                        {
+                            case ItemDepth.GameTheme:
+                                configPath = Path.Combine(workingPath, ((node.Content as TreeItem)!).Text, "config.json");
+                                break;
+                            case ItemDepth.Subject:
+                                configPath = Path.Combine(workingPath, ((node.Parent.Content as TreeItem)!).Text, ((node.Content as TreeItem)!).Text, "config.json");
+                                break;
+                            case ItemDepth.Animation:
+                                configPath = Path.Combine(workingPath, ((node.Parent.Parent.Content as TreeItem)!).Text, ((node.Parent.Content as TreeItem)!).Text, "raw", ((node.Content as TreeItem)!).Text, "config.json");
+                                break;
+                        }
+                        if (configPath != null && File.Exists(configPath))
+                        {
+                            await Windows.System.Launcher.LaunchUriAsync(new Uri("file:///" + configPath.Replace('\\', '/')));
+                        }
+                    }
+                }
             }
         }
     }

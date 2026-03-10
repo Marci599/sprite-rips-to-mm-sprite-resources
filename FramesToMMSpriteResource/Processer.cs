@@ -201,13 +201,13 @@ namespace FramesToMMSpriteResource
               
                     int trimLeft = trim.X; int trimTop = trim.Y;
                     int originalWidth = orig.X; int originalHeight = orig.Y;
-                    if (!recover.x)
+                    if (!recover.X)
                     {
                         trimLeft = 0;
                         originalWidth = (int)Math.Abs(rightScaled - leftScaled);
                         if (gameThemeConfig.IsHd) originalWidth *= 2;
                     }
-                    if (!recover.y)
+                    if (!recover.Y)
                     {
                         trimTop = 0;
                         originalHeight = (int)Math.Abs(bottomScaled - topScaled);
