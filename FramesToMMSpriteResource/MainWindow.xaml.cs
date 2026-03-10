@@ -400,7 +400,7 @@ namespace FramesToMMSpriteResource
         {
             programConfig.GameThemeConfigs = [];
             TreeViewControl.RootNodes.Clear();
-            if (!PrimaryInfoBar.IsClosable)
+            if (!PrimaryInfoBar.IsClosable && PrimaryInfoBar.Title != "Generating")
             {
                 PrimaryInfoBar.IsOpen = false;
             }
@@ -1063,16 +1063,17 @@ namespace FramesToMMSpriteResource
         private async void GenerateButton_Click(object sender, RoutedEventArgs e)
         {
             SetInfoBar(InfoBarSeverity.Informational, "Generating", $"{programConfig.SelectedNode![1]} is being generated", false);
-            await Task.Delay(1);
+            ControlEnabler.IsEnabled = false;
             try
             {
-                Processer.StartProcess();
+                await Processer.StartProcessAsync();
                 SetInfoBar(InfoBarSeverity.Success, "Successfully generated", $"Spritesheet generated into {programConfig.SelectedNode![1]}/generated");
             }
             catch (Exception er)
             {
                 SetInfoBar(InfoBarSeverity.Error, "Generation failed", er.Message);
             }
+            ControlEnabler.IsEnabled = true;
         }
 
         private async void TreeViewControl_PointerPressed(object sender, PointerRoutedEventArgs e)

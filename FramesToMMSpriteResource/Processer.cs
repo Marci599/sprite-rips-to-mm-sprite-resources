@@ -40,7 +40,7 @@ namespace FramesToMMSpriteResource
         static SubjectConfig subjectConfig;
         static (byte r, byte g, byte b, byte a)? parsedBackgroundColor = null;
 
-        static public void StartProcess()
+        public static async Task StartProcessAsync()
         {
             programConfig = MainWindow.programConfig;
             gameThemeConfig = programConfig.GameThemeConfigs[programConfig.SelectedNode[0]];
@@ -73,7 +73,7 @@ namespace FramesToMMSpriteResource
                 {
                     if(Path.GetExtension(spritePath) == ".png")
                     {
-                        var image = CanvasBitmap.LoadAsync(SharedCanvasDevice, spritePath).GetAwaiter().GetResult();
+                        var image = await CanvasBitmap.LoadAsync(SharedCanvasDevice, spritePath);
                         if (!string.IsNullOrEmpty(subjectConfig.BackgroundColor) && subjectConfig.RemoveBackground)
                         {
                             image = RemoveColorWithThreshold(image);
@@ -123,6 +123,7 @@ namespace FramesToMMSpriteResource
             var canvasSize = new IntVector2(layoutInfo.CanvasSize.X, layoutInfo.CanvasSize.Y);
 
             var sheetImage = CreateSpriteSheet(processedSprites, finalPositions, canvasSize);
+            //TODO: regenerate false
             var payload = ExportSpriteMetadata(processedSprites, finalPositions, canvasSize, animationsMeta, subPositions);
 
             string outputDir = Path.Combine(subjectPath, "generated");

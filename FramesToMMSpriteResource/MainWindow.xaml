@@ -15,7 +15,11 @@
     </Window.SystemBackdrop>
 
 
-    <Grid x:Name="MainGrid">
+    <ContentControl x:Name="ControlEnabler" HorizontalAlignment="Stretch" 
+                    VerticalAlignment="Stretch"
+                    HorizontalContentAlignment="Stretch" 
+                    VerticalContentAlignment="Stretch">
+    <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="auto"/>
             <ColumnDefinition Width="*"/>
@@ -347,4 +351,5 @@
 
         </Grid>
     </Grid>
+    </ContentControl>
 </Window>
