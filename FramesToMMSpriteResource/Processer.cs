@@ -35,6 +35,7 @@ namespace FramesToMMSpriteResource
     class Processer
     {
         private static readonly CanvasDevice SharedCanvasDevice = new CanvasDevice();
+        private const double MaxColorDistance = 441.6729559300637;
         static ProgramConfig programConfig;
         static GameThemeConfig gameThemeConfig;
         static SubjectConfig subjectConfig;
@@ -279,7 +280,7 @@ namespace FramesToMMSpriteResource
                     ds.DrawImage(bmp, new Windows.Foundation.Rect(pos?.X ?? 0, pos?.Y ?? 0, bmp.SizeInPixels.Width, bmp.SizeInPixels.Height));
                 }
             }
-            return CreateBitmapFromBytes(rt.GetPixelBytes(), canvasSize);
+            return rt;
         }
 
         static LayoutInfo SelectLayout(List<ProcessedSprite> sprites)
@@ -422,49 +423,25 @@ namespace FramesToMMSpriteResource
 
         static CanvasBitmap RemoveColorWithThreshold(CanvasBitmap src)
         {
-            var w = src.SizeInPixels.Width;
-            var h = src.SizeInPixels.Height;
-            var bytes = src.GetPixelBytes(); // synchronous helper below
-            var thr2 = subjectConfig.ColorTreshold * subjectConfig.ColorTreshold;
-
-            // bytes are BGRA per pixel
-            for (int i = 0; i < bytes.Length; i += 4)
+            float normalizedTolerance = (float)Math.Clamp(subjectConfig.ColorTreshold / MaxColorDistance, 0.0, 1.0);
+            var source = (ICanvasImage)new ChromaKeyEffect
             {
-                int b = bytes[i + 0];
-                int g = bytes[i + 1];
-                int r = bytes[i + 2];
-                int a = bytes[i + 3];
+                Source = src,
+                Color = Microsoft.UI.Color.FromArgb(255, parsedBackgroundColor!.Value.r, parsedBackgroundColor.Value.g, parsedBackgroundColor.Value.b),
+                Tolerance = normalizedTolerance,
+                Feather = false,
+                InvertAlpha = false
+            };
 
-                if (a != 0)
+            if (programConfig.ReduceFileSize)
+            {
+                source = new PremultiplyEffect
                 {
-                    var dr = r - parsedBackgroundColor.Value.r;
-                    var dg = g - parsedBackgroundColor.Value.g;
-                    var db = b - parsedBackgroundColor.Value.b;
-                    var dist2 = dr * dr + dg * dg + db * db;
-                    if (dist2 <= thr2)
-                    {
-                        if (!programConfig.ReduceFileSize)
-                        {
-                            bytes[i + 3] = 0; // alpha = 0
-                        }
-                        else
-                        {
-                            bytes[i + 0] = 0;
-                            bytes[i + 1] = 0;
-                            bytes[i + 2] = 0;
-                            bytes[i + 3] = 0;
-                        }
-                    }
-                }
+                    Source = source
+                };
             }
-       
-            return CreateBitmapFromBytes(bytes, new IntVector2((int)w, (int)h));
-        }
 
-        private static CanvasBitmap CreateBitmapFromBytes(byte[] bytes, IntVector2 size)
-        {
-            // DirectXPixelFormat.B8G8R8A8UIntNormalized corresponds to BGRA8.
-            return CanvasBitmap.CreateFromBytes(SharedCanvasDevice, bytes, size.X, size.Y, Windows.Graphics.DirectX.DirectXPixelFormat.B8G8R8A8UIntNormalized);
+            return RenderImageToTarget(source, (int)src.SizeInPixels.Width, (int)src.SizeInPixels.Height, src.Dpi);
         }
 
         static CanvasBitmap ResizeBitmapNearest(CanvasBitmap source, IntVector2 newSize)
@@ -478,8 +455,7 @@ namespace FramesToMMSpriteResource
                     1.0f,
                     CanvasImageInterpolation.NearestNeighbor);
             }
-            // copy into CanvasBitmap for convenience
-            return CanvasBitmap.CreateFromBytes(SharedCanvasDevice, rt.GetPixelBytes(), newSize.X, newSize.Y, Windows.Graphics.DirectX.DirectXPixelFormat.B8G8R8A8UIntNormalized);
+            return rt;
 
         }
 
@@ -602,21 +578,32 @@ namespace FramesToMMSpriteResource
                 var srcRect = new Windows.Foundation.Rect(left, top, width, height);
                 ds.DrawImage(src, new Windows.Foundation.Rect(0, 0, width, height), srcRect);
             }
-            return CreateBitmapFromBytes(rt.GetPixelBytes(), new(width, height));
+            return rt;
         }
 
         static CanvasBitmap EnsureEvenDimensions(CanvasBitmap src)
         {
             IntVector2 size = new((int)src.SizeInPixels.Width, (int)src.SizeInPixels.Height);
             IntVector2 newSize = new(size.X + (size.X % 2), size.Y + (size.Y % 2));
-            if (newSize.X == size.X && newSize.X == size.Y) return src;
+            if (newSize.X == size.X && newSize.Y == size.Y) return src;
             var rt = new CanvasRenderTarget(SharedCanvasDevice, newSize.X, newSize.Y, src.Dpi);
             using (var ds = rt.CreateDrawingSession())
             {
                 ds.Clear(Microsoft.UI.Colors.Transparent);
                 ds.DrawImage(src, new Windows.Foundation.Rect(0, 0, size.X, size.Y));
             }
-            return CreateBitmapFromBytes(rt.GetPixelBytes(), newSize);
+            return rt;
+        }
+
+        private static CanvasBitmap RenderImageToTarget(ICanvasImage image, int width, int height, float dpi)
+        {
+            var rt = new CanvasRenderTarget(SharedCanvasDevice, width, height, dpi);
+            using (var ds = rt.CreateDrawingSession())
+            {
+                ds.Clear(Microsoft.UI.Colors.Transparent);
+                ds.DrawImage(image);
+            }
+            return rt;
         }
 
         private static int EnsureEvenValue(int v) => (v % 2 == 0) ? v : v + 1;
