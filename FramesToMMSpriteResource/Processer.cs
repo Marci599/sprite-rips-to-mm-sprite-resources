@@ -427,7 +427,7 @@ namespace FramesToMMSpriteResource
             var source = (ICanvasImage)new ChromaKeyEffect
             {
                 Source = src,
-                Color = Microsoft.UI.Color.FromArgb(255, parsedBackgroundColor!.Value.r, parsedBackgroundColor.Value.g, parsedBackgroundColor.Value.b),
+                Color = Windows.UI.Color.FromArgb(255, parsedBackgroundColor!.Value.r, parsedBackgroundColor.Value.g, parsedBackgroundColor.Value.b),
                 Tolerance = normalizedTolerance,
                 Feather = false,
                 InvertAlpha = false

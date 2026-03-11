@@ -1064,10 +1064,12 @@ namespace FramesToMMSpriteResource
         {
             SetInfoBar(InfoBarSeverity.Informational, "Generating", $"{programConfig.SelectedNode![1]} is being generated", false);
             ControlEnabler.IsEnabled = false;
+            var stopwatch = Stopwatch.StartNew();
             try
             {
                 await Processer.StartProcessAsync();
-                SetInfoBar(InfoBarSeverity.Success, "Successfully generated", $"Spritesheet generated into {programConfig.SelectedNode![1]}/generated");
+                stopwatch.Stop();
+                SetInfoBar(InfoBarSeverity.Success, "Successfully generated", $"Spritesheet generated into {programConfig.SelectedNode![1]}/generated ({stopwatch.ElapsedMilliseconds}ms)");
             }
             catch (Exception er)
             {
