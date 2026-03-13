@@ -2,6 +2,7 @@
 using Microsoft.Graphics.Canvas.Effects;
 using Microsoft.Graphics.Canvas.UI;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -11,18 +12,18 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using System.Xml;
 
 
 
 namespace FramesToMMSpriteResource
 {
-    class ProcessedSprite(CanvasBitmap image, IntVector2 originalSize, IntVector2 trimOffset, string animationName)
+    class ProcessedSprite(CanvasBitmap image, IntVector2 originalSize, IntVector2 trimOffset, string animationName, JsonObject? oldFrameJson)
     {
         public CanvasBitmap Image = image;
         public IntVector2 OriginalSize = originalSize;
         public IntVector2 TrimOffset = trimOffset;
         public string AnimationName = animationName;
+        public JsonObject? OldFrameJson = oldFrameJson;
     }
 
     class LayoutInfo(IntVector2 layoutSize, IntVector2 canvasSize, List<IntVector2?> positions)
@@ -30,6 +31,12 @@ namespace FramesToMMSpriteResource
         public IntVector2 LayoutSize = layoutSize;
         public IntVector2 CanvasSize = canvasSize;
         public List<IntVector2?> Positions = positions;
+    }
+
+    public class PreviousSpriteFileValues
+    {
+        public Dictionary<string, List<JsonObject>> FramesByAnimation { get; set; }
+        public string SubPositions { get; set; }
     }
 
     class Processer
@@ -64,16 +71,88 @@ namespace FramesToMMSpriteResource
             List<ProcessedSprite> processedSprites = [];
             List<Dictionary< string, object>> animationsMeta = [];
             int frameIndex = 0;
+
+       
+
             string subPositions = string.Empty;
+            PreviousSpriteFileValues previousSpriteFile = null;
+
+            string outputDir = Path.Combine(subjectPath, "generated");
+            string spriteFilePath = Path.Combine(outputDir, programConfig.SelectedNode[1] + ".sprite");
+
+            JsonArray frames = null;
+            JsonArray named = null;
+
+            if (File.Exists(spriteFilePath))
+            {
+            
+                var txt = File.ReadAllText(spriteFilePath);
+                var spritePayload = JsonNode.Parse(txt)?.AsObject();
+
+                frames = spritePayload?["Frames"]?.AsArray();
+                named = spritePayload?["NamedAnimations"]?.AsArray();
+         
+
+                var result = new PreviousSpriteFileValues
+                {
+                    FramesByAnimation = new Dictionary<string, List<JsonObject>>(),
+                    SubPositions = spritePayload?["SubPositions"]?.GetValue<string>()
+                };
+
+               
+
+            }
+        
+
 
             foreach (var (animationName, animationConfig) in subjectConfig.AnimationConfigs)
             {
+                List<JsonObject>? list = null;
+                if (named != null && !animationConfig.Regenerate)
+                {
+                    foreach (var entryNode in named)
+                    {
+                        var entry = entryNode?.AsObject();
+                        if (entry == null) continue;
+
+                        var name = entry["Name"]?.GetValue<string>();
+                        if (name == null || animationName != name) continue;
+             
+
+                        var framesField = entry["Frames"]?.GetValue<string>() ?? string.Empty;
+
+                        var indices = framesField
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(s => int.Parse(s.Trim()))
+                            .ToList();
+
+                        list = new List<JsonObject>();
+
+                        foreach (var idx in indices)
+                        {
+                            if (idx < 0 || idx >= frames.Count) continue;
+
+                            if (frames[idx] is JsonObject frameObj)
+                                list.Add(frameObj);
+                           
+                        }
+                        break;
+
+                    }
+                }
+               
+
                 int spritesCount = 0;
                 string animationPath = Path.Combine(subjectPath, "raw", animationName);
-                foreach(string spritePath in Directory.GetFiles(animationPath))
+
+                var filesInAnimationPath = Directory.GetFiles(animationPath);
+                var i = 0;
+                foreach (var spritePath in filesInAnimationPath)
                 {
-                    if(Path.GetExtension(spritePath) == ".png")
+                
+                    if (Path.GetExtension(spritePath) == ".png")
                     {
+                  
                         var image = await CanvasBitmap.LoadAsync(SharedCanvasDevice, spritePath);
                         if (!string.IsNullOrEmpty(subjectConfig.BackgroundColor) && subjectConfig.RemoveBackground)
                         {
@@ -102,8 +181,15 @@ namespace FramesToMMSpriteResource
                         {
                             image = EnsureEvenDimensions(image);
                         }
-                        processedSprites.Add(new ProcessedSprite(image, originalSize, offset, animationName));
+          
+                        JsonObject oldJson = null;
+                        if(list != null)
+                        {
+                            oldJson = list[i];
+                        }
+                        processedSprites.Add(new ProcessedSprite(image, originalSize, offset, animationName, oldJson));
                         spritesCount++;
+                        i++;
                     }                 
                 }
                 var frameRange = Enumerable.Range(frameIndex, spritesCount).ToList();
@@ -124,10 +210,12 @@ namespace FramesToMMSpriteResource
             var canvasSize = new IntVector2(layoutInfo.CanvasSize.X, layoutInfo.CanvasSize.Y);
 
             var sheetImage = CreateSpriteSheet(processedSprites, finalPositions, canvasSize);
-            //TODO: regenerate false
+
+    
+
             var payload = ExportSpriteMetadata(processedSprites, finalPositions, canvasSize, animationsMeta, subPositions);
 
-            string outputDir = Path.Combine(subjectPath, "generated");
+     
 
             if (Directory.Exists(outputDir))
             {
@@ -154,7 +242,7 @@ namespace FramesToMMSpriteResource
             {
                 WriteIndented = true
             };
-            File.WriteAllText(Path.Combine(outputDir, programConfig.SelectedNode[1] + ".sprite"), payload.ToJsonString(options));
+            File.WriteAllText(spriteFilePath, payload.ToJsonString(options));
         }
 
         private static void SaveCanvasBitmapToFile(CanvasBitmap bmp, string path)
@@ -166,6 +254,7 @@ namespace FramesToMMSpriteResource
                .AsTask().GetAwaiter().GetResult();
         }
 
+  
         private static JsonObject ExportSpriteMetadata(List<ProcessedSprite> sprites, List<IntVector2?> positions, IntVector2 canvasSize, List<Dictionary<string, object>> animations, string subPositions)
         {
             int sourceWidth = canvasSize.X;
@@ -195,8 +284,8 @@ namespace FramesToMMSpriteResource
                 }
 
                 JsonObject frameValues;
-                /*if (!sprite.TryGetValue("old_frame_json", out var old))
-                {*/
+                if (sprite.OldFrameJson == null)
+                { 
                     var trim = sprite.TrimOffset;
                     AnimationConfig animConfig = subjectConfig.AnimationConfigs[sprite.AnimationName];
                     var recover = animConfig.RecoverCroppedOffset;
@@ -235,11 +324,13 @@ namespace FramesToMMSpriteResource
                     }
                     var offsetText = $"{originOffsetX} {originOffsetY}";
                     frameValues = new JsonObject { ["Offset"] = offsetText };
-                /*}
+                }
                 else
                 {
-                    frameValues = (JObject)old;
-                }*/
+                
+
+                    frameValues = sprite.OldFrameJson.DeepClone().AsObject();
+                }
 
                 frameValues["Rect"] = $"{leftScaled} {topScaled} {rightScaled} {bottomScaled}";
                 frames.Add(frameValues);

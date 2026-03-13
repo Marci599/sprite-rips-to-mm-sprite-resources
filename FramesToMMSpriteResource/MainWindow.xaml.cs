@@ -1,8 +1,12 @@
 using Microsoft.UI;
+using Microsoft.UI.Composition;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Hosting;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -13,10 +17,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Windows.ApplicationModel;
-
-using Windows.Media.Playback;
 using Windows.Media.Core;
-using Microsoft.UI.Xaml.Input;
+using Windows.Media.Playback;
+using Windows.UI.Composition;
 
 namespace FramesToMMSpriteResource
 {
@@ -96,6 +99,9 @@ namespace FramesToMMSpriteResource
 
         MediaPlayer player = new();
 
+        int fadeOutMs = 50;
+        int fadeInMs = 100;
+
         public ObservableCollection<string> BreadcrumbItems { get; } = new();
 
         private readonly JsonSerializerOptions jsonOptions = new()
@@ -109,7 +115,9 @@ namespace FramesToMMSpriteResource
         {
             InitializeComponent();
 
-          
+
+
+
 
 
             AppWindow.Resize(new Windows.Graphics.SizeInt32(1000, 625));
@@ -126,7 +134,6 @@ namespace FramesToMMSpriteResource
 
             programConfig = LoadProgramConfig();
 
-            SaveBarBorder.RegisterPropertyChangedCallback(UIElement.VisibilityProperty, SaveBarBorderVisibilityChanged);
 
             SetUpTreeViewAndConfigs();
 
@@ -140,9 +147,10 @@ namespace FramesToMMSpriteResource
 
             ProgramNameTextBlock.Text += GetCurrentVersion();
 
+            //TODO: NAPONTA EGYSZER
             CheckForUpdate();
 
-     
+
         }
 
         public static bool IsNewer(string latest, string current)
@@ -191,7 +199,7 @@ namespace FramesToMMSpriteResource
                 WorkingPathTextBox.TextChanged -= WorkingPathTextBox_LostFocus;
                 ReduceFileSizeCheckBox.Click += ReduceFileSizeCheckBox_Click;
                 WorkingPathTextBox.TextChanged += WorkingPathTextBox_LostFocus;
-       
+
             }
             else
             {
@@ -210,22 +218,24 @@ namespace FramesToMMSpriteResource
 
         private void BreadcrumbBar_ItemClicked(BreadcrumbBar sender, BreadcrumbBarItemClickedEventArgs args)
         {
-     
+
 
             int clickedIndex = args.Index;
-            
+
             while (programConfig.SelectedNode!.Count > clickedIndex + 1)
             {
                 programConfig.SelectedNode.RemoveAt(programConfig.SelectedNode.Count - 1);
             }
 
+            TreeViewNode? selectedNode = null;
             foreach (TreeViewNode gameThemeNode in TreeViewControl.RootNodes)
             {
-                if((gameThemeNode.Content as TreeItem)!.Text == programConfig.SelectedNode[0])
+                if ((gameThemeNode.Content as TreeItem)!.Text == programConfig.SelectedNode[0])
                 {
-                    if(programConfig.SelectedNode.Count == 1)
+                    if (programConfig.SelectedNode.Count == 1)
                     {
                         TreeViewControl.SelectedNode = gameThemeNode;
+                        selectedNode = gameThemeNode;
                         break;
                     }
                     else
@@ -237,6 +247,7 @@ namespace FramesToMMSpriteResource
                                 if (programConfig.SelectedNode.Count == 2)
                                 {
                                     TreeViewControl.SelectedNode = subjectNode;
+                                    selectedNode = subjectNode;
                                     break;
                                 }
                                 else
@@ -245,14 +256,15 @@ namespace FramesToMMSpriteResource
                                     {
                                         if ((animationNode.Content as TreeItem)!.Text == programConfig.SelectedNode[2])
                                         {
-                                       
+
                                             TreeViewControl.SelectedNode = animationNode;
+                                            selectedNode = animationNode;
                                             break;
-                                        
+
                                         }
                                     }
                                     break;
-                                }                          
+                                }
                             }
                         }
                         break;
@@ -260,17 +272,128 @@ namespace FramesToMMSpriteResource
                 }
             }
 
-            WaitThenDisplayCorrectPanel(TreeViewControl.SelectedNode);
+            if (selectedNode != null)
+            {
+                _ = DisplayBreadcrumbSelectedPanelAsync(selectedNode);
+            }
         }
 
-        private void SaveBarBorderVisibilityChanged(DependencyObject sender, DependencyProperty dp)
+        async Task DisplayBreadcrumbSelectedPanelAsync(TreeViewNode node)
         {
-            if (((UIElement)sender).Visibility == Visibility.Visible)
+            TreeViewControl.Focus(FocusState.Programmatic);
+
+            FadeOutAllPanels(false);
+            ItemDepth depth = GetNodeDepth(node);
+            DisplayCorrectPanel(node, depth);
+        }
+
+
+        private bool _isSaveBarShowing = true;
+        private async void AnimateSaveBarBorder(bool show)
+        {
+            if (_isSaveBarShowing == show) return;
+
+    
+            _isSaveBarShowing = show;
+            var compositor = ElementCompositionPreview.GetElementVisual(SaveBarBorder).Compositor;
+            var saveBarVisual = ElementCompositionPreview.GetElementVisual(SaveBarBorder);
+            var bottomPanelVisual = ElementCompositionPreview.GetElementVisual(BottomBarStackPanel);
+ 
+            float height = (float)SaveBarBorder.ActualHeight;
+            if (height <= 0) height = 100f; 
+
+            var animationDuration = TimeSpan.FromMilliseconds(150);
+
+   
+
+            if (show)
             {
                 PrimaryInfoBar.CornerRadius = new CornerRadius(8, 8, 0, 0);
+ 
+
+                var cubicEaseOut = compositor.CreateCubicBezierEasingFunction(
+                       new System.Numerics.Vector2(0.215f, 0.61f),
+                       new System.Numerics.Vector2(0.355f, 1.0f)
+                   );
+
+
+
+                // Fade in SaveBarBorder
+
+                var opacityAnimation = compositor.CreateScalarKeyFrameAnimation();
+
+                opacityAnimation.InsertKeyFrame(0f, 0f);
+
+                opacityAnimation.InsertKeyFrame(1f, 1f, cubicEaseOut);
+
+                opacityAnimation.Duration = animationDuration;
+
+
+
+                saveBarVisual.StartAnimation("Opacity", opacityAnimation);
+
+
+
+                // Slide up BottomBarStackPanel
+
+                var offsetAnimation = compositor.CreateVector3KeyFrameAnimation();
+
+                offsetAnimation.InsertKeyFrame(0f, new Vector3(0, (float)SaveBarBorder.ActualHeight, 0));
+
+                offsetAnimation.InsertKeyFrame(1f, Vector3.Zero, cubicEaseOut);
+
+                offsetAnimation.Duration = animationDuration;
+
+
+
+                bottomPanelVisual.StartAnimation("Offset", offsetAnimation);
             }
             else
             {
+       
+
+                // Fade out SaveBarBorder
+                var cubicEaseIn = compositor.CreateCubicBezierEasingFunction(
+          new System.Numerics.Vector2(0.55f, 0.055f),
+          new System.Numerics.Vector2(0.675f, 0.19f)
+       );
+
+
+                var saveBarHeight = SaveBarBorder.ActualHeight;
+
+
+
+                // Fade out SaveBarBorder
+
+                var opacityAnimation = compositor.CreateScalarKeyFrameAnimation();
+
+                opacityAnimation.InsertKeyFrame(0f, 1f);
+
+                opacityAnimation.InsertKeyFrame(1f, 0f, cubicEaseIn);
+
+                opacityAnimation.Duration = animationDuration;
+
+
+
+                saveBarVisual.StartAnimation("Opacity", opacityAnimation);
+
+
+
+                // Slide down BottomBarStackPanel
+
+                var offsetAnimation = compositor.CreateVector3KeyFrameAnimation();
+
+                offsetAnimation.InsertKeyFrame(0f, Vector3.Zero);
+
+                offsetAnimation.InsertKeyFrame(1f, new Vector3(0, (float)saveBarHeight, 0), cubicEaseIn);
+
+                offsetAnimation.Duration = animationDuration;
+
+
+
+                bottomPanelVisual.StartAnimation("Offset", offsetAnimation);
+
+                await Task.Delay(animationDuration);
                 PrimaryInfoBar.CornerRadius = new CornerRadius(8, 8, 8, 8);
             }
         }
@@ -288,15 +411,15 @@ namespace FramesToMMSpriteResource
 
         async void WaitThenSave()
         {
- 
+
             TreeViewControl.Focus(FocusState.Programmatic);
-         
+
             await Task.Delay(30);
-     
+
             SaveAllConfigs();
         }
 
-  
+
         void SaveAllConfigs()
         {
             if (hierarchyError)
@@ -324,7 +447,7 @@ namespace FramesToMMSpriteResource
                 programConfig.IsHd = programConfig.GameThemeConfigs!["Game Theme"].IsHd;
                 SaveProgramConfig();
                 SaveSubjects(workingPath, "Game Theme");
-            }        
+            }
         }
 
         void SaveSubjects(string gameThemeDir, string gameThemeName)
@@ -373,7 +496,7 @@ namespace FramesToMMSpriteResource
 
                 var json = File.ReadAllText(filePath);
                 var obj = JsonSerializer.Deserialize<T>(json, jsonOptions);
-         
+
                 return obj ?? new T();
             }
             catch (Exception ex)
@@ -403,6 +526,7 @@ namespace FramesToMMSpriteResource
             if (!PrimaryInfoBar.IsClosable && PrimaryInfoBar.Title != "Generating")
             {
                 PrimaryInfoBar.IsOpen = false;
+                SaveBarBorder.CornerRadius = new CornerRadius(8, 8, 8, 8);
             }
             SetUpTreeViewAndConfigs();
         }
@@ -429,6 +553,7 @@ namespace FramesToMMSpriteResource
                     {
                         SetInfoBar(InfoBarSeverity.Error, "Working path is incorrect", $"Working path does not exist:\n{workingPath}", false);
                         TreeViewPlaceHolderButton.Visibility = Visibility.Collapsed;
+                        TreeViewPlaceHolderStackPanel.Visibility = Visibility.Visible;
                         TreeViewPlaceHolderText.Text = "Cannot display hierarchy";
                         UnallowGeneration();
                         OpenSettings();
@@ -439,6 +564,7 @@ namespace FramesToMMSpriteResource
                     {
                         TreeViewPlaceHolderText.Text = "Empty working directory";
                         TreeViewPlaceHolderButton.Visibility = Visibility.Visible;
+                        TreeViewPlaceHolderStackPanel.Visibility = Visibility.Visible;
                         UnallowGeneration();
                         OpenSettings();
                         return;
@@ -448,6 +574,7 @@ namespace FramesToMMSpriteResource
                     {
                         hierarchyError = false;
                         AllowGeneration();
+                        TreeViewPlaceHolderStackPanel.Visibility = Visibility.Collapsed;
                         var gameThemeDirs = Directory.GetDirectories(workingPath);
 
                         foreach (var gameThemeDir in gameThemeDirs)
@@ -455,19 +582,19 @@ namespace FramesToMMSpriteResource
                             string gameThemeName = Path.GetFileName(gameThemeDir);
 
                             var gameThemeConfigPath = Path.Combine(gameThemeDir, CONFIG_FILENAME);
-                            GameThemeConfig gameThemeConfig = LoadJson<GameThemeConfig>(gameThemeConfigPath);      
+                            GameThemeConfig gameThemeConfig = LoadJson<GameThemeConfig>(gameThemeConfigPath);
 
                             SetUpSubjectTreeViewAndConfigs(gameThemeDir, gameThemeName, gameThemeConfig);
                         }
 
-                        if(TreeViewControl.SelectedNode == null)
+                        if (TreeViewControl.SelectedNode == null)
                         {
                             OpenSettings();
                         }
                         else
                         {
-                            DisplayCorrectPanel(TreeViewControl.SelectedNode);
-                        }          
+                            WaitThenDisplayCorrectPanel(TreeViewControl.SelectedNode);
+                        }
                     }
                     else
                     {
@@ -475,9 +602,10 @@ namespace FramesToMMSpriteResource
                         {
                             hierarchyError = false;
                             AllowGeneration();
+                            TreeViewPlaceHolderStackPanel.Visibility = Visibility.Collapsed;
 
                             GameThemeConfig gameThemeConfig = new(programConfig.IsHd, true);
-                    
+
                             SetUpSubjectTreeViewAndConfigs(workingPath, "Game Theme", gameThemeConfig);
 
                             if (TreeViewControl.SelectedNode == null)
@@ -486,7 +614,7 @@ namespace FramesToMMSpriteResource
                             }
                             else
                             {
-                                DisplayCorrectPanel(TreeViewControl.SelectedNode);
+                                WaitThenDisplayCorrectPanel(TreeViewControl.SelectedNode);
                             }
                         }
                         else
@@ -495,6 +623,7 @@ namespace FramesToMMSpriteResource
                             SetInfoBar(InfoBarSeverity.Error, "Wrong hierarchy or missing folders", "The way you've set your files and folders up is wrong...", false);
                             TreeViewPlaceHolderText.Text = "Cannot display hierarchy";
                             TreeViewPlaceHolderButton.Visibility = Visibility.Collapsed;
+                            TreeViewPlaceHolderStackPanel.Visibility = Visibility.Visible;
                             OpenSettings();
                         }
                     }
@@ -527,7 +656,7 @@ namespace FramesToMMSpriteResource
 
                     subjectConfig.AnimationConfigs![animationName] = animationConfig;
 
-                    var animationTreeItem = new TreeViewNode { Content = new TreeItem(animationName, "\uE805")};
+                    var animationTreeItem = new TreeViewNode { Content = new TreeItem(animationName, "\uE805") };
                     subjectTreeItem.Children.Add(animationTreeItem);
 
                     if (programConfig.SelectedNode != null &&
@@ -562,12 +691,12 @@ namespace FramesToMMSpriteResource
                 programConfig.SelectedNode[0] == gameThemeName)
             {
                 TreeViewControl.SelectedNode = gameThemeTreeItem;
-            }   
+            }
         }
 
         void UnallowGeneration()
         {
-            TreeViewPlaceHolderStackPanel.Visibility = Visibility.Visible;
+   
             ReduceFileSizeCheckBox.IsEnabled = false;
             GenerateButton.IsEnabled = false;
             ReduceFileSizeCheckBoxTexts.Opacity = 0.5;
@@ -575,7 +704,7 @@ namespace FramesToMMSpriteResource
 
         void AllowGeneration()
         {
-            TreeViewPlaceHolderStackPanel.Visibility = Visibility.Collapsed;
+
             ReduceFileSizeCheckBox.IsEnabled = true;
             GenerateButton.IsEnabled = true;
             ReduceFileSizeCheckBoxTexts.Opacity = 1;
@@ -585,7 +714,7 @@ namespace FramesToMMSpriteResource
         {
             try
             {
-                var firstLevelDirs = Directory.GetDirectories(workingPath);     
+                var firstLevelDirs = Directory.GetDirectories(workingPath);
 
                 foreach (var first in firstLevelDirs)
                 {
@@ -619,7 +748,7 @@ namespace FramesToMMSpriteResource
                         return false;
                     }
                 }
-                
+
                 return true;
             }
             catch
@@ -633,47 +762,150 @@ namespace FramesToMMSpriteResource
             WaitThenDisplayCorrectPanel((args.InvokedItem as TreeViewNode)!);
         }
 
-        async void WaitThenDisplayCorrectPanel(TreeViewNode node)
+        void WaitThenDisplayCorrectPanel(TreeViewNode node)
         {
             TreeViewControl.Focus(FocusState.Programmatic);
-            await Task.Delay(30);
-            DisplayCorrectPanel(node);
+
+            // Skip animation if same panel is already selected
+            if (TreeViewControl.SelectedNode == node && activated == true)
+            {
+                return;
+            }
+            SettingsToggleButton.IsChecked = false;
+            ItemDepth depth = GetNodeDepth(node);
+            bool sameDepth = false;
+            if(programConfig.SelectedNode != null && (
+               depth == ItemDepth.GameTheme && programConfig.SelectedNode.Count == 1 ||
+               depth == ItemDepth.Subject && programConfig.SelectedNode.Count == 2 ||
+               depth == ItemDepth.Animation && programConfig.SelectedNode.Count == 3))
+            {
+                sameDepth = true;
+            }
+
+            FadeOutAllPanels(sameDepth);        
+            DisplayCorrectPanel(node, depth);
         }
 
-        void DisplayCorrectPanel(TreeViewNode node)
+        void FadeOutAllPanels(bool sameDepth)
         {
-            ItemDepth depth = GetNodeDepth(node);
+            var panels = new[] { GameThemePanel, SubjectPanel, AnimationsPanel, HelpPanel };
 
-            GameThemePanel.Visibility = Visibility.Collapsed;
-            SubjectPanel.Visibility = Visibility.Collapsed;
-            AnimationsPanel.Visibility = Visibility.Collapsed;
-            HelpPanel.Visibility = Visibility.Collapsed;
+            foreach (var panel in panels)
+            {
+                if (panel.Visibility == Visibility.Visible)
+                {
+                    FadeOutPanel(panel, sameDepth);
+                }
+            }
+        }
 
-            DetachAllPanelEvents();
+        void FadeOutPanel(UIElement panel, bool sameDepth)
+        {
+            var storyboard = new Storyboard();
+            var doubleAnimation = new DoubleAnimation
+            {
+                From = 1.0,
+                To = 0.0,
+                Duration = new Duration(TimeSpan.FromMilliseconds(fadeOutMs)),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+            };
+
+            Storyboard.SetTarget(doubleAnimation, panel);
+            Storyboard.SetTargetProperty(doubleAnimation, "Opacity");
+            storyboard.Children.Add(doubleAnimation);
+    
+
+            storyboard.Completed += (s, e) =>
+            {
+                if (!sameDepth)
+                {
+                    panel.Visibility = Visibility.Collapsed;
+                }
+                panel.Opacity = 1.0;
+            };
+
+            storyboard.Begin();
+        }
+
+        void FadeInPanel(UIElement panel)
+        {
+            panel.Opacity = 0.0;
+            panel.Visibility = Visibility.Visible;
+
+            // Set up the transform if not already present
+            if (panel.RenderTransform is not TranslateTransform translateTransform)
+            {
+                translateTransform = new TranslateTransform();
+                panel.RenderTransform = translateTransform;
+            }
+
+            var storyboard = new Storyboard();
+
+            // Opacity animation
+            var opacityAnimation = new DoubleAnimation
+            {
+                From = 0.0,
+                To = 1.0,
+                Duration = new Duration(TimeSpan.FromMilliseconds(fadeInMs)),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            Storyboard.SetTarget(opacityAnimation, panel);
+            Storyboard.SetTargetProperty(opacityAnimation, "Opacity");
+            storyboard.Children.Add(opacityAnimation);
+
+            // Translate Y animation (slide up from 20px below)
+            var translateAnimation = new DoubleAnimation
+            {
+                From = 10.0,
+                To = 0.0,
+                Duration = new Duration(TimeSpan.FromMilliseconds(fadeInMs)),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            Storyboard.SetTarget(translateAnimation, translateTransform);
+            Storyboard.SetTargetProperty(translateAnimation, "Y");
+            storyboard.Children.Add(translateAnimation);
+
+            storyboard.Begin();
+        }
+
+        async void DisplayCorrectPanel(TreeViewNode node, ItemDepth depth)
+        {
+      
+
+         
 
             string gameThemeName;
             string subjectName;
             switch (depth)
             {
-                case ItemDepth.GameTheme: 
-                    GameThemePanel.Visibility = Visibility.Visible;
-                    SaveBarBorder.Visibility = Visibility.Collapsed;
-                    gameThemeName = ((node.Content as TreeItem)!).Text;
-                    currentConfig = programConfig.GameThemeConfigs![gameThemeName];
+                case ItemDepth.GameTheme:
+        
+                    AnimateSaveBarBorder(show: false);
+                    gameThemeName = ((node.Content as TreeItem)!).Text;         
                     UpdateBreadcrumb(gameThemeName);
+                    programConfig.SelectedNode = [(node.Content as TreeItem)!.Text];
+                    await Task.Delay(fadeOutMs);
+                    DetachAllPanelEvents();
+                    FadeInPanel(GameThemePanel);
+                    currentConfig = programConfig.GameThemeConfigs![gameThemeName];
                     var gameThemeConfig = (currentConfig as GameThemeConfig)!;
                     IsHdCheckBox.IsChecked = gameThemeConfig.IsHd;
                     IsHdCheckBox.Click += ClickIsHdCheckBox;
-
-                    programConfig.SelectedNode = [(node.Content as TreeItem)!.Text];
                     break;
-                case ItemDepth.Subject: 
-                    SubjectPanel.Visibility = Visibility.Visible;
-                    SaveBarBorder.Visibility = Visibility.Visible;
+                case ItemDepth.Subject:
+                    AnimateSaveBarBorder(show: true);
                     gameThemeName = (node.Parent.Content as TreeItem)!.Text;
                     subjectName = (node.Content as TreeItem)!.Text;
-                    currentConfig = programConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName];
                     UpdateBreadcrumb(gameThemeName, subjectName);
+
+                    programConfig.SelectedNode = [(node.Parent.Content as TreeItem)!.Text, (node.Content as TreeItem)!.Text];
+                    await Task.Delay(fadeOutMs);
+                    DetachAllPanelEvents();
+                    FadeInPanel(SubjectPanel);
+                  
+                 
+                    currentConfig = programConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName];
+           
                     var subjectConfig = (currentConfig as SubjectConfig)!;
                     subjectConfig.Sheet ??= new SheetConfig();
 
@@ -702,20 +934,28 @@ namespace FramesToMMSpriteResource
                     SheetWidthTextBox.ValueChanged += SheetWidthTextBox_ValueChanged;
                     SheetHeightTextBox.ValueChanged += SheetHeightTextBox_ValueChanged;
 
-                    programConfig.SelectedNode = [(node.Parent.Content as TreeItem)!.Text, (node.Content as TreeItem)!.Text];
+
                     break;
                 case ItemDepth.Animation:
-                    AnimationsPanel.Visibility = Visibility.Visible;
-                    SaveBarBorder.Visibility = Visibility.Visible;
+                    AnimateSaveBarBorder(show: true);
                     gameThemeName = (node.Parent.Parent.Content as TreeItem)!.Text;
                     subjectName = (node.Parent.Content as TreeItem)!.Text;
                     string animationName = (node.Content as TreeItem)!.Text;
-                    currentConfig = programConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName];
                     UpdateBreadcrumb(gameThemeName, subjectName, animationName);
+
+                    programConfig.SelectedNode = [(node.Parent.Parent.Content as TreeItem)!.Text, (node.Parent.Content as TreeItem)!.Text, (node.Content as TreeItem)!.Text];
+                    await Task.Delay(fadeOutMs);
+                    DetachAllPanelEvents();
+                    FadeInPanel(AnimationsPanel);
+        
+           
+                    
+                    currentConfig = programConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName];
+      
                     var animationConfig = (currentConfig as AnimationConfig)!;
                     animationConfig.RecoverCroppedOffset ??= new RecoverCroppedOffset();
                     animationConfig.Offset ??= new Vector2(0, 0);
-              
+
                     RegenerateCheckBox.IsChecked = animationConfig.Regenerate;
                     RecoverXCheckBox.IsChecked = animationConfig.RecoverCroppedOffset.X;
                     RecoverYCheckBox.IsChecked = animationConfig.RecoverCroppedOffset.Y;
@@ -733,14 +973,14 @@ namespace FramesToMMSpriteResource
                     OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
 
 
-                    programConfig.SelectedNode = [(node.Parent.Parent.Content as TreeItem)!.Text, (node.Parent.Content as TreeItem)!.Text, (node.Content as TreeItem)!.Text];
+
                     break;
                 default:
-                    OpenSettings();
+                    DetachAllPanelEvents();
                     break;
             }
 
-            SettingsToggleButton.IsChecked = false;
+
         }
 
         private void DetachAllPanelEvents()
@@ -844,7 +1084,7 @@ namespace FramesToMMSpriteResource
                 case ItemDepth.Subject:
                     programConfig.GameThemeConfigs![(node.Parent.Content as TreeItem)!.Text].SubjectConfigs![(node.Content as TreeItem)!.Text].IsExpanded = true;
                     break;
-                default: 
+                default:
                     break;
             }
         }
@@ -880,23 +1120,39 @@ namespace FramesToMMSpriteResource
 
         private void ClickSettings(object sender, RoutedEventArgs e)
         {
-            OpenSettings();
+            _ = OpenSettingsAsync();
+        }
+
+        async Task OpenSettingsAsync()
+        {
+           
+            SettingsToggleButton.IsChecked = true;
+            // Skip animation if settings are already open
+            if (HelpPanel.Visibility == Visibility.Visible)
+            {
+                return;
+            }
+            TreeViewControl.SelectedNode = null;
+            programConfig.SelectedNode = null;
+            FadeOutAllPanels(false);
+
+            UpdateBreadcrumb("Settings & Help");
+            AnimateSaveBarBorder(show: false);
+            await Task.Delay(fadeOutMs);
+            FadeInPanel(HelpPanel);
+
+       
+        
+
         }
 
         public void OpenSettings()
         {
-            UpdateBreadcrumb("Settings & Help");
-
-            SubjectPanel.Visibility = Visibility.Collapsed;
-            AnimationsPanel.Visibility = Visibility.Collapsed;
-            GameThemePanel.Visibility = Visibility.Collapsed;
-            HelpPanel.Visibility = Visibility.Visible;
-            TreeViewControl.SelectedNode = null;
-            SaveBarBorder.Visibility = Visibility.Collapsed;
-
-            SettingsToggleButton.IsChecked = true;
-
-            programConfig.SelectedNode = null;
+            if (!activated)
+            {
+                SaveBarBorder.Opacity = 0;
+            }
+            _ = OpenSettingsAsync();
         }
 
         private void SetInfoBar(InfoBarSeverity severity, string title, string message, bool isClosable = true)
@@ -928,7 +1184,7 @@ namespace FramesToMMSpriteResource
                     break;
             }
         }
-        
+
 
         private void ClickPrimaryInfoBar(InfoBar sender, object args)
         {
@@ -1064,18 +1320,28 @@ namespace FramesToMMSpriteResource
         {
             SetInfoBar(InfoBarSeverity.Informational, "Generating", $"{programConfig.SelectedNode![1]} is being generated", false);
             ControlEnabler.IsEnabled = false;
+            HeaderBreadcrumbBar.IsEnabled = false;
+            TreeViewControl.IsEnabled = false;
+            SettingsToggleButton.IsEnabled = false;
+            UnallowGeneration();
             var stopwatch = Stopwatch.StartNew();
             try
             {
                 await Processer.StartProcessAsync();
                 stopwatch.Stop();
                 SetInfoBar(InfoBarSeverity.Success, "Successfully generated", $"Spritesheet generated into {programConfig.SelectedNode![1]}/generated ({stopwatch.ElapsedMilliseconds}ms)");
+
             }
             catch (Exception er)
             {
                 SetInfoBar(InfoBarSeverity.Error, "Generation failed", er.Message);
             }
+          
             ControlEnabler.IsEnabled = true;
+            HeaderBreadcrumbBar.IsEnabled = true;
+            TreeViewControl.IsEnabled = true;
+            SettingsToggleButton.IsEnabled = true;
+            AllowGeneration();
         }
 
         private async void TreeViewControl_PointerPressed(object sender, PointerRoutedEventArgs e)
@@ -1111,6 +1377,37 @@ namespace FramesToMMSpriteResource
                     }
                 }
             }
+        }
+
+        private void BottomBarStackPanel_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            var HelpStackPanel = ((HelpPanel.Children[0] as ScrollViewer).Content as StackPanel);
+            HelpStackPanel.Padding = new Thickness(
+                HelpStackPanel.Padding.Left,
+                HelpStackPanel.Padding.Top,
+                HelpStackPanel.Padding.Right,
+                BottomBarStackPanel.ActualHeight + HelpStackPanel.Padding.Top * 2);
+
+            var GameThemeStackPanel = ((GameThemePanel.Children[0] as ScrollViewer).Content as StackPanel);
+            GameThemeStackPanel.Padding = new Thickness(
+                GameThemeStackPanel.Padding.Left,
+                GameThemeStackPanel.Padding.Top,
+                GameThemeStackPanel.Padding.Right,
+                BottomBarStackPanel.ActualHeight + GameThemeStackPanel.Padding.Top * 2);
+
+            var SubjectStackPanel = ((SubjectPanel.Children[0] as ScrollViewer).Content as StackPanel);
+            SubjectStackPanel.Padding = new Thickness(
+                SubjectStackPanel.Padding.Left,
+                SubjectStackPanel.Padding.Top,
+                SubjectStackPanel.Padding.Right,
+                BottomBarStackPanel.ActualHeight + SubjectStackPanel.Padding.Top * 2);
+
+            var AnimationStackPanel = ((AnimationsPanel.Children[0] as ScrollViewer).Content as StackPanel);
+            AnimationStackPanel.Padding = new Thickness(
+                AnimationStackPanel.Padding.Left,
+                AnimationStackPanel.Padding.Top,
+                AnimationStackPanel.Padding.Right,
+                BottomBarStackPanel.ActualHeight + AnimationStackPanel.Padding.Top * 2);
         }
     }
 }

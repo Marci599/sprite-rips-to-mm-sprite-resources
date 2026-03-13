@@ -15,10 +15,7 @@
     </Window.SystemBackdrop>
 
 
-    <ContentControl x:Name="ControlEnabler" HorizontalAlignment="Stretch" 
-                    VerticalAlignment="Stretch"
-                    HorizontalContentAlignment="Stretch" 
-                    VerticalContentAlignment="Stretch">
+
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="auto"/>
@@ -114,18 +111,19 @@
             </BreadcrumbBar>
 
             <Border Grid.Row="1" Background="{ThemeResource LayerFillColorDefaultBrush}" CornerRadius="20 0 0 0">
+                <ContentControl x:Name="ControlEnabler" HorizontalAlignment="Stretch" 
+                    VerticalAlignment="Stretch"
+                    HorizontalContentAlignment="Stretch" 
+                    VerticalContentAlignment="Stretch">
                 <Grid>
                     <!-- GameTheme Panel (default visible) -->
-                    <Grid x:Name="GameThemePanel" Visibility="Visible">
+                    <Grid x:Name="GameThemePanel" Visibility="Collapsed">
                         <ScrollViewer>
                             <StackPanel Padding="20 14 20 20">
                                 <StackPanel Spacing="4" MaxWidth="1000">
                                     <CheckBox x:Name="IsHdCheckBox" Content="Is HD"/>
                                     <TextBlock Text="If enabled @2x pngs will be generated and .sprites files will be adjusted for that"  Style="{StaticResource HelperTextStyle}"/>
                                 </StackPanel>
-                                <Grid
-                                    Height="{Binding ActualHeight, ElementName=BottomBarStackPanel}"
-                                    IsHitTestVisible="False"/>
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>
@@ -189,9 +187,7 @@
                                         </StackPanel>
                                     </Border>
                                 </Grid>
-                                <Grid
-                                    Height="{Binding ActualHeight, ElementName=BottomBarStackPanel}"
-                                    IsHitTestVisible="False"/>
+      
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>
@@ -244,9 +240,7 @@
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
-                                <Grid
-                                  Height="{Binding ActualHeight, ElementName=BottomBarStackPanel}"
-                                  IsHitTestVisible="False"/>
+            
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>
@@ -297,19 +291,17 @@
                                         </Button>
                                     </InfoBar.ActionButton>
                                 </InfoBar>
-                                <Grid
-                                    Height="{Binding ActualHeight, ElementName=BottomBarStackPanel}"
-                                    IsHitTestVisible="False"/>
+             
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>
                 </Grid>
+                </ContentControl>
             </Border>
 
-
-            <!-- Bottom Section -->
-            
-            <StackPanel x:Name="BottomBarStackPanel" VerticalAlignment="Bottom" Grid.Row="1" Margin="12">
+            <!-- Bottom Section - moved to Grid.Row="1" -->
+                <Grid Grid.Row="1" VerticalAlignment="Bottom" Margin="12">
+                <StackPanel x:Name="BottomBarStackPanel" SizeChanged="BottomBarStackPanel_SizeChanged" Translation="0,0,0">
                 <InfoBar
                     x:Name="PrimaryInfoBar"
                     IsOpen="False"
@@ -322,7 +314,8 @@
                     x:Name="SaveBarBorder"
                     Background="{StaticResource AcrylicBackgroundFillColorBaseBrush}"
                     CornerRadius="8"
-                    
+                    Margin="0 -1 0 0"
+  
                     >
 
                     <Grid ColumnSpacing="8" Padding="16">
@@ -348,8 +341,9 @@
                     </Grid>
                 </Border>
             </StackPanel>
+            </Grid>
 
         </Grid>
     </Grid>
-    </ContentControl>
+
 </Window>
