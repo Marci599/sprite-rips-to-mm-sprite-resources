@@ -12,7 +12,7 @@
                 <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
             <!-- Converters -->
-            <local:BoolToDoubleConverter x:Key="BoolToDoubleConverter" />
+    
                 <!-- Shared styles to reduce repetition in the app XAML -->
                 <Style x:Key="CardBorderStyle" TargetType="Border">
                     <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
@@ -81,11 +81,12 @@
                                 <Rectangle x:Name="SelectionStripe"
                                            Grid.ColumnSpan="2"
                                            Fill="{ThemeResource AccentFillColorDefaultBrush}"
-                                           Opacity="1"
+                                   
                                            HorizontalAlignment="Left"
                                            VerticalAlignment="Stretch"
                                            Height="16"
-                                           Width="{Binding IsChecked, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolToDoubleConverter}, ConverterParameter=3}" 
+                                           Width="3" 
+                                           Visibility="{Binding IsChecked, RelativeSource={RelativeSource TemplatedParent}}"
                                            RadiusX="1" RadiusY="1"/>
 
                                 <VisualStateManager.VisualStateGroups>
@@ -107,28 +108,7 @@
                                         </VisualState>
                                     </VisualStateGroup>
 
-                                    <VisualStateGroup x:Name="CheckStates">
-                                        <VisualState x:Name="Unchecked">
-                                            <Storyboard>
-                                                <!-- collapse the stripe by setting width to 0 -->
-                                                <DoubleAnimation Storyboard.TargetName="SelectionStripe" Storyboard.TargetProperty="Width" To="0" Duration="0" />
-                                                <!-- ensure content area remains transparent -->
-                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentBorder" Storyboard.TargetProperty="Background">
-                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="Transparent" />
-                                                </ObjectAnimationUsingKeyFrames>
-                                            </Storyboard>
-                                        </VisualState>
-                                        <VisualState x:Name="Checked">
-                                            <Storyboard>
-                                                <!-- expand the stripe to 4px -->
-                                                <DoubleAnimation Storyboard.TargetName="SelectionStripe" Storyboard.TargetProperty="Width" To="4" Duration="0:0:0.12" />
-                                                <!-- keep the content area transparent (matching "átlátszó háttér") -->
-                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentBorder" Storyboard.TargetProperty="Background">
-                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="Transparent" />
-                                                </ObjectAnimationUsingKeyFrames>
-                                            </Storyboard>
-                                        </VisualState>
-                                    </VisualStateGroup>
+                                   
                                 </VisualStateManager.VisualStateGroups>
                             </Grid>
                         </ControlTemplate>

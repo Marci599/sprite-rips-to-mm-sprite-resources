@@ -221,7 +221,8 @@ namespace FramesToMMSpriteResources
             {
                 foreach (var child in Directory.EnumerateFiles(outputDir))
                 {
-                    try { Directory.Delete(child); } catch { }
+                    try { File.Delete(child); } catch (Exception ex) { Debug.WriteLine(ex.Message); Debug.WriteLine(ex.StackTrace);
+                    }
                 }
             }
             Directory.CreateDirectory(outputDir);
