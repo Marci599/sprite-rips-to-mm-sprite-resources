@@ -14,9 +14,10 @@
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
-
-
     <Grid>
+        <Grid.Resources>
+            <local:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
+        </Grid.Resources>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="auto"/>
             <ColumnDefinition Width="*"/>
@@ -37,10 +38,19 @@
                 </TreeView.ItemContainerStyle>
                 <TreeView.ItemTemplate>
                     <DataTemplate>
-                        <StackPanel Orientation="Horizontal">
-                            <FontIcon Glyph="{Binding Content.IconGlyph}" Width="20" Height="32" Margin="-4 0 12 0" Opacity="0.67" FontSize="18"/>
-                            <TextBlock Text="{Binding Content.Text}" VerticalAlignment="Center" Margin="0 0 18 0"/>
-                        </StackPanel>
+                        <Grid ColumnSpacing="12" Padding="0 0 12 0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <FontIcon Grid.Column="0" Glyph="{Binding Content.IconGlyph}" Width="20" Height="32" Margin="-4 0 0 0" Opacity="0.67" FontSize="18"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Content.Text}" VerticalAlignment="Center" Margin="0 0 0 0"/>
+                            <Border Grid.Column="2" Background="{StaticResource SubtleFillColorSecondaryBrush}" CornerRadius="10" MinWidth="20" Height="20" Padding="6 0 6 2" Visibility="{Binding Content.Count, Converter={StaticResource CountToVisibilityConverter}}">
+                                <TextBlock Text="{Binding Content.Count}" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{StaticResource TextFillColorTertiaryBrush}" FontWeight="SemiBold"/>
+                            </Border>
+                            
+                        </Grid>
                     </DataTemplate>
                 </TreeView.ItemTemplate>
             </TreeView>
@@ -256,7 +266,8 @@
                                         <TextBlock x:Name="ProgramNameTextBlock" Text="Frames to MM sprite resources v" Style="{StaticResource SectionHeaderStyle}"/>
                                         <Rectangle Style="{StaticResource GroupDividerStyle}"/>
                                         <TextBlock Text="Created by Marci599 for Mario Multiverse.&#x0a;Mario Multiverse (SFMB) created by neoarc."/>
-                                        <TextBlock Text="Check GitHub repository for help, updates and issues:"/>
+                                            <TextBlock Text="Using SkiaSharp and Oxipng."/>
+                                        <TextBlock Text="Check GitHub repository for help, updates, examples and issues:"/>
                                         <HyperlinkButton NavigateUri = "https://github.com/Marci599/sprite-rips-to-mm-sprite-resources" Margin="-12 -14 -12 -4" Padding="11 0 11 4" MinHeight="0">
                                             <TextBlock Text="github.com/Marci599/sprite-rips-to-mm-sprite-resources"/>
                                         </HyperlinkButton>

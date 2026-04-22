@@ -9,7 +9,7 @@
             
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
-                <!-- Other merged dictionaries here -->
+            
             </ResourceDictionary.MergedDictionaries>
             <!-- Converters -->
     
@@ -42,7 +42,12 @@
                 <Style x:Key="InsetTextBoxStyle" TargetType="TextBox">
                     <Setter Property="CornerRadius" Value="4" />
                 </Style>
-            <!-- Other app resources here -->
+
+            <Style TargetType="CheckBox" BasedOn="{StaticResource DefaultCheckBoxStyle}">
+                
+            </Style>
+
+      
             <Style TargetType="TextBlock">
                 <Setter Property="TextWrapping" Value="Wrap" />
             </Style>

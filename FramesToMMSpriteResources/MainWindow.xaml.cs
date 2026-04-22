@@ -1,8 +1,9 @@
-using Microsoft.UI;
+﻿using Microsoft.UI;
 using Microsoft.UI.Composition;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
@@ -29,12 +30,17 @@ namespace FramesToMMSpriteResources
     public class TreeItem
     {
         public string Text { get; set; }
+
+   
         public string IconGlyph { get; set; }
 
-        public TreeItem(string text, string iconGlyph)
+        public int Count { get; set; }
+
+        public TreeItem(string text, string iconGlyph, int count = -1)
         {
             Text = text;
             IconGlyph = iconGlyph;
+            Count = count;
         }
     }
 
@@ -160,21 +166,39 @@ namespace FramesToMMSpriteResources
 
             ProgramNameTextBlock.Text += GetCurrentVersion();
 
-            //TODO: NAPONTA EGYSZER
-            CheckForUpdate();
+        
+            CheckForUpdateIfNeeded();
 
-            // Subscribe to the cancellable Closing event
+       
             AppWindow.Closing += AppWindow_Closing;
+        }
+
+        async void CheckForUpdateIfNeeded()
+        {
+            var now = DateTime.UtcNow;
+
+            if (programConfig.LastUpdateCheck.HasValue)
+            {
+                var lastCheck = programConfig.LastUpdateCheck.Value;
+
+       
+                if (lastCheck.Date == now.Date)
+                    return;
+            }
+
+        
+            programConfig.LastUpdateCheck = now;
+            SaveProgramConfig();
+
+            await CheckForUpdateAsync();
         }
 
         private void AppWindow_Closing(AppWindow sender, AppWindowClosingEventArgs args)
         {
-            // Immediately cancel the system close so we can show an async dialog.
-            // (If you already know you want to cancel, set true and return.)
+       
             args.Cancel = true;
 
-            // Use the UI dispatcher to show an async dialog after the handler returns.
-            // Do not await inside the event handler itself (the event is synchronous).
+       
             _ = DispatcherQueue.TryEnqueue(async () =>
             {
                 TreeViewControl.Focus(FocusState.Programmatic);
@@ -203,11 +227,12 @@ namespace FramesToMMSpriteResources
             return $"{version.Major}.{version.Minor}.{version.Build}";
         }
 
-        async void CheckForUpdate()
+        async Task CheckForUpdateAsync()
         {
             string current = GetCurrentVersion();
 
             string? latest = await UpdateChecker.GetLatestVersionAsync();
+
 
 
 
@@ -558,12 +583,17 @@ namespace FramesToMMSpriteResources
         {
             programConfig.GameThemeConfigs = [];
             TreeViewControl.RootNodes.Clear();
+            TryCloseInfoBar();
+            SetUpTreeViewAndConfigs();
+        }
+
+        void TryCloseInfoBar()
+        {
             if (!PrimaryInfoBar.IsClosable && PrimaryInfoBar.Title != "Generating")
             {
                 PrimaryInfoBar.IsOpen = false;
                 SaveBarBorder.CornerRadius = new CornerRadius(8, 8, 8, 8);
             }
-            SetUpTreeViewAndConfigs();
         }
 
         void SetUpTreeViewAndConfigs()
@@ -687,6 +717,7 @@ namespace FramesToMMSpriteResources
                 var subjectTreeItem = new TreeViewNode { Content = new TreeItem(subjectName, "\uF158"), IsExpanded = subjectConfig.IsExpanded };
 
                 var animationDirs = Directory.GetDirectories(Path.Combine(subjectDir, "raw"));
+                int framesSum = 0;
                 foreach (var animationDir in animationDirs)
                 {
                     string animationName = Path.GetFileName(animationDir);
@@ -696,7 +727,17 @@ namespace FramesToMMSpriteResources
 
                     subjectConfig.AnimationConfigs![animationName] = animationConfig;
 
-                    var animationTreeItem = new TreeViewNode { Content = new TreeItem(animationName, "\uE805") };
+                    var fileCount = Directory.GetFiles(animationDir).Length;
+                    
+
+                    if (File.Exists(animationConfigPath))
+                    {
+                        fileCount--;
+                    }
+
+                    framesSum += fileCount;
+
+                    var animationTreeItem = new TreeViewNode { Content = new TreeItem(animationName, "\uE805", fileCount) };
                     subjectTreeItem.Children.Add(animationTreeItem);
 
                     if (programConfig.SelectedNode != null &&
@@ -708,6 +749,8 @@ namespace FramesToMMSpriteResources
                         TreeViewControl.SelectedNode = animationTreeItem;
                     }
                 }
+
+                (subjectTreeItem.Content as TreeItem).Count = framesSum;
 
                 gameThemeConfig.SubjectConfigs![subjectName] = subjectConfig;
 
@@ -913,11 +956,23 @@ namespace FramesToMMSpriteResources
             storyboard.Begin();
         }
 
+        void CheckFrameCountAndDisplayWarning(int count)
+        {
+            if (count <= 0)
+            {
+                SetInfoBar(InfoBarSeverity.Warning, "Animations are empty", "Add at least one frame to at least one animation.", false);
+                UnallowGeneration();
+            }
+            else
+            {
+                AllowGeneration();
+                TryCloseInfoBar();
+            }
+        }
+
         async void DisplayCorrectPanel(TreeViewNode node, ItemDepth depth, bool animate = true)
         {
       
-
-         
 
             string gameThemeName;
             string subjectName;
@@ -930,7 +985,9 @@ namespace FramesToMMSpriteResources
                     gameThemeName = ((node.Content as TreeItem)!).Text;         
                     UpdateBreadcrumb(gameThemeName);
                     programConfig.SelectedNode = [(node.Content as TreeItem)!.Text];
-                    
+
+                    TryCloseInfoBar();
+
                     if (animate)
                     {
                         await Task.Delay(fadeOutMs);
@@ -956,6 +1013,9 @@ namespace FramesToMMSpriteResources
                     UpdateBreadcrumb(gameThemeName, subjectName);
 
                     programConfig.SelectedNode = [(node.Parent.Content as TreeItem)!.Text, (node.Content as TreeItem)!.Text];
+
+                    CheckFrameCountAndDisplayWarning((node.Content as TreeItem).Count);
+
                     if (animate)
                     {
                         await Task.Delay(fadeOutMs);
@@ -964,7 +1024,7 @@ namespace FramesToMMSpriteResources
                     }
                     else
                     {
-                        await Task.Delay(fadeOutMs);
+                        await Task.Delay(30);
                         DetachAllPanelEvents();
                         SubjectPanel.Visibility = Visibility.Visible;
                     }
@@ -1010,6 +1070,8 @@ namespace FramesToMMSpriteResources
                     UpdateBreadcrumb(gameThemeName, subjectName, animationName);
 
                     programConfig.SelectedNode = [(node.Parent.Parent.Content as TreeItem)!.Text, (node.Parent.Content as TreeItem)!.Text, (node.Content as TreeItem)!.Text];
+
+                    CheckFrameCountAndDisplayWarning((node.Parent.Content as TreeItem).Count);
 
                     if (animate)
                     {
@@ -1201,7 +1263,6 @@ namespace FramesToMMSpriteResources
 
         async Task OpenSettingsAsync()
         {
-           
             SettingsToggleButton.IsChecked = true;
             // Skip animation if settings are already open
             if (HelpPanel.Visibility == Visibility.Visible)
@@ -1214,6 +1275,7 @@ namespace FramesToMMSpriteResources
 
             UpdateBreadcrumb("Settings & Help");
             AnimateSaveBarBorder(show: false);
+            TryCloseInfoBar();
             await Task.Delay(fadeOutMs);
             FadeInPanel(HelpPanel);
 

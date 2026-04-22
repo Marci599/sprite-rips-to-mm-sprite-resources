@@ -20,7 +20,13 @@
     <Page Remove="Styles.xaml" />
   </ItemGroup>
 
-  <ItemGroup>
+<ItemGroup>
+	<None Include="Assets\Tools\oxipng.exe">
+		<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</None>
+</ItemGroup>
+
+	<ItemGroup>
     <Content Include="Assets\SplashScreen.scale-200.png" />
     <Content Include="Assets\LockScreenLogo.scale-200.png" />
     <Content Include="Assets\Square150x150Logo.scale-200.png" />
@@ -42,10 +48,9 @@
     <ProjectCapability Include="Msix" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="NetVips" Version="3.2.0" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7705" />
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260209005" />
-    <PackageReference Include="NetVips.Native.win-x64" Version="8.18.2" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.1721" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260416003" />
+    <PackageReference Include="SkiaSharp" Version="3.119.2" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Controls\CardGroup.xaml">

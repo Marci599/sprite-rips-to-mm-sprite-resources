@@ -19,7 +19,10 @@ namespace FramesToMMSpriteResources
         public List<string>? SelectedNode;
 
         [JsonPropertyName("is_hd")]
+
         public bool IsHd = true;
+        [JsonPropertyName("last_update_check")]
+        public DateTime? LastUpdateCheck { get; set; }
 
         [JsonIgnore]
         public Dictionary<string, GameThemeConfig>? GameThemeConfigs = [];
