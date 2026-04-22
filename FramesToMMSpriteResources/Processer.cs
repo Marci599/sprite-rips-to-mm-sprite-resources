@@ -29,8 +29,8 @@ namespace FramesToMMSpriteResources
 
     public class PreviousSpriteFileValues
     {
-        public Dictionary<string, List<JsonObject>> FramesByAnimation { get; set; }
-        public string SubPositions { get; set; }
+        public Dictionary<string, List<JsonObject>> FramesByAnimation { get; set; } = new();
+        public string SubPositions { get; set; } = string.Empty;
     }
 
     class Processer
@@ -135,56 +135,30 @@ namespace FramesToMMSpriteResources
                 }
 
 
-                int spritesCount = 0;
                 string animationPath = Path.Combine(subjectPath, "raw", animationName);
+                var spritePaths = Directory
+                    .EnumerateFiles(animationPath, "*.png", SearchOption.TopDirectoryOnly)
+                    .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
 
-                var filesInAnimationPath = Directory.GetFiles(animationPath);
-                var i = 0;
-                foreach (var spritePath in filesInAnimationPath)
+                var animationSprites = new ProcessedSprite[spritePaths.Length];
+                Parallel.For(0, spritePaths.Length, new ParallelOptions
                 {
-
-                    if (Path.GetExtension(spritePath) == ".png")
+                    MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount)
+                }, i =>
+                {
+                    JsonObject? oldJson = null;
+                    if (list != null && i < list.Count)
                     {
-
-                        var image = LoadImage(spritePath);
-                        if (!string.IsNullOrEmpty(subjectConfig.BackgroundColor) && subjectConfig.RemoveBackground)
-                        {
-                            image = RemoveColorWithThreshold(image);
-                        }
-
-                        if (subjectConfig.ResizeToPercent != 100 && subjectConfig.ResizeToPercent > 0)
-                        {
-                            var scale = subjectConfig.ResizeToPercent / 100.0;
-                            int newW = Math.Max(1, (int)Math.Round(image.Width * scale));
-                            int newH = Math.Max(1, (int)Math.Round(image.Height * scale));
-                            if (newW != image.Width || newH != image.Height)
-                                image = ResizeBitmapNearest(image, new IntVector2(newW, newH));
-                        }
-
-                        var originalSize = new IntVector2(image.Width, image.Height);
-
-                        (Image imgAfterTrim, IntVector2 offset) = (image, new(0, 0));
-
-                        if (subjectConfig.CropSprites)
-                        {
-                            (imgAfterTrim, offset) = TrimColor(image);
-                        }
-                        image = imgAfterTrim;
-                        if (gameThemeConfig.IsHd)
-                        {
-                            image = EnsureEvenDimensions(image);
-                        }
-
-                        JsonObject oldJson = null;
-                        if (list != null)
-                        {
-                            oldJson = list[i];
-                        }
-                        processedSprites.Add(new ProcessedSprite(image, originalSize, offset, animationName, oldJson));
-                        spritesCount++;
-                        i++;
+                        oldJson = list[i];
                     }
-                }
+
+                    animationSprites[i] = ProcessSingleSprite(spritePaths[i], animationName, oldJson);
+                });
+
+                processedSprites.AddRange(animationSprites);
+
+                int spritesCount = spritePaths.Length;
                 var frameRange = Enumerable.Range(frameIndex, spritesCount).ToList();
                 animationsMeta.Add(new Dictionary<string, object>
                 {
@@ -252,6 +226,40 @@ namespace FramesToMMSpriteResources
                 return image.Bandjoin(alpha);
             }
             throw new InvalidOperationException($"Unsupported band count: {image.Bands} in {path}");
+        }
+
+        private static ProcessedSprite ProcessSingleSprite(string spritePath, string animationName, JsonObject? oldJson)
+        {
+            var image = LoadImage(spritePath);
+            if (!string.IsNullOrEmpty(subjectConfig.BackgroundColor) && subjectConfig.RemoveBackground)
+            {
+                image = RemoveColorWithThreshold(image);
+            }
+
+            if (subjectConfig.ResizeToPercent != 100 && subjectConfig.ResizeToPercent > 0)
+            {
+                var scale = subjectConfig.ResizeToPercent / 100.0;
+                int newW = Math.Max(1, (int)Math.Round(image.Width * scale));
+                int newH = Math.Max(1, (int)Math.Round(image.Height * scale));
+                if (newW != image.Width || newH != image.Height)
+                {
+                    image = ResizeBitmapNearest(image, new IntVector2(newW, newH));
+                }
+            }
+
+            var originalSize = new IntVector2(image.Width, image.Height);
+            (Image imgAfterTrim, IntVector2 offset) = (image, new(0, 0));
+            if (subjectConfig.CropSprites)
+            {
+                (imgAfterTrim, offset) = TrimColor(image);
+            }
+            image = imgAfterTrim;
+            if (gameThemeConfig.IsHd)
+            {
+                image = EnsureEvenDimensions(image);
+            }
+
+            return new ProcessedSprite(image, originalSize, offset, animationName, oldJson);
         }
 
         private static void SaveImageToFile(Image image, string path)
@@ -365,13 +373,13 @@ namespace FramesToMMSpriteResources
         static Image CreateSpriteSheet(List<ProcessedSprite> sprites, List<IntVector2?> positions, IntVector2 canvasSize)
         {
             if (canvasSize.X <= 1 || canvasSize.Y <= 1) throw new InvalidOperationException("Sprites don't exist.");
-            var sheet = Image.Black(canvasSize.X, canvasSize.Y, bands: 4);
+            var sheet = Image.Black(canvasSize.X, canvasSize.Y, bands: 4).CopyMemory();
             for (int i = 0; i < sprites.Count; i++)
             {
                 var pos = positions[i];
                 if (pos == default) continue;
                 var bmp = sprites[i].Image;
-                sheet = sheet.Insert(bmp, pos?.X ?? 0, pos?.Y ?? 0);
+                sheet.DrawImage(bmp, pos?.X ?? 0, pos?.Y ?? 0);
             }
             return sheet;
         }
@@ -552,86 +560,43 @@ namespace FramesToMMSpriteResources
 
         static (Image cropped, IntVector2 offset) TrimColor(Image src)
         {
-            IntVector2 size = new(src.Width, src.Height);
-            var bytes = src.WriteToMemory();
-            int bands = src.Bands;
-
             if (subjectConfig.BackgroundColor == null || subjectConfig.RemoveBackground)
             {
-                int left = size.X, top = size.Y, right = 0, bottom = 0;
-                bool any = false;
-                for (int y = 0; y < size.Y; y++)
+                var alpha = src[3];
+                if (!TryGetBoundingBox(alpha > 0, out int left, out int top, out int right, out int bottom))
                 {
-                    for (int x = 0; x < size.X; x++)
-                    {
-                        int idx = (y * size.X + x) * bands;
-                        byte a = bytes[idx + 3];
-                        if (a != 0)
-                        {
-                            any = true;
-                            if (x < left) left = x;
-                            if (x > right) right = x;
-                            if (y < top) top = y;
-                            if (y > bottom) bottom = y;
-                        }
-                    }
+                    return (src, new(0, 0));
                 }
-                if (!any) return (src, new(0, 0));
-                right++; bottom++;
                 if (gameThemeConfig.IsHd)
                 {
-                    (left, top, right, bottom) = AlignEvenBox(left, top, right, bottom, size);
+                    (left, top, right, bottom) = AlignEvenBox(left, top, right, bottom, new(src.Width, src.Height));
                 }
                 var cropped = CropBitmap(src, left, top, right - left, bottom - top);
                 return (cropped, new(left, top));
             }
             else
             {
-
                 double thr2 = subjectConfig.ColorTreshold * subjectConfig.ColorTreshold;
                 byte tr = parsedBackgroundColor.Value.r, tg = parsedBackgroundColor.Value.g, tb = parsedBackgroundColor.Value.b, ta = parsedBackgroundColor.Value.a;
+                var bands = src.Bandsplit();
+                var dr = bands[0] - tr;
+                var dg = bands[1] - tg;
+                var db = bands[2] - tb;
+                var da = bands[3] - ta;
+                var dist2 = dr * dr + dg * dg + db * db + da * da;
+                var contentMask = (dist2 > thr2);
 
-                bool[] rowHas = new bool[size.Y];
-                bool[] colHas = new bool[size.X];
-                bool any = false;
-
-                for (int y = 0; y < size.Y; y++)
+                if (!TryGetBoundingBox(contentMask, out int left, out int top, out int right, out int bottom))
                 {
-                    for (int x = 0; x < size.X; x++)
-                    {
-                        int idx = (y * size.X + x) * bands;
-                        int r = bytes[idx + 0];
-                        int g = bytes[idx + 1];
-                        int b = bytes[idx + 2];
-                        int a = bytes[idx + 3];
-
-                        int dr = r - tr;
-                        int dg = g - tg;
-                        int db = b - tb;
-                        int da = a - ta;
-                        long dist2 = (long)dr * dr + (long)dg * dg + (long)db * db + (long)da * da;
-                        if (dist2 > thr2)
-                        {
-                            rowHas[y] = true;
-                            colHas[x] = true;
-                            any = true;
-                        }
-                    }
+                    return (src, new(0, 0));
                 }
-
-                if (!any) return (src, new(0, 0));
-
-                int top = Array.IndexOf(rowHas, true);
-                int bottom = size.Y - Array.IndexOf(rowHas.Reverse().ToArray(), true);
-                int left = Array.IndexOf(colHas, true);
-                int right = size.X - Array.IndexOf(colHas.Reverse().ToArray(), true);
 
                 if (gameThemeConfig.IsHd)
                 {
-                    (left, top, right, bottom) = AlignEvenBox(left, top, right, bottom, size);
+                    (left, top, right, bottom) = AlignEvenBox(left, top, right, bottom, new(src.Width, src.Height));
                 }
 
-                if (left == 0 && top == 0 && right == size.X && bottom == size.Y)
+                if (left == 0 && top == 0 && right == src.Width && bottom == src.Height)
                 {
                     return (src, new(0, 0));
                 }
@@ -639,6 +604,42 @@ namespace FramesToMMSpriteResources
                 var cropped = CropBitmap(src, left, top, right - left, bottom - top);
                 return (cropped, new(left, top));
             }
+        }
+
+        private static bool TryGetBoundingBox(Image mask, out int left, out int top, out int right, out int bottom)
+        {
+            int width = mask.Width;
+            int height = mask.Height;
+            var bytes = mask.Cast(Enums.BandFormat.Uchar).WriteToMemory();
+
+            left = width;
+            top = height;
+            right = -1;
+            bottom = -1;
+
+            for (int y = 0; y < height; y++)
+            {
+                int rowStart = y * width;
+                for (int x = 0; x < width; x++)
+                {
+                    if (bytes[rowStart + x] == 0) continue;
+
+                    if (x < left) left = x;
+                    if (x > right) right = x;
+                    if (y < top) top = y;
+                    if (y > bottom) bottom = y;
+                }
+            }
+
+            if (right < 0 || bottom < 0)
+            {
+                left = top = right = bottom = 0;
+                return false;
+            }
+
+            right += 1;
+            bottom += 1;
+            return true;
         }
 
         private static (int left, int top, int right, int bottom) AlignEvenBox(int left, int top, int right, int bottom, IntVector2 size)
