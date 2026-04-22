@@ -263,19 +263,39 @@
                                     </StackPanel>
                                 </Border>
 
-                                <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
+                                <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" MaxWidth="1000" Padding="16 8 16 16">
                                     <StackPanel Spacing="12">
                                         <TextBlock Text="Settings" Style="{StaticResource SectionHeaderStyle}"/>
 
                                         <Rectangle Style="{StaticResource GroupDividerStyle}"/>
 
-
-                                        <StackPanel Spacing="4">
-                                            <TextBox x:Name="WorkingPathTextBox" Grid.Column="0" PlaceholderText="Default" Header="Working directory path"/>
-                                            <TextBlock Text="To use the same directory the program is in, leave it blank"  Style="{StaticResource HelperTextStyle}"/>
+                                            <StackPanel Spacing="4">
+                                                <Grid ColumnSpacing="0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBox x:Name="WorkingPathTextBox" Grid.Column="0" Header="Working directory path" CornerRadius="4 0 0 4"/>
+                                                    <Button x:Name="BrowseFolderButton" Style="{StaticResource AccentButtonStyle}" Grid.Column="1" VerticalAlignment="Bottom" Click="BrowseFolderButton_Click" CornerRadius="0 4 4 0">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <FontIcon Glyph="&#xE838;" FontSize="14"/>
+                                                            <TextBlock Text="Browse"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                </Grid>
+                                                <TextBlock Text="Please provide a path where your folders and files will be / are located"  Style="{StaticResource HelperTextStyle}"/>
+                                                
+                                            </StackPanel>
+                                            <StackPanel Spacing="8">
+                                                <TextBlock Text="Manage program"/>
+                                            <Button x:Name="UninstallButton" Grid.Column="1" VerticalAlignment="Bottom" Click="UninstallButton_Click">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <FontIcon Glyph="&#xE74D;" FontSize="14"/>
+                                                    <TextBlock Text="Uninstall"/>
+                                                </StackPanel>
+                                            </Button>
+                                            </StackPanel>
                                         </StackPanel>
-
-                                    </StackPanel>
                                 </Border>
 
 
