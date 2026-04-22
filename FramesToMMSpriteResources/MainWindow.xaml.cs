@@ -21,6 +21,7 @@ using System.Xml.Linq;
 using Windows.ApplicationModel;
 using Windows.Media.Core;
 using Windows.Media.Playback;
+using Windows.Storage.Pickers;
 using Windows.UI.Composition;
 
 namespace FramesToMMSpriteResources
@@ -1433,6 +1434,28 @@ namespace FramesToMMSpriteResources
             TreeViewControl.IsEnabled = true;
             SettingsToggleButton.IsEnabled = true;
             AllowGeneration();
+        }
+
+        private async void BrowseFolderButton_Click(object sender, RoutedEventArgs e)
+        {
+            var folderPicker = new FolderPicker();
+            folderPicker.FileTypeFilter.Add("*");
+
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            WinRT.Interop.InitializeWithWindow.Initialize(folderPicker, hwnd);
+
+            var folder = await folderPicker.PickSingleFolderAsync();
+            if (folder != null)
+            {
+                WorkingPathTextBox.Text = folder.Path;
+                programConfig.WorkingPath = folder.Path;
+                WaitThenSave();
+            }
+        }
+
+        private async void UninstallButton_Click(object sender, RoutedEventArgs e)
+        {
+            await Windows.System.Launcher.LaunchUriAsync(new Uri("ms-settings:appsfeatures"));
         }
 
         private async void TreeViewControl_PointerPressed(object sender, PointerRoutedEventArgs e)
