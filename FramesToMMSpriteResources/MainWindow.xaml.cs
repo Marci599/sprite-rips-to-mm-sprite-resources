@@ -1453,6 +1453,11 @@ namespace FramesToMMSpriteResources
             }
         }
 
+        private async void UninstallButton_Click(object sender, RoutedEventArgs e)
+        {
+            await Windows.System.Launcher.LaunchUriAsync(new Uri("ms-settings:appsfeatures"));
+        }
+
         private async void TreeViewControl_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
             if (e.GetCurrentPoint(TreeViewControl).Properties.IsRightButtonPressed)
