@@ -250,7 +250,7 @@ namespace FramesToMMSpriteResources
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
-            //TODO: OPTIMALIZÁCIÓ TOGGLE
+       
             bmp.SaveAsync(path, CanvasBitmapFileFormat.Png)
                .AsTask().GetAwaiter().GetResult();
         }
@@ -521,17 +521,11 @@ namespace FramesToMMSpriteResources
                 Source = src,
                 Color = Windows.UI.Color.FromArgb(255, parsedBackgroundColor!.Value.r, parsedBackgroundColor.Value.g, parsedBackgroundColor.Value.b),
                 Tolerance = normalizedTolerance,
+               
                 Feather = false,
                 InvertAlpha = false
+                
             };
-
-            if (programConfig.ReduceFileSize)
-            {
-                source = new PremultiplyEffect
-                {
-                    Source = source
-                };
-            }
 
             return RenderImageToTarget(source, (int)src.SizeInPixels.Width, (int)src.SizeInPixels.Height, src.Dpi);
         }
