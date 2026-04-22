@@ -1,19 +1,25 @@
-﻿using NetVips;
+﻿using Microsoft.Graphics.Canvas;
+using Microsoft.Graphics.Canvas.Effects;
+using Microsoft.Graphics.Canvas.UI;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Numerics;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
+
+
 namespace FramesToMMSpriteResources
 {
-    class ProcessedSprite(Image image, IntVector2 originalSize, IntVector2 trimOffset, string animationName, JsonObject? oldFrameJson)
+    class ProcessedSprite(CanvasBitmap image, IntVector2 originalSize, IntVector2 trimOffset, string animationName, JsonObject? oldFrameJson)
     {
-        public Image Image = image;
+        public CanvasBitmap Image = image;
         public IntVector2 OriginalSize = originalSize;
         public IntVector2 TrimOffset = trimOffset;
         public string AnimationName = animationName;
@@ -29,12 +35,13 @@ namespace FramesToMMSpriteResources
 
     public class PreviousSpriteFileValues
     {
-        public Dictionary<string, List<JsonObject>> FramesByAnimation { get; set; } = new();
-        public string SubPositions { get; set; } = string.Empty;
+        public Dictionary<string, List<JsonObject>> FramesByAnimation { get; set; }
+        public string SubPositions { get; set; }
     }
 
     class Processer
     {
+        private static readonly CanvasDevice SharedCanvasDevice = new CanvasDevice();
         private const double MaxColorDistance = 441.6729559300637;
         static ProgramConfig programConfig;
         static GameThemeConfig gameThemeConfig;
@@ -55,17 +62,17 @@ namespace FramesToMMSpriteResources
 
 
             string subjectPath = MainWindow.usingGameThemes ?
-
+            
                 Path.Combine(MainWindow.workingPath, programConfig.SelectedNode[0], programConfig.SelectedNode[1])
             :
-
+            
                 Path.Combine(MainWindow.workingPath, programConfig.SelectedNode[1]);
 
             List<ProcessedSprite> processedSprites = [];
-            List<Dictionary<string, object>> animationsMeta = [];
+            List<Dictionary< string, object>> animationsMeta = [];
             int frameIndex = 0;
 
-
+       
 
             string subPositions = string.Empty;
             PreviousSpriteFileValues previousSpriteFile = null;
@@ -78,13 +85,13 @@ namespace FramesToMMSpriteResources
 
             if (File.Exists(spriteFilePath))
             {
-
+            
                 var txt = File.ReadAllText(spriteFilePath);
                 var spritePayload = JsonNode.Parse(txt)?.AsObject();
 
                 frames = spritePayload?["Frames"]?.AsArray();
                 named = spritePayload?["NamedAnimations"]?.AsArray();
-
+         
 
                 var result = new PreviousSpriteFileValues
                 {
@@ -92,10 +99,10 @@ namespace FramesToMMSpriteResources
                     SubPositions = spritePayload?["SubPositions"]?.GetValue<string>()
                 };
 
-
+               
 
             }
-
+        
 
 
             foreach (var (animationName, animationConfig) in subjectConfig.AnimationConfigs)
@@ -110,7 +117,7 @@ namespace FramesToMMSpriteResources
 
                         var name = entry["Name"]?.GetValue<string>();
                         if (name == null || animationName != name) continue;
-
+             
 
                         var framesField = entry["Frames"]?.GetValue<string>() ?? string.Empty;
 
@@ -127,38 +134,64 @@ namespace FramesToMMSpriteResources
 
                             if (frames[idx] is JsonObject frameObj)
                                 list.Add(frameObj);
-
+                           
                         }
                         break;
 
                     }
                 }
+               
 
-
+                int spritesCount = 0;
                 string animationPath = Path.Combine(subjectPath, "raw", animationName);
-                var spritePaths = Directory
-                    .EnumerateFiles(animationPath, "*.png", SearchOption.TopDirectoryOnly)
-                    .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
-                    .ToArray();
 
-                var animationSprites = new ProcessedSprite[spritePaths.Length];
-                Parallel.For(0, spritePaths.Length, new ParallelOptions
+                var filesInAnimationPath = Directory.GetFiles(animationPath);
+                var i = 0;
+                foreach (var spritePath in filesInAnimationPath)
                 {
-                    MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount)
-                }, i =>
-                {
-                    JsonObject? oldJson = null;
-                    if (list != null && i < list.Count)
+                
+                    if (Path.GetExtension(spritePath) == ".png")
                     {
-                        oldJson = list[i];
-                    }
+                  
+                        var image = await CanvasBitmap.LoadAsync(SharedCanvasDevice, spritePath);
+                        if (!string.IsNullOrEmpty(subjectConfig.BackgroundColor) && subjectConfig.RemoveBackground)
+                        {
+                            image = RemoveColorWithThreshold(image);
+                        }
 
-                    animationSprites[i] = ProcessSingleSprite(spritePaths[i], animationName, oldJson);
-                });
+                        if (subjectConfig.ResizeToPercent != 100 && subjectConfig.ResizeToPercent > 0)
+                        {
+                            var scale = subjectConfig.ResizeToPercent / 100.0;
+                            int newW = Math.Max(1, (int)Math.Round(image.SizeInPixels.Width * scale));
+                            int newH = Math.Max(1, (int)Math.Round(image.SizeInPixels.Height * scale));
+                            if (newW != image.SizeInPixels.Width || newH != image.SizeInPixels.Height)
+                                image = ResizeBitmapNearest(image, new IntVector2(newW, newH));
+                        }
 
-                processedSprites.AddRange(animationSprites);
+                        var originalSize = new IntVector2((int)image.SizeInPixels.Width, (int)image.SizeInPixels.Height);
 
-                int spritesCount = spritePaths.Length;
+                        (CanvasBitmap imgAfterTrim, IntVector2 offset) = (image, new(0, 0));
+
+                        if (subjectConfig.CropSprites)
+                        {
+                            (imgAfterTrim, offset) = TrimColor(image);
+                        }
+                        image = imgAfterTrim;
+                        if (gameThemeConfig.IsHd)
+                        {
+                            image = EnsureEvenDimensions(image);
+                        }
+          
+                        JsonObject oldJson = null;
+                        if(list != null)
+                        {
+                            oldJson = list[i];
+                        }
+                        processedSprites.Add(new ProcessedSprite(image, originalSize, offset, animationName, oldJson));
+                        spritesCount++;
+                        i++;
+                    }                 
+                }
                 var frameRange = Enumerable.Range(frameIndex, spritesCount).ToList();
                 animationsMeta.Add(new Dictionary<string, object>
                 {
@@ -178,19 +211,17 @@ namespace FramesToMMSpriteResources
 
             var sheetImage = CreateSpriteSheet(processedSprites, finalPositions, canvasSize);
 
-
+    
 
             var payload = ExportSpriteMetadata(processedSprites, finalPositions, canvasSize, animationsMeta, subPositions);
 
-
+     
 
             if (Directory.Exists(outputDir))
             {
                 foreach (var child in Directory.EnumerateFiles(outputDir))
                 {
-                    try { File.Delete(child); } catch (Exception ex)
-                    {
-                        Debug.WriteLine(ex.Message); Debug.WriteLine(ex.StackTrace);
+                    try { File.Delete(child); } catch (Exception ex) { Debug.WriteLine(ex.Message); Debug.WriteLine(ex.StackTrace);
                     }
                 }
             }
@@ -200,75 +231,31 @@ namespace FramesToMMSpriteResources
             var spritesheetPath2x = spritesheetPath;
             if (gameThemeConfig.IsHd)
             {
-                int halfW = Math.Max(1, (sheetImage.Width + 1) / 2);
-                int halfH = Math.Max(1, (sheetImage.Height + 1) / 2);
+                int halfW = Math.Max(1, ((int)sheetImage.SizeInPixels.Width + 1) / 2);
+                int halfH = Math.Max(1, ((int)sheetImage.SizeInPixels.Height + 1) / 2);
                 var sheetHalf = ResizeBitmapNearest(sheetImage, new IntVector2(halfW, halfH));
-                SaveImageToFile(sheetHalf, spritesheetPath);
+                SaveCanvasBitmapToFile(sheetHalf, spritesheetPath);
                 spritesheetPath2x = Path.Combine(outputDir, programConfig.SelectedNode[1] + "@2x.png");
             }
-            SaveImageToFile(sheetImage, spritesheetPath2x);
+            SaveCanvasBitmapToFile(sheetImage, spritesheetPath2x);
 
             var options = new JsonSerializerOptions
             {
                 WriteIndented = true
             };
             File.WriteAllText(spriteFilePath, payload.ToJsonString(options));
-            await Task.CompletedTask;
         }
 
-        private static Image LoadImage(string path)
-        {
-            var image = Image.NewFromFile(path, access: Enums.Access.Random, failOn: Enums.FailOn.Warning);
-            if (image.Bands == 4) return image;
-            if (image.Bands == 3)
-            {
-                var alpha = Image.Black(image.Width, image.Height) + 255;
-                return image.Bandjoin(alpha);
-            }
-            throw new InvalidOperationException($"Unsupported band count: {image.Bands} in {path}");
-        }
-
-        private static ProcessedSprite ProcessSingleSprite(string spritePath, string animationName, JsonObject? oldJson)
-        {
-            var image = LoadImage(spritePath);
-            if (!string.IsNullOrEmpty(subjectConfig.BackgroundColor) && subjectConfig.RemoveBackground)
-            {
-                image = RemoveColorWithThreshold(image);
-            }
-
-            if (subjectConfig.ResizeToPercent != 100 && subjectConfig.ResizeToPercent > 0)
-            {
-                var scale = subjectConfig.ResizeToPercent / 100.0;
-                int newW = Math.Max(1, (int)Math.Round(image.Width * scale));
-                int newH = Math.Max(1, (int)Math.Round(image.Height * scale));
-                if (newW != image.Width || newH != image.Height)
-                {
-                    image = ResizeBitmapNearest(image, new IntVector2(newW, newH));
-                }
-            }
-
-            var originalSize = new IntVector2(image.Width, image.Height);
-            (Image imgAfterTrim, IntVector2 offset) = (image, new(0, 0));
-            if (subjectConfig.CropSprites)
-            {
-                (imgAfterTrim, offset) = TrimColor(image);
-            }
-            image = imgAfterTrim;
-            if (gameThemeConfig.IsHd)
-            {
-                image = EnsureEvenDimensions(image);
-            }
-
-            return new ProcessedSprite(image, originalSize, offset, animationName, oldJson);
-        }
-
-        private static void SaveImageToFile(Image image, string path)
+        private static void SaveCanvasBitmapToFile(CanvasBitmap bmp, string path)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            image.WriteToFile(path);
+
+       
+            bmp.SaveAsync(path, CanvasBitmapFileFormat.Png)
+               .AsTask().GetAwaiter().GetResult();
         }
 
-
+  
         private static JsonObject ExportSpriteMetadata(List<ProcessedSprite> sprites, List<IntVector2?> positions, IntVector2 canvasSize, List<Dictionary<string, object>> animations, string subPositions)
         {
             int sourceWidth = canvasSize.X;
@@ -285,7 +272,7 @@ namespace FramesToMMSpriteResources
                 var position = positions[i];
                 int left = position?.X ?? 0; int top = position?.Y ?? 0;
                 var bmp = sprite.Image;
-                IntVector2 size = new(bmp.Width, bmp.Height);
+                IntVector2 size = new((int)bmp.SizeInPixels.Width, (int)bmp.SizeInPixels.Height);
                 var orig = sprite.OriginalSize;
                 double leftScaled = left; double topScaled = top; double rightScaled = left + size.X; double bottomScaled = top + size.Y;
 
@@ -299,11 +286,11 @@ namespace FramesToMMSpriteResources
 
                 JsonObject frameValues;
                 if (sprite.OldFrameJson == null)
-                {
+                { 
                     var trim = sprite.TrimOffset;
                     AnimationConfig animConfig = subjectConfig.AnimationConfigs[sprite.AnimationName];
                     var recover = animConfig.RecoverCroppedOffset;
-
+              
                     int trimLeft = trim.X; int trimTop = trim.Y;
                     int originalWidth = orig.X; int originalHeight = orig.Y;
                     if (!recover.X)
@@ -341,7 +328,7 @@ namespace FramesToMMSpriteResources
                 }
                 else
                 {
-
+                
 
                     frameValues = sprite.OldFrameJson.DeepClone().AsObject();
                 }
@@ -370,18 +357,22 @@ namespace FramesToMMSpriteResources
             return payload;
         }
 
-        static Image CreateSpriteSheet(List<ProcessedSprite> sprites, List<IntVector2?> positions, IntVector2 canvasSize)
+        static CanvasBitmap CreateSpriteSheet(List<ProcessedSprite> sprites, List<IntVector2?> positions, IntVector2 canvasSize)
         {
             if (canvasSize.X <= 1 || canvasSize.Y <= 1) throw new InvalidOperationException("Sprites don't exist.");
-            var sheet = Image.Black(canvasSize.X, canvasSize.Y, bands: 4).CopyMemory();
-            for (int i = 0; i < sprites.Count; i++)
+            var rt = new CanvasRenderTarget(SharedCanvasDevice, canvasSize.X, canvasSize.Y, 96);
+            using (var ds = rt.CreateDrawingSession())
             {
-                var pos = positions[i];
-                if (pos == default) continue;
-                var bmp = sprites[i].Image;
-                sheet.DrawImage(bmp, pos?.X ?? 0, pos?.Y ?? 0);
+                ds.Clear(Microsoft.UI.Colors.Transparent);
+                for (int i = 0; i < sprites.Count; i++)
+                {
+                    var pos = positions[i];
+                    if (pos == default) continue;
+                    var bmp = (CanvasBitmap)sprites[i].Image;
+                    ds.DrawImage(bmp, new Windows.Foundation.Rect(pos?.X ?? 0, pos?.Y ?? 0, bmp.SizeInPixels.Width, bmp.SizeInPixels.Height));
+                }
             }
-            return sheet;
+            return rt;
         }
 
         static LayoutInfo SelectLayout(List<ProcessedSprite> sprites)
@@ -406,8 +397,8 @@ namespace FramesToMMSpriteResources
         private static (IntVector2 size, List<IntVector2?> positions) LayoutForWidth(List<ProcessedSprite> sprites, int widthLimit)
         {
             int gap = gameThemeConfig.IsHd ? 2 : 1;
-            if (sprites.Count == 0) return (new(0, 0), new List<IntVector2?>());
-            int maxSpriteWidth = sprites.Max(s => s.Image.Width);
+            if (sprites.Count == 0) return (new(0,0), new List<IntVector2?>());
+            int maxSpriteWidth = sprites.Max(s => (int)s.Image.SizeInPixels.Width);
             if (widthLimit < maxSpriteWidth) throw new InvalidOperationException("width_limit is smaller than the widest sprite.");
 
             var rows = new List<(List<int> indices, int width, int height)>();
@@ -417,8 +408,8 @@ namespace FramesToMMSpriteResources
             for (int index = 0; index < sprites.Count; index++)
             {
                 var bmp = sprites[index].Image;
-                int spriteWidth = bmp.Width;
-                int spriteHeight = bmp.Height;
+                int spriteWidth = (int)bmp.SizeInPixels.Width;
+                int spriteHeight = (int)bmp.SizeInPixels.Height;
                 int projectedWidth = currentIndices.Count == 0 ? spriteWidth : currentWidth + gap + spriteWidth;
                 if (currentIndices.Count > 0 && projectedWidth > widthLimit)
                 {
@@ -460,9 +451,9 @@ namespace FramesToMMSpriteResources
                 {
                     int spriteIndex = row.indices[itemIndex];
                     var bmp = sprites[spriteIndex].Image;
-                    int yPos = yOffset + (row.height - bmp.Height);
+                    int yPos = yOffset + (row.height - (int)bmp.SizeInPixels.Height);
                     positions[spriteIndex] = new(xOffset, yPos);
-                    xOffset += bmp.Width;
+                    xOffset += (int)bmp.SizeInPixels.Width;
                     if (itemIndex < row.indices.Count - 1)
                     {
                         xOffset += gap;
@@ -479,7 +470,7 @@ namespace FramesToMMSpriteResources
         {
             int gap = gameThemeConfig.IsHd ? 2 : 1;
             if (sprites.Count == 0) return (new(0, 0), new List<IntVector2?>());
-            var widths = sprites.Select(s => s.Image.Width).ToList();
+            var widths = sprites.Select(s => (int)s.Image.SizeInPixels.Width).ToList();
             int maxWidth = widths.Max();
             int totalWidth = widths.Sum();
             var candidateWidths = new HashSet<int>() { maxWidth, totalWidth + gap * (sprites.Count - 1) };
@@ -489,7 +480,7 @@ namespace FramesToMMSpriteResources
                 prefix += widths[i];
                 candidateWidths.Add(Math.Max(maxWidth, prefix + gap * i));
             }
-
+          
             (IntVector2, List<IntVector2?>) bestLayout = default;
             (double, double, double)? bestScore = null;
 
@@ -522,81 +513,120 @@ namespace FramesToMMSpriteResources
 
 
 
-        static Image RemoveColorWithThreshold(Image src)
+        static CanvasBitmap RemoveColorWithThreshold(CanvasBitmap src)
         {
-            if (src.Bands < 4) throw new InvalidOperationException("RGBA image is required for background removal.");
-
-            double thr2 = subjectConfig.ColorTreshold * subjectConfig.ColorTreshold;
-            var (tr, tg, tb, ta) = parsedBackgroundColor!.Value;
-            var bands = src.Bandsplit();
-
-            var dr = bands[0] - tr;
-            var dg = bands[1] - tg;
-            var db = bands[2] - tb;
-            var da = bands[3] - ta;
-            var dist2 = dr * dr + dg * dg + db * db + da * da;
-
-            var nearBgMask = dist2 <= thr2;
-            var keepMask = nearBgMask.Invert();
-            var alpha = ((bands[3] * keepMask) / 255).Cast(Enums.BandFormat.Uchar);
-
-            if (!programConfig.ReduceFileSize)
+            float normalizedTolerance = (float)Math.Clamp(subjectConfig.ColorTreshold / MaxColorDistance, 0.0, 1.0);
+            var source = (ICanvasImage)new ChromaKeyEffect
             {
-                return bands[0].Bandjoin(new[] { bands[1], bands[2], alpha });
+                Source = src,
+                Color = Windows.UI.Color.FromArgb(255, parsedBackgroundColor!.Value.r, parsedBackgroundColor.Value.g, parsedBackgroundColor.Value.b),
+                Tolerance = normalizedTolerance,
+               
+                Feather = false,
+                InvertAlpha = false
+                
+            };
+
+            return RenderImageToTarget(source, (int)src.SizeInPixels.Width, (int)src.SizeInPixels.Height, src.Dpi);
+        }
+
+        static CanvasBitmap ResizeBitmapNearest(CanvasBitmap source, IntVector2 newSize)
+        {
+            var rt = new CanvasRenderTarget(SharedCanvasDevice, newSize.X, newSize.Y, source.Dpi);
+            using (var ds = rt.CreateDrawingSession())
+            {
+                ds.DrawImage(source,
+                    new Windows.Foundation.Rect(0, 0, newSize.X, newSize.Y),
+                    source.Bounds,
+                    1.0f,
+                    CanvasImageInterpolation.NearestNeighbor);
             }
+            return rt;
 
-            var r = ((bands[0] * keepMask) / 255).Cast(Enums.BandFormat.Uchar);
-            var g = ((bands[1] * keepMask) / 255).Cast(Enums.BandFormat.Uchar);
-            var b = ((bands[2] * keepMask) / 255).Cast(Enums.BandFormat.Uchar);
-            return r.Bandjoin(new[] { g, b, alpha });
         }
 
-        static Image ResizeBitmapNearest(Image source, IntVector2 newSize)
+        static (CanvasBitmap cropped, IntVector2 offset) TrimColor(CanvasBitmap src)
         {
-            double sx = (double)newSize.X / Math.Max(1, source.Width);
-            double sy = (double)newSize.Y / Math.Max(1, source.Height);
-            return source.Resize(sx, vscale: sy, kernel: Enums.Kernel.Nearest);
-        }
+            IntVector2 size = new((int)src.SizeInPixels.Width, (int)src.SizeInPixels.Height);
+            var bytes = src.GetPixelBytes();
 
-        static (Image cropped, IntVector2 offset) TrimColor(Image src)
-        {
             if (subjectConfig.BackgroundColor == null || subjectConfig.RemoveBackground)
             {
-                var alpha = src[3];
-                if (!TryGetBoundingBox(alpha > 0, out int left, out int top, out int right, out int bottom))
+                // treat as alpha trimming
+                int left = size.X, top = size.Y, right = 0, bottom = 0;
+                bool any = false;
+                for (int y = 0; y < size.Y; y++)
                 {
-                    return (src, new(0, 0));
+                    for (int x = 0; x < size.X; x++)
+                    {
+                        int idx = (y * size.X + x) * 4;
+                        byte a = bytes[idx + 3];
+                        if (a != 0)
+                        {
+                            any = true;
+                            if (x < left) left = x;
+                            if (x > right) right = x;
+                            if (y < top) top = y;
+                            if (y > bottom) bottom = y;
+                        }
+                    }
                 }
+                if (!any) return (src, new(0, 0));
+                right++; bottom++; // exclusive
                 if (gameThemeConfig.IsHd)
                 {
-                    (left, top, right, bottom) = AlignEvenBox(left, top, right, bottom, new(src.Width, src.Height));
+                    (left, top, right, bottom) = AlignEvenBox(left, top, right, bottom, size);
                 }
                 var cropped = CropBitmap(src, left, top, right - left, bottom - top);
                 return (cropped, new(left, top));
             }
             else
             {
+             
                 double thr2 = subjectConfig.ColorTreshold * subjectConfig.ColorTreshold;
                 byte tr = parsedBackgroundColor.Value.r, tg = parsedBackgroundColor.Value.g, tb = parsedBackgroundColor.Value.b, ta = parsedBackgroundColor.Value.a;
-                var bands = src.Bandsplit();
-                var dr = bands[0] - tr;
-                var dg = bands[1] - tg;
-                var db = bands[2] - tb;
-                var da = bands[3] - ta;
-                var dist2 = dr * dr + dg * dg + db * db + da * da;
-                var contentMask = (dist2 > thr2);
 
-                if (!TryGetBoundingBox(contentMask, out int left, out int top, out int right, out int bottom))
+                bool[] rowHas = new bool[size.Y];
+                bool[] colHas = new bool[size.X];
+                bool any = false;
+
+                for (int y = 0; y < size.Y; y++)
                 {
-                    return (src, new(0, 0));
+                    for (int x = 0; x < size.X; x++)
+                    {
+                        int idx = (y * size.X + x) * 4;
+                        int b = bytes[idx + 0];
+                        int g = bytes[idx + 1];
+                        int r = bytes[idx + 2];
+                        int a = bytes[idx + 3];
+
+                        int dr = r - tr;
+                        int dg = g - tg;
+                        int db = b - tb;
+                        int da = a - ta;
+                        long dist2 = (long)dr * dr + (long)dg * dg + (long)db * db + (long)da * da;
+                        if (dist2 > thr2)
+                        {
+                            rowHas[y] = true;
+                            colHas[x] = true;
+                            any = true;
+                        }
+                    }
                 }
+
+                if (!any) return (src, new(0, 0));
+
+                int top = Array.IndexOf(rowHas, true);
+                int bottom = size.Y - Array.IndexOf(rowHas.Reverse().ToArray(), true);
+                int left = Array.IndexOf(colHas, true);
+                int right = size.X - Array.IndexOf(colHas.Reverse().ToArray(), true);
 
                 if (gameThemeConfig.IsHd)
                 {
-                    (left, top, right, bottom) = AlignEvenBox(left, top, right, bottom, new(src.Width, src.Height));
+                    (left, top, right, bottom) = AlignEvenBox(left, top, right, bottom, size);
                 }
 
-                if (left == 0 && top == 0 && right == src.Width && bottom == src.Height)
+                if (left == 0 && top == 0 && right == size.X && bottom == size.Y)
                 {
                     return (src, new(0, 0));
                 }
@@ -604,42 +634,6 @@ namespace FramesToMMSpriteResources
                 var cropped = CropBitmap(src, left, top, right - left, bottom - top);
                 return (cropped, new(left, top));
             }
-        }
-
-        private static bool TryGetBoundingBox(Image mask, out int left, out int top, out int right, out int bottom)
-        {
-            int width = mask.Width;
-            int height = mask.Height;
-            var bytes = mask.Cast(Enums.BandFormat.Uchar).WriteToMemory();
-
-            left = width;
-            top = height;
-            right = -1;
-            bottom = -1;
-
-            for (int y = 0; y < height; y++)
-            {
-                int rowStart = y * width;
-                for (int x = 0; x < width; x++)
-                {
-                    if (bytes[rowStart + x] == 0) continue;
-
-                    if (x < left) left = x;
-                    if (x > right) right = x;
-                    if (y < top) top = y;
-                    if (y > bottom) bottom = y;
-                }
-            }
-
-            if (right < 0 || bottom < 0)
-            {
-                left = top = right = bottom = 0;
-                return false;
-            }
-
-            right += 1;
-            bottom += 1;
-            return true;
         }
 
         private static (int left, int top, int right, int bottom) AlignEvenBox(int left, int top, int right, int bottom, IntVector2 size)
@@ -662,17 +656,40 @@ namespace FramesToMMSpriteResources
             return (leftAligned, topAligned, rightAligned, bottomAligned);
         }
 
-        private static Image CropBitmap(Image src, int left, int top, int width, int height)
+        private static CanvasBitmap CropBitmap(CanvasBitmap src, int left, int top, int width, int height)
         {
-            return src.ExtractArea(left, top, width, height);
+            var rt = new CanvasRenderTarget(SharedCanvasDevice, width, height, src.Dpi);
+            using (var ds = rt.CreateDrawingSession())
+            {
+                var srcRect = new Windows.Foundation.Rect(left, top, width, height);
+                ds.DrawImage(src, new Windows.Foundation.Rect(0, 0, width, height), srcRect);
+            }
+            return rt;
         }
 
-        static Image EnsureEvenDimensions(Image src)
+        static CanvasBitmap EnsureEvenDimensions(CanvasBitmap src)
         {
-            IntVector2 size = new(src.Width, src.Height);
+            IntVector2 size = new((int)src.SizeInPixels.Width, (int)src.SizeInPixels.Height);
             IntVector2 newSize = new(size.X + (size.X % 2), size.Y + (size.Y % 2));
             if (newSize.X == size.X && newSize.Y == size.Y) return src;
-            return src.Embed(0, 0, newSize.X, newSize.Y, extend: Enums.Extend.Background, background: [0, 0, 0, 0]);
+            var rt = new CanvasRenderTarget(SharedCanvasDevice, newSize.X, newSize.Y, src.Dpi);
+            using (var ds = rt.CreateDrawingSession())
+            {
+                ds.Clear(Microsoft.UI.Colors.Transparent);
+                ds.DrawImage(src, new Windows.Foundation.Rect(0, 0, size.X, size.Y));
+            }
+            return rt;
+        }
+
+        private static CanvasBitmap RenderImageToTarget(ICanvasImage image, int width, int height, float dpi)
+        {
+            var rt = new CanvasRenderTarget(SharedCanvasDevice, width, height, dpi);
+            using (var ds = rt.CreateDrawingSession())
+            {
+                ds.Clear(Microsoft.UI.Colors.Transparent);
+                ds.DrawImage(image);
+            }
+            return rt;
         }
 
         private static int EnsureEvenValue(int v) => (v % 2 == 0) ? v : v + 1;
