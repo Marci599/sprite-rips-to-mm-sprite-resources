@@ -244,7 +244,7 @@ namespace FramesToMMSpriteResources
 
         private static Image LoadImage(string path)
         {
-            var image = Image.NewFromFile(path, access: Enums.Access.Sequential);
+            var image = Image.NewFromFile(path, access: Enums.Access.Random, failOn: Enums.FailOn.Warning);
             if (image.Bands == 4) return image;
             if (image.Bands == 3)
             {
@@ -365,13 +365,13 @@ namespace FramesToMMSpriteResources
         static Image CreateSpriteSheet(List<ProcessedSprite> sprites, List<IntVector2?> positions, IntVector2 canvasSize)
         {
             if (canvasSize.X <= 1 || canvasSize.Y <= 1) throw new InvalidOperationException("Sprites don't exist.");
-            var sheet = Image.Black(canvasSize.X, canvasSize.Y, bands: 4);
+            var sheet = Image.Black(canvasSize.X, canvasSize.Y, bands: 4).Copy(memory: true);
             for (int i = 0; i < sprites.Count; i++)
             {
                 var pos = positions[i];
                 if (pos == default) continue;
                 var bmp = sprites[i].Image;
-                sheet = sheet.Insert(bmp, pos?.X ?? 0, pos?.Y ?? 0, expand: false, background: [0, 0, 0, 0]);
+                sheet.DrawImage(bmp, pos?.X ?? 0, pos?.Y ?? 0, mode: Enums.CombineMode.Set);
             }
             return sheet;
         }
@@ -516,42 +516,31 @@ namespace FramesToMMSpriteResources
 
         static Image RemoveColorWithThreshold(Image src)
         {
-            var bytes = src.WriteToMemory();
-            int bands = src.Bands;
-            if (bands < 4) throw new InvalidOperationException("RGBA image is required for background removal.");
+            if (src.Bands < 4) throw new InvalidOperationException("RGBA image is required for background removal.");
 
             double thr2 = subjectConfig.ColorTreshold * subjectConfig.ColorTreshold;
-            byte tr = parsedBackgroundColor!.Value.r;
-            byte tg = parsedBackgroundColor.Value.g;
-            byte tb = parsedBackgroundColor.Value.b;
-            byte ta = parsedBackgroundColor.Value.a;
+            var (tr, tg, tb, ta) = parsedBackgroundColor!.Value;
+            var bands = src.Bandsplit();
 
-            for (int i = 0; i < bytes.Length; i += bands)
+            var dr = bands[0] - tr;
+            var dg = bands[1] - tg;
+            var db = bands[2] - tb;
+            var da = bands[3] - ta;
+            var dist2 = dr * dr + dg * dg + db * db + da * da;
+
+            var nearBgMask = dist2 <= thr2;
+            var keepMask = nearBgMask.Not();
+            var alpha = ((bands[3] * keepMask) / 255).Cast(Enums.BandFormat.Uchar);
+
+            if (!programConfig.ReduceFileSize)
             {
-                int r = bytes[i + 0];
-                int g = bytes[i + 1];
-                int b = bytes[i + 2];
-                int a = bytes[i + 3];
-
-                int dr = r - tr;
-                int dg = g - tg;
-                int db = b - tb;
-                int da = a - ta;
-                long dist2 = (long)dr * dr + (long)dg * dg + (long)db * db + (long)da * da;
-
-                if (dist2 <= thr2)
-                {
-                    bytes[i + 3] = 0;
-                    if (programConfig.ReduceFileSize)
-                    {
-                        bytes[i + 0] = 0;
-                        bytes[i + 1] = 0;
-                        bytes[i + 2] = 0;
-                    }
-                }
+                return bands[0].Bandjoin([bands[1], bands[2], alpha]);
             }
 
-            return Image.NewFromMemory(bytes, src.Width, src.Height, bands, src.Format);
+            var r = ((bands[0] * keepMask) / 255).Cast(Enums.BandFormat.Uchar);
+            var g = ((bands[1] * keepMask) / 255).Cast(Enums.BandFormat.Uchar);
+            var b = ((bands[2] * keepMask) / 255).Cast(Enums.BandFormat.Uchar);
+            return r.Bandjoin([g, b, alpha]);
         }
 
         static Image ResizeBitmapNearest(Image source, IntVector2 newSize)
