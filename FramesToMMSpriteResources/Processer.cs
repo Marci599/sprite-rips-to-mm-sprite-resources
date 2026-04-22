@@ -365,13 +365,13 @@ namespace FramesToMMSpriteResources
         static Image CreateSpriteSheet(List<ProcessedSprite> sprites, List<IntVector2?> positions, IntVector2 canvasSize)
         {
             if (canvasSize.X <= 1 || canvasSize.Y <= 1) throw new InvalidOperationException("Sprites don't exist.");
-            var sheet = Image.Black(canvasSize.X, canvasSize.Y, bands: 4).Copy(memory: true);
+            var sheet = Image.Black(canvasSize.X, canvasSize.Y, bands: 4);
             for (int i = 0; i < sprites.Count; i++)
             {
                 var pos = positions[i];
                 if (pos == default) continue;
                 var bmp = sprites[i].Image;
-                sheet.DrawImage(bmp, pos?.X ?? 0, pos?.Y ?? 0, mode: Enums.CombineMode.Set);
+                sheet = sheet.Insert(bmp, pos?.X ?? 0, pos?.Y ?? 0);
             }
             return sheet;
         }
@@ -529,18 +529,18 @@ namespace FramesToMMSpriteResources
             var dist2 = dr * dr + dg * dg + db * db + da * da;
 
             var nearBgMask = dist2 <= thr2;
-            var keepMask = nearBgMask.Not();
+            var keepMask = nearBgMask.Invert();
             var alpha = ((bands[3] * keepMask) / 255).Cast(Enums.BandFormat.Uchar);
 
             if (!programConfig.ReduceFileSize)
             {
-                return bands[0].Bandjoin([bands[1], bands[2], alpha]);
+                return bands[0].Bandjoin(new[] { bands[1], bands[2], alpha });
             }
 
             var r = ((bands[0] * keepMask) / 255).Cast(Enums.BandFormat.Uchar);
             var g = ((bands[1] * keepMask) / 255).Cast(Enums.BandFormat.Uchar);
             var b = ((bands[2] * keepMask) / 255).Cast(Enums.BandFormat.Uchar);
-            return r.Bandjoin([g, b, alpha]);
+            return r.Bandjoin(new[] { g, b, alpha });
         }
 
         static Image ResizeBitmapNearest(Image source, IntVector2 newSize)
