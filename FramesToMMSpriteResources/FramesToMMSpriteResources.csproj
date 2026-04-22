@@ -45,6 +45,7 @@
     <PackageReference Include="NetVips" Version="3.2.0" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.7705" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260209005" />
+    <PackageReference Include="NetVips.Native.win-x64" Version="8.18.2" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Controls\CardGroup.xaml">
