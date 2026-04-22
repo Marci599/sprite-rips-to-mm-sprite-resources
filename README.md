@@ -13,12 +13,9 @@ Download latest version here: [Releases](https://github.com/Marci599/sprite-rips
 
 ## How to use
 
-**Make sure to put the program in its own folder**
-
 If you are **not** planning to work with different Game Themes, structure your files as follows:
 ```
 <Folder>
-├─ FramesToMMSpriteResources.exe
 ├─ <SubjectName>
 │  └─ raw
 │     ├─ <AnimationName>
@@ -33,7 +30,6 @@ If you are **not** planning to work with different Game Themes, structure your f
 If you plan to work with different Game Themes, then structure your files as follows:
 ```
 <Folder>
-├─ FramesToMMSpriteResources.exe
 ├─ <GameThemeName>
 │  ├─ <SubjectName>
 │  │  └─ raw
@@ -52,6 +48,6 @@ You can download this example that contains a subject with raw frames: [V_Yoshi]
 - Unzip it and put V_Yoshi next to the pragram.
 - Note that the Jump aniamtions is just a placeholder.
 
-After setup, launch the program, configure options, and use `Generate Subject` to create the spritesheet resources into `<SubjectName>/generated`.
+After intsalling the program, launch it, set the path to the directory you want to use, configure options, and use `Generate Subject` to create the spritesheet resources into `<SubjectName>/generated`.
 
 For best results, if your subject moves around in the raw recording and you want to resize it, adjust each raw frame in a separate program so it appears stationary before generating the spritesheet.
