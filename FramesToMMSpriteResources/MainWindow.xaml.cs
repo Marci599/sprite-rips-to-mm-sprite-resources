@@ -34,13 +34,26 @@ namespace FramesToMMSpriteResources
    
         public string IconGlyph { get; set; }
 
-        public int Count { get; set; }
+        public string CountText { get; set; }
+
+        public int Count;
+
+
 
         public TreeItem(string text, string iconGlyph, int count = -1)
         {
             Text = text;
             IconGlyph = iconGlyph;
             Count = count;
+            CountText = count.ToString();
+        }
+
+        public TreeItem(string text, string iconGlyph, int oldCount, int newCount)
+        {
+            Text = text;
+            IconGlyph = iconGlyph;
+            Count = newCount;
+            CountText = oldCount + " → " + newCount;
         }
     }
 
@@ -188,7 +201,7 @@ namespace FramesToMMSpriteResources
 
         
             programConfig.LastUpdateCheck = now;
-            SaveProgramConfig();
+    
 
             await CheckForUpdateAsync();
         }
@@ -736,8 +749,21 @@ namespace FramesToMMSpriteResources
                     }
 
                     framesSum += fileCount;
-
-                    var animationTreeItem = new TreeViewNode { Content = new TreeItem(animationName, "\uE805", fileCount) };
+                    TreeItem treeItem;
+                    if(animationConfig.GeneratedFrameCount == -1)
+                    {
+                        animationConfig.GeneratedFrameCount = fileCount;
+                    }
+                    if (animationConfig.GeneratedFrameCount == fileCount)
+                    {
+                        treeItem = new(animationName, "\uE805", fileCount);
+                    }
+                    else
+                    {
+                        treeItem = new(animationName, "\uE805", animationConfig.GeneratedFrameCount, fileCount);
+                    }
+                    
+                    var animationTreeItem = new TreeViewNode { Content = treeItem};
                     subjectTreeItem.Children.Add(animationTreeItem);
 
                     if (programConfig.SelectedNode != null &&
@@ -751,6 +777,7 @@ namespace FramesToMMSpriteResources
                 }
 
                 (subjectTreeItem.Content as TreeItem).Count = framesSum;
+                (subjectTreeItem.Content as TreeItem).CountText = framesSum.ToString();
 
                 gameThemeConfig.SubjectConfigs![subjectName] = subjectConfig;
 
@@ -1016,6 +1043,8 @@ namespace FramesToMMSpriteResources
 
                     CheckFrameCountAndDisplayWarning((node.Content as TreeItem).Count);
 
+                    GenerateButton.Content = $"Generate {programConfig.SelectedNode[1]}";
+
                     if (animate)
                     {
                         await Task.Delay(fadeOutMs);
@@ -1072,6 +1101,8 @@ namespace FramesToMMSpriteResources
                     programConfig.SelectedNode = [(node.Parent.Parent.Content as TreeItem)!.Text, (node.Parent.Content as TreeItem)!.Text, (node.Content as TreeItem)!.Text];
 
                     CheckFrameCountAndDisplayWarning((node.Parent.Content as TreeItem).Count);
+
+                    GenerateButton.Content = $"Generate {programConfig.SelectedNode[1]}";
 
                     if (animate)
                     {
@@ -1478,6 +1509,7 @@ namespace FramesToMMSpriteResources
             SettingsToggleButton.IsEnabled = false;
             UnallowGeneration();
             await Task.Delay(30);
+            
             var stopwatch = Stopwatch.StartNew();
             try
             {
@@ -1490,12 +1522,16 @@ namespace FramesToMMSpriteResources
             {
                 SetInfoBar(InfoBarSeverity.Error, "Generation failed", er.Message);
             }
-          
+
+            
+            SaveAllConfigs();
             ControlEnabler.IsEnabled = true;
             HeaderBreadcrumbBar.IsEnabled = true;
             TreeViewControl.IsEnabled = true;
             SettingsToggleButton.IsEnabled = true;
             AllowGeneration();
+            ReloadTreeViewAndConfigs();
+            
         }
 
         private async void BrowseFolderButton_Click(object sender, RoutedEventArgs e)
@@ -1585,6 +1621,11 @@ namespace FramesToMMSpriteResources
                 AnimationStackPanel.Padding.Top,
                 AnimationStackPanel.Padding.Right,
                 BottomBarStackPanel.ActualHeight + 12 * 2);
+        }
+        private async void ProgramDirectoryButton_Click(object sender, RoutedEventArgs e)
+        {
+            var exeDir = AppContext.BaseDirectory;
+            await Windows.System.Launcher.LaunchUriAsync(new Uri("file:///" + exeDir.Replace('\\', '/')));
         }
     }
 }

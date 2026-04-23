@@ -30,7 +30,7 @@
             </Grid.RowDefinitions>
 
 
-            <TreeView x:Name="TreeViewControl" Grid.Row="0" Margin="0 2 0 0" MinWidth="200" CanReorderItems="False" CanDragItems="False">
+            <TreeView x:Name="TreeViewControl" Grid.Row="0" Margin="0 2 0 0" MinWidth="200" CanReorderItems="False" CanDragItems="False" SelectionMode="Single">
                 <TreeView.ItemContainerStyle>
                     <Style TargetType="TreeViewItem">
 
@@ -46,10 +46,10 @@
                             </Grid.ColumnDefinitions>
                             <FontIcon Grid.Column="0" Glyph="{Binding Content.IconGlyph}" Width="20" Height="32" Margin="-4 0 0 0" Opacity="0.67" FontSize="18"/>
                             <TextBlock Grid.Column="1" Text="{Binding Content.Text}" VerticalAlignment="Center" Margin="0 0 0 0"/>
-                            <Border Grid.Column="2" Background="{StaticResource SubtleFillColorSecondaryBrush}" CornerRadius="10" MinWidth="20" Height="20" Padding="6 0 6 2" Visibility="{Binding Content.Count, Converter={StaticResource CountToVisibilityConverter}}">
-                                <TextBlock Text="{Binding Content.Count}" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{StaticResource TextFillColorTertiaryBrush}" FontWeight="SemiBold"/>
+                            <Border Grid.Column="2" Background="{StaticResource SubtleFillColorSecondaryBrush}" CornerRadius="10" MinWidth="20" Height="20" Padding="6 0 6 2" Visibility="{Binding Content.CountText, Converter={StaticResource CountToVisibilityConverter}}">
+                                <TextBlock Text="{Binding Content.CountText}" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{StaticResource TextFillColorTertiaryBrush}" FontWeight="SemiBold"/>
                             </Border>
-                            
+
                         </Grid>
                     </DataTemplate>
                 </TreeView.ItemTemplate>
@@ -106,7 +106,7 @@
                 Margin="0 2 0 20">
                 <BreadcrumbBar.Resources>
                     <x:Double x:Key="BreadcrumbBarChevronFontSize">18</x:Double>
-      
+
                 </BreadcrumbBar.Resources>
                 <BreadcrumbBar.ItemTemplate>
                     <DataTemplate x:DataType="x:String">
@@ -125,160 +125,160 @@
                     VerticalAlignment="Stretch"
                     HorizontalContentAlignment="Stretch" 
                     VerticalContentAlignment="Stretch">
-                <Grid>
-                    <!-- GameTheme Panel (default visible) -->
-                    <Grid x:Name="GameThemePanel" Visibility="Collapsed">
-                        <ScrollViewer>
-                            <StackPanel Padding="20 14 20 20">
-                                <StackPanel Spacing="4" MaxWidth="1000">
-                                    <CheckBox x:Name="IsHdCheckBox" Content="Is HD"/>
-                                    <TextBlock Text="If enabled @2x pngs will be generated and .sprites files will be adjusted for that"  Style="{StaticResource HelperTextStyle}"/>
+                    <Grid>
+                        <!-- GameTheme Panel (default visible) -->
+                        <Grid x:Name="GameThemePanel" Visibility="Collapsed">
+                            <ScrollViewer>
+                                <StackPanel Padding="20 14 20 20">
+                                    <StackPanel Spacing="4" MaxWidth="1000">
+                                        <CheckBox x:Name="IsHdCheckBox" Content="Is HD"/>
+                                        <TextBlock Text="If enabled @2x pngs will be generated and .sprites files will be adjusted for that"  Style="{StaticResource HelperTextStyle}"/>
+                                    </StackPanel>
                                 </StackPanel>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </Grid>
-                    <!-- Subject Panel (default visible) -->
-                    <Grid x:Name="SubjectPanel" Visibility="Collapsed">
-                        <ScrollViewer>
-                            <StackPanel Padding="20 20 20 20">
-                                <Grid ColumnSpacing="10" MaxWidth="1000">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
+                            </ScrollViewer>
+                        </Grid>
+                        <!-- Subject Panel (default visible) -->
+                        <Grid x:Name="SubjectPanel" Visibility="Collapsed">
+                            <ScrollViewer>
+                                <StackPanel Padding="20 20 20 20">
+                                    <Grid ColumnSpacing="10" MaxWidth="1000">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
 
-                                    <!-- Processing Group -->
-                                    <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
+                                        <!-- Processing Group -->
+                                        <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
+                                            <StackPanel Spacing="12">
+                                                <TextBlock Text="Processing" Style="{StaticResource SectionHeaderStyle}"/>
+
+                                                <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+
+                                                <NumberBox x:Name="ResizeTextBox" PlaceholderText="100" Header="Resize to percent" Minimum="1" Maximum="999999"/>
+
+                                                <StackPanel Spacing="4">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="32"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBox x:Name="ColorTextBox" Grid.Column="0" PlaceholderText="#00000000" Header="Background color" Style="{StaticResource InsetTextBoxStyle}" CornerRadius="4 0 0 4"/>
+                                                        <Border x:Name="ColorPreviewBorder" Grid.Column="1" BorderThickness="1" Background="White" CornerRadius="0 4 4 0" Height="32" VerticalAlignment="Bottom"/>
+                                                    </Grid>
+
+                                                    <TextBlock Text="If already transparent, leave it blank" Style="{StaticResource HelperTextStyle}"/>
+                                                </StackPanel>
+
+                                                <NumberBox x:Name="ThresholdTextBox" PlaceholderText="100" Header="Color threshold" Minimum="0" Maximum="999999"/>
+
+                                                <CheckBox x:Name="RemoveBackgroundCheckBox" Content="Remove background"/>
+                                                <StackPanel Spacing="4">
+                                                    <CheckBox x:Name="CropSpritesCheckBox" Content="Crop sprites"/>
+                                                    <TextBlock Text="Cropping reduces file size"  Style="{StaticResource HelperTextStyle}"/>
+                                                    <TextBlock Text="Cropping is based on the bg color and threshold"  Style="{StaticResource HelperTextStyle}"/>
+                                                </StackPanel>
+
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Sheet Dimensions Group -->
+                                        <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}">
+                                            <StackPanel Spacing="12">
+                                                <TextBlock Text="Exporting" Style="{StaticResource SectionHeaderStyle}"/>
+                                                <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+
+                                                <NumberBox x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width" Minimum="1" Maximum="999999"/>
+
+                                                <StackPanel Spacing="4">
+                                                    <NumberBox x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height" Minimum="1" Maximum="999999"/>
+                                                    <TextBlock Text="For automatic sizing, leave it blank" Style="{StaticResource HelperTextStyle}"/>
+                                                </StackPanel>
+
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Grid>
+
+                        <!-- Animations Panel (hidden by default) -->
+                        <Grid x:Name="AnimationsPanel" Visibility="Collapsed">
+                            <ScrollViewer>
+                                <StackPanel x:Name="AnimationDetailPanel" Spacing="10" Padding="20 14 20 20">
+                                    <StackPanel Spacing="4" MaxWidth="1000">
+                                        <CheckBox x:Name="RegenerateCheckBox" Content="Regenerate frame properties"/>
+                                        <TextBlock Text="If disabled, manually modified offsets and sub-positions will remain unchanged"  Style="{StaticResource HelperTextStyle}"/>
+                                    </StackPanel>
+
+                                    <NumberBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay" MaxWidth="1000" Minimum="-1" Maximum="999999"/>
+
+                                    <Border Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
                                         <StackPanel Spacing="12">
-                                            <TextBlock Text="Processing" Style="{StaticResource SectionHeaderStyle}"/>
-
+                                            <TextBlock Text="Offset" Style="{StaticResource SectionHeaderStyle}"/>
                                             <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-
-                                            <NumberBox x:Name="ResizeTextBox" PlaceholderText="100" Header="Resize to percent" Minimum="1" Maximum="999999"/>
-
                                             <StackPanel Spacing="4">
-                                                <Grid>
+                                                <Grid ColumnSpacing="8">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="32"/>
+                                                        <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <TextBox x:Name="ColorTextBox" Grid.Column="0" PlaceholderText="#00000000" Header="Background color" Style="{StaticResource InsetTextBoxStyle}" CornerRadius="4 0 0 4"/>
-                                                    <Border x:Name="ColorPreviewBorder" Grid.Column="1" BorderThickness="1" Background="White" CornerRadius="0 4 4 0" Height="32" VerticalAlignment="Bottom"/>
+
+                                                    <NumberBox Grid.Column="0" x:Name="OffsetXTextBox" PlaceholderText="0" Header="X" Maximum="999999" Minimum="-999999"/>
+                                                    <NumberBox Grid.Column="1" x:Name="OffsetYTextBox" PlaceholderText="0" Header="Y" Maximum="999999" Minimum="-999999"/>
+
                                                 </Grid>
-
-                                                <TextBlock Text="If already transparent, leave it blank" Style="{StaticResource HelperTextStyle}"/>
+                                                <TextBlock Text="Adjusts the offset for every sprite within the selected animation"  Style="{StaticResource HelperTextStyle}"/>
                                             </StackPanel>
-
-                                            <NumberBox x:Name="ThresholdTextBox" PlaceholderText="100" Header="Color threshold" Minimum="0" Maximum="999999"/>
-
-                                            <CheckBox x:Name="RemoveBackgroundCheckBox" Content="Remove background"/>
-                                            <StackPanel Spacing="4">
-                                                <CheckBox x:Name="CropSpritesCheckBox" Content="Crop sprites"/>
-                                                <TextBlock Text="Cropping reduces file size"  Style="{StaticResource HelperTextStyle}"/>
-                                                <TextBlock Text="Cropping is based on the bg color and threshold"  Style="{StaticResource HelperTextStyle}"/>
-                                            </StackPanel>
-
                                         </StackPanel>
                                     </Border>
 
-                                    <!-- Sheet Dimensions Group -->
-                                    <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}">
+                                    <Border Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
                                         <StackPanel Spacing="12">
-                                            <TextBlock Text="Sheet dimensions" Style="{StaticResource SectionHeaderStyle}"/>
+                                            <TextBlock Text="Recover cropped offset" Style="{StaticResource SectionHeaderStyle}"/>
                                             <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-
-                                            <NumberBox x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width" Minimum="1" Maximum="999999"/>
-
                                             <StackPanel Spacing="4">
-                                                <NumberBox x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height" Minimum="1" Maximum="999999"/>
-                                                <TextBlock Text="For automatic sizing, leave it blank" Style="{StaticResource HelperTextStyle}"/>
+                                                <Grid ColumnSpacing="8">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <CheckBox Grid.Column="0" x:Name="RecoverXCheckBox" Content="X"/>
+                                                    <CheckBox Grid.Column="1" x:Name="RecoverYCheckBox" Content="Y"/>
+                                                </Grid>
+                                                <TextBlock Text="If enabled, the offsets will be adjusted to account for any cropping that was done"  Style="{StaticResource HelperTextStyle}"/>
                                             </StackPanel>
-
                                         </StackPanel>
                                     </Border>
-                                </Grid>
-      
-                            </StackPanel>
-                        </ScrollViewer>
-                    </Grid>
 
-                    <!-- Animations Panel (hidden by default) -->
-                    <Grid x:Name="AnimationsPanel" Visibility="Collapsed">
-                        <ScrollViewer>
-                            <StackPanel x:Name="AnimationDetailPanel" Spacing="10" Padding="20 14 20 20">
-                                <StackPanel Spacing="4" MaxWidth="1000">
-                                    <CheckBox x:Name="RegenerateCheckBox" Content="Regenerate frame properties"/>
-                                    <TextBlock Text="If disabled, manually modified offsets and sub-positions will remain unchanged"  Style="{StaticResource HelperTextStyle}"/>
                                 </StackPanel>
+                            </ScrollViewer>
+                        </Grid>
 
-                                <NumberBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay" MaxWidth="1000" Minimum="-1" Maximum="999999"/>
-
-                                <Border Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
-                                    <StackPanel Spacing="12">
-                                        <TextBlock Text="Offset" Style="{StaticResource SectionHeaderStyle}"/>
-                                        <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                                        <StackPanel Spacing="4">
-                                            <Grid ColumnSpacing="8">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-
-                                                <NumberBox Grid.Column="0" x:Name="OffsetXTextBox" PlaceholderText="0" Header="X" Maximum="999999" Minimum="-999999"/>
-                                                <NumberBox Grid.Column="1" x:Name="OffsetYTextBox" PlaceholderText="0" Header="Y" Maximum="999999" Minimum="-999999"/>
-
-                                            </Grid>
-                                            <TextBlock Text="Adjusts the offset for every sprite within the selected animation"  Style="{StaticResource HelperTextStyle}"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
-                                    <StackPanel Spacing="12">
-                                        <TextBlock Text="Recover cropped offset" Style="{StaticResource SectionHeaderStyle}"/>
-                                        <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                                        <StackPanel Spacing="4">
-                                            <Grid ColumnSpacing="8">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <CheckBox Grid.Column="0" x:Name="RecoverXCheckBox" Content="X"/>
-                                                <CheckBox Grid.Column="1" x:Name="RecoverYCheckBox" Content="Y"/>
-                                            </Grid>
-                                            <TextBlock Text="If enabled, the offsets will be adjusted to account for any cropping that was done"  Style="{StaticResource HelperTextStyle}"/>
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Border>
-            
-                            </StackPanel>
-                        </ScrollViewer>
-                    </Grid>
-
-                    <!-- HelpPanel -->
-                    <Grid x:Name="HelpPanel" Visibility="Collapsed">
-                        <ScrollViewer>
-                            <StackPanel Padding="20 20 20 20" Spacing="10">
+                        <!-- HelpPanel -->
+                        <Grid x:Name="HelpPanel" Visibility="Collapsed">
+                            <ScrollViewer>
+                                <StackPanel Padding="20 20 20 20" Spacing="10">
 
 
-                                <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
-                                    <StackPanel Spacing="12">
-                                        <TextBlock x:Name="ProgramNameTextBlock" Text="Frames to MM sprite resources v" Style="{StaticResource SectionHeaderStyle}"/>
-                                        <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                                        <TextBlock Text="Created by Marci599 for Mario Multiverse.&#x0a;Mario Multiverse (SFMB) created by neoarc."/>
+                                    <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
+                                        <StackPanel Spacing="12">
+                                            <TextBlock x:Name="ProgramNameTextBlock" Text="Frames to MM sprite resources v" Style="{StaticResource SectionHeaderStyle}"/>
+                                            <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+                                            <TextBlock Text="Created by Marci599 for Mario Multiverse.&#x0a;Mario Multiverse (SFMB) created by neoarc."/>
                                             <TextBlock Text="Using SkiaSharp and Oxipng."/>
-                                        <TextBlock Text="Check GitHub repository for help, updates, examples and issues:"/>
-                                        <HyperlinkButton NavigateUri = "https://github.com/Marci599/sprite-rips-to-mm-sprite-resources" Margin="-12 -14 -12 -4" Padding="11 0 11 4" MinHeight="0">
-                                            <TextBlock Text="github.com/Marci599/sprite-rips-to-mm-sprite-resources"/>
-                                        </HyperlinkButton>
-                                    </StackPanel>
-                                </Border>
+                                            <TextBlock Text="Check GitHub repository for help, updates, examples and issues:"/>
+                                            <HyperlinkButton NavigateUri = "https://github.com/Marci599/sprite-rips-to-mm-sprite-resources" Margin="-12 -14 -12 -4" Padding="11 0 11 4" MinHeight="0">
+                                                <TextBlock Text="github.com/Marci599/sprite-rips-to-mm-sprite-resources"/>
+                                            </HyperlinkButton>
+                                        </StackPanel>
+                                    </Border>
 
-                                <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" MaxWidth="1000" Padding="16 8 16 16">
-                                    <StackPanel Spacing="12">
-                                        <TextBlock Text="Settings" Style="{StaticResource SectionHeaderStyle}"/>
+                                    <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" MaxWidth="1000" Padding="16 8 16 16">
+                                        <StackPanel Spacing="12">
+                                            <TextBlock Text="Settings" Style="{StaticResource SectionHeaderStyle}"/>
 
-                                        <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+                                            <Rectangle Style="{StaticResource GroupDividerStyle}"/>
 
                                             <StackPanel Spacing="4">
                                                 <Grid ColumnSpacing="0">
@@ -295,45 +295,54 @@
                                                     </Button>
                                                 </Grid>
                                                 <TextBlock Text="Please provide a path where your folders and files will be / are located"  Style="{StaticResource HelperTextStyle}"/>
-                                                
+
                                             </StackPanel>
                                             <StackPanel Spacing="8">
                                                 <TextBlock Text="Manage program"/>
-                                            <Button x:Name="UninstallButton" Grid.Column="1" VerticalAlignment="Bottom" Click="UninstallButton_Click">
-                                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <FontIcon Glyph="&#xE74D;" FontSize="14"/>
-                                                    <TextBlock Text="Uninstall"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Button x:Name="UninstallButton" Grid.Column="1" VerticalAlignment="Bottom" Click="UninstallButton_Click">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <FontIcon Glyph="&#xE74D;" FontSize="14"/>
+                                                            <TextBlock Text="Uninstall"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button x:Name="ProgramDirectoryButton" Grid.Column="1" VerticalAlignment="Bottom" Click="ProgramDirectoryButton_Click">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <FontIcon Glyph="&#xE838;" FontSize="14"/>
+                                                            <TextBlock Text="Open Directory"/>
+                                                        </StackPanel>
+                                                    </Button>
                                                 </StackPanel>
-                                            </Button>
+                                                
                                             </StackPanel>
                                         </StackPanel>
-                                </Border>
+                                    </Border>
 
 
-       
-                            
-                                <InfoBar x:Name="UpdateInfoBar" IsOpen="False" Severity="Informational" MaxWidth="1000" Title="Update available" Message="Download the latest version of this program for an improved experience" IsClosable="False">
-                                    <InfoBar.ActionButton>
-                                        <Button HorizontalAlignment="Right" Click="UpdateButton_Click">
-                                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                                <TextBlock Text="Download"/>
-                                                <FontIcon Glyph="&#xE8AD;" Opacity="0.67" FontSize="14"/>
-                                            </StackPanel>
-                                        </Button>
-                                    </InfoBar.ActionButton>
-                                </InfoBar>
-             
-                            </StackPanel>
-                        </ScrollViewer>
+
+
+                                    <InfoBar x:Name="UpdateInfoBar" IsOpen="False" Severity="Informational" MaxWidth="1000" Title="Update available" Message="Download the latest version of this program for an improved experience" IsClosable="False">
+                                        <InfoBar.ActionButton>
+                                            <Button HorizontalAlignment="Right" Click="UpdateButton_Click">
+                                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                                    <TextBlock Text="Download"/>
+                                                    <FontIcon Glyph="&#xE8AD;" Opacity="0.67" FontSize="14"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </InfoBar.ActionButton>
+                                    </InfoBar>
+
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Grid>
                     </Grid>
-                </Grid>
                 </ContentControl>
             </Border>
 
             <!-- Bottom Section - moved to Grid.Row="1" -->
-                <Grid Grid.Row="1" VerticalAlignment="Bottom" Margin="12">
+            <Grid Grid.Row="1" VerticalAlignment="Bottom" Margin="12">
                 <StackPanel x:Name="BottomBarStackPanel" SizeChanged="BottomBarStackPanel_SizeChanged" Translation="0,0,0">
-                <InfoBar
+                    <InfoBar
                     x:Name="PrimaryInfoBar"
                     IsOpen="False"
      
@@ -341,7 +350,7 @@
                
                     CornerRadius="8 8 0 0"
                     CloseButtonClick="ClickPrimaryInfoBar"/>
-                <Border
+                    <Border
                     x:Name="SaveBarBorder"
                     Background="{StaticResource AcrylicBackgroundFillColorBaseBrush}"
                     CornerRadius="8"
@@ -349,29 +358,29 @@
   
                     >
 
-                    <Grid ColumnSpacing="8" Padding="16">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+                        <Grid ColumnSpacing="8" Padding="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
-                        <Grid>
-              
-                            <StackPanel x:Name="ReduceFileSizeCheckBoxTexts" Margin="35 -2 0 -2">
-                                <TextBlock Grid.Column="1" Text="Reduce file size" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="1" Text="If enabled, expect a bit slower generation"  Style="{StaticResource HelperTextStyle}"/>
-                            </StackPanel>
-                            <CheckBox x:Name="ReduceFileSizeCheckBox" Grid.Column="0" Content="" VerticalAlignment="Center"/>
+                            <Grid>
+
+                                <StackPanel x:Name="ReduceFileSizeCheckBoxTexts" Margin="35 -2 0 -2">
+                                    <TextBlock Grid.Column="1" Text="Reduce file size" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="If enabled, expect a bit slower generation"  Style="{StaticResource HelperTextStyle}"/>
+                                </StackPanel>
+                                <CheckBox x:Name="ReduceFileSizeCheckBox" Grid.Column="0" Content="" VerticalAlignment="Center"/>
+                            </Grid>
+
+
+                            <Button x:Name="GenerateButton" Grid.Column="4" Content="Generate Subject" MinWidth="120" Click="GenerateButton_Click"/>
                         </Grid>
-                        
-       
-                        <Button x:Name="GenerateButton" Grid.Column="4" Content="Generate Subject" MinWidth="120" Click="GenerateButton_Click"/>
-                    </Grid>
-                </Border>
-            </StackPanel>
+                    </Border>
+                </StackPanel>
             </Grid>
 
         </Grid>

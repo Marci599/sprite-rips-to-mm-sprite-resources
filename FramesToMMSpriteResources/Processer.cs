@@ -53,8 +53,6 @@ namespace FramesToMMSpriteResources
 
     internal static class Processer
     {
-        private const double MaxColorDistance = 441.6729559300637;
-
         private static ProgramConfig programConfig = null!;
         private static GameThemeConfig gameThemeConfig = null!;
         private static SubjectConfig subjectConfig = null!;
@@ -96,7 +94,7 @@ namespace FramesToMMSpriteResources
                 named = spritePayload?["NamedAnimations"]?.AsArray();
                 subPositions = spritePayload?["SubPositions"]?.GetValue<string>() ?? string.Empty;
 
-          
+
                 var _previousSpriteFile = new PreviousSpriteFileValues
                 {
                     FramesByAnimation = new Dictionary<string, List<JsonObject>>(),
@@ -135,10 +133,13 @@ namespace FramesToMMSpriteResources
                         break;
                     }
                 }
+                
+                animationConfig.GeneratedFrameCount = -1;
+                
 
                 int spritesCount = 0;
                 string animationPath = Path.Combine(subjectPath, "raw", animationName);
-     
+
                 var i = 0;
 
                 var spritePaths = Directory.GetFiles(animationPath)
@@ -264,7 +265,7 @@ namespace FramesToMMSpriteResources
                 int halfH = Math.Max(1, (sheetImage.Height + 1) / 2);
                 using var sheetHalf = ResizeBitmapNearest(sheetImage, halfW, halfH);
                 SaveBitmapToFile(sheetHalf, spritesheetPath);
-                spritesheetPath2x = Path.Combine(outputDir, programConfig.SelectedNode[1] +"@2x" + extension);
+                spritesheetPath2x = Path.Combine(outputDir, programConfig.SelectedNode[1] + "@2x" + extension);
             }
 
             SaveBitmapToFile(sheetImage, spritesheetPath2x);
@@ -285,7 +286,7 @@ namespace FramesToMMSpriteResources
             using var image = SKImage.FromBitmap(bmp);
 
             using var data = image.Encode(SKEncodedImageFormat.Png, 100);
-      
+
 
             if (data == null)
                 throw new InvalidOperationException($"Failed to encode image: {path}");
@@ -370,6 +371,7 @@ namespace FramesToMMSpriteResources
                 if (sprite.OldFrameJson == null)
                 {
                     var trim = sprite.TrimOffset;
+                    
                     AnimationConfig animConfig = subjectConfig.AnimationConfigs[sprite.AnimationName];
                     var recover = animConfig.RecoverCroppedOffset;
 

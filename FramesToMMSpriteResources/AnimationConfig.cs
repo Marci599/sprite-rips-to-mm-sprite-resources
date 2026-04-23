@@ -22,6 +22,9 @@ namespace FramesToMMSpriteResources
         [JsonPropertyName("recover_cropped_offset")]
         public RecoverCroppedOffset RecoverCroppedOffset = new();
 
+        [JsonPropertyName("generated_frame_count")]
+        public int GeneratedFrameCount = -1;
+
         public AnimationConfig() { }
 
         public AnimationConfig(bool regenerate, int delay, Vector2? offset, RecoverCroppedOffset recoverCroppedOffset)

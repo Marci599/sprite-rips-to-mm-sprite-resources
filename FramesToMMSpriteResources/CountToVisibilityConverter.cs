@@ -8,7 +8,7 @@ namespace FramesToMMSpriteResources
     {
         public object Convert(object value, Type targetType, object parameter, string language)
         {
-            if (value is int count && count != -1)
+            if (value is string countText && countText != "-1")
             {
                 return Visibility.Visible;
             }
