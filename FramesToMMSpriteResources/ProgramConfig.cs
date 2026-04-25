@@ -15,8 +15,11 @@ namespace FramesToMMSpriteResources
         [JsonPropertyName("reduce_file_size")]
         public bool ReduceFileSize = false;
 
-        [JsonPropertyName("selected_node")]
-        public List<string>? SelectedNode;
+        [JsonPropertyName("selected_node_path")]
+        public List<string>? SelectedNodePath;
+
+        [JsonPropertyName("selected_nodes")]
+        public HashSet<string>? SelectedNodes;
 
         [JsonPropertyName("is_hd")]
 
@@ -29,12 +32,13 @@ namespace FramesToMMSpriteResources
 
         public ProgramConfig() { }
 
-        public ProgramConfig(string? workingPath = null, bool reduceFileSize = false, Dictionary<string, GameThemeConfig>? gameThemeConfigs = null, List<string>? selectedNode = null)
+        public ProgramConfig(string? workingPath = null, bool reduceFileSize = false, Dictionary<string, GameThemeConfig>? gameThemeConfigs = null, List<string>? selectedNodePath = null, HashSet<string>? selectedNodes = null)
         {
             WorkingPath = workingPath;
             ReduceFileSize = reduceFileSize;
             GameThemeConfigs = gameThemeConfigs;
-            SelectedNode = selectedNode;
+            SelectedNodePath = selectedNodePath;
+            SelectedNodes = selectedNodes;
         }
     }
 }

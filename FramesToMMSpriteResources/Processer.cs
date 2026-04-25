@@ -58,12 +58,11 @@ namespace FramesToMMSpriteResources
         private static SubjectConfig subjectConfig = null!;
         private static (byte r, byte g, byte b, byte a)? parsedBackgroundColor;
 
-        public static async Task StartProcessAsync()
+        public static async Task StartProcessAsync(string gameThemeName, string subjectName)
         {
             programConfig = MainWindow.programConfig;
-            gameThemeConfig = programConfig.GameThemeConfigs[programConfig.SelectedNode[0]];
-            subjectConfig = gameThemeConfig.SubjectConfigs[programConfig.SelectedNode[1]];
-
+            gameThemeConfig = programConfig.GameThemeConfigs[gameThemeName];
+            subjectConfig = gameThemeConfig.SubjectConfigs[subjectName];
             parsedBackgroundColor = null;
             if (subjectConfig.BackgroundColor != null)
             {
@@ -72,8 +71,8 @@ namespace FramesToMMSpriteResources
             }
 
             string subjectPath = MainWindow.usingGameThemes
-                ? Path.Combine(MainWindow.workingPath, programConfig.SelectedNode[0], programConfig.SelectedNode[1])
-                : Path.Combine(MainWindow.workingPath, programConfig.SelectedNode[1]);
+                ? Path.Combine(MainWindow.workingPath, gameThemeName, subjectName)
+                : Path.Combine(MainWindow.workingPath, subjectName);
 
             List<ProcessedSprite> processedSprites = new();
             List<Dictionary<string, object>> animationsMeta = new();
@@ -81,7 +80,7 @@ namespace FramesToMMSpriteResources
 
             string subPositions = string.Empty;
             string outputDir = Path.Combine(subjectPath, "generated");
-            string spriteFilePath = Path.Combine(outputDir, programConfig.SelectedNode[1] + ".sprite");
+            string spriteFilePath = Path.Combine(outputDir, subjectName + ".sprite");
 
             JsonArray? frames = null;
             JsonArray? named = null;
@@ -256,7 +255,7 @@ namespace FramesToMMSpriteResources
 
             string extension = ".png";
 
-            var spritesheetPath = Path.Combine(outputDir, programConfig.SelectedNode[1] + extension);
+            var spritesheetPath = Path.Combine(outputDir, subjectName + extension);
             var spritesheetPath2x = spritesheetPath;
 
             if (gameThemeConfig.IsHd)
@@ -265,7 +264,7 @@ namespace FramesToMMSpriteResources
                 int halfH = Math.Max(1, (sheetImage.Height + 1) / 2);
                 using var sheetHalf = ResizeBitmapNearest(sheetImage, halfW, halfH);
                 SaveBitmapToFile(sheetHalf, spritesheetPath);
-                spritesheetPath2x = Path.Combine(outputDir, programConfig.SelectedNode[1] + "@2x" + extension);
+                spritesheetPath2x = Path.Combine(outputDir, subjectName + "@2x" + extension);
             }
 
             SaveBitmapToFile(sheetImage, spritesheetPath2x);
