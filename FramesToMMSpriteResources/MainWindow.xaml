@@ -298,7 +298,39 @@
                             
                             <StackPanel x:Name="FrameDetailPanel" Spacing="10" Padding="20 14 20 20" MaxWidth="1000">
 
-                                <!-- A CANVAS LIKE THING HERE -->
+                                <Border Style="{StaticResource CardBorderStyle}" HorizontalAlignment="Stretch">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Text="Frame coordinates" Style="{StaticResource SectionHeaderStyle}"/>
+                                        <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+                                        <TextBlock Text="Drag in the area below to pan around the coordinate plane. You can also set the sprite position manually with X/Y values."
+                                                   Style="{StaticResource HelperTextStyle}"/>
+
+                                        <Grid ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <NumberBox x:Name="FrameVectorXTextBox" Grid.Column="0" Header="Vector2 X" Minimum="-999999" Maximum="999999" ValueChanged="FrameVectorXTextBox_ValueChanged"/>
+                                            <NumberBox x:Name="FrameVectorYTextBox" Grid.Column="1" Header="Vector2 Y" Minimum="-999999" Maximum="999999" ValueChanged="FrameVectorYTextBox_ValueChanged"/>
+                                        </Grid>
+
+                                        <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="8" Background="{ThemeResource LayerFillColorDefaultBrush}">
+                                            <Canvas x:Name="FrameCoordinateCanvas"
+                                                    Height="320"
+                                                    HorizontalAlignment="Stretch"
+                                                    VerticalAlignment="Top"
+                                                    SizeChanged="FrameCoordinateCanvas_SizeChanged"
+                                                    PointerPressed="FrameCoordinateCanvas_PointerPressed"
+                                                    PointerMoved="FrameCoordinateCanvas_PointerMoved"
+                                                    PointerReleased="FrameCoordinateCanvas_PointerReleased"
+                                                    PointerExited="FrameCoordinateCanvas_PointerReleased">
+                                                <Rectangle x:Name="FrameXAxis" Height="1.5" Fill="{ThemeResource TextFillColorSecondaryBrush}" Opacity="0.8"/>
+                                                <Rectangle x:Name="FrameYAxis" Width="1.5" Fill="{ThemeResource TextFillColorSecondaryBrush}" Opacity="0.8"/>
+                                                <Image x:Name="FrameCoordinateSpriteImage" Width="48" Height="48" Source="Assets/icon.png" PointerPressed="FrameCoordinateSpriteImage_PointerPressed"/>
+                                            </Canvas>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
 
                             </StackPanel>
                             
