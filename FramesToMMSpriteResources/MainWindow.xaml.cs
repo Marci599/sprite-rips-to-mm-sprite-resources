@@ -1467,7 +1467,6 @@ namespace FramesToMMSpriteResources
             _frameSpritePosition = Vector2.Zero;
             _isFrameCanvasDragging = false;
             _frameCanvasZoom = 1.0f;
-            RenderOptions.SetBitmapInterpolationMode(FrameCoordinateSpriteImage, BitmapInterpolationMode.NearestNeighbor);
             FrameVectorXTextBox.Value = 0;
             FrameVectorYTextBox.Value = 0;
 
@@ -1524,30 +1523,43 @@ namespace FramesToMMSpriteResources
             FrameCheckerboardCanvas.Height = canvasHeight;
             FrameCheckerboardCanvas.Children.Clear();
 
-            double tileSize = 4.0 * _frameCanvasZoom;
-            if (tileSize <= 0)
+            double baseTileSize = 4.0 * _frameCanvasZoom;
+            if (baseTileSize <= 0)
             {
                 return;
             }
 
-            int minTileX = (int)Math.Floor((-axisX) / tileSize) - 1;
-            int maxTileX = (int)Math.Ceiling((canvasWidth - axisX) / tileSize) + 1;
-            int minTileY = (int)Math.Floor((axisY - canvasHeight) / tileSize) - 1;
-            int maxTileY = (int)Math.Ceiling(axisY / tileSize) + 1;
+            int stride = 1;
+            double tileSize = baseTileSize;
 
-            for (int tileY = minTileY; tileY <= maxTileY; tileY++)
+            int estimatedColumns = (int)Math.Ceiling(canvasWidth / tileSize) + 2;
+            int estimatedRows = (int)Math.Ceiling(canvasHeight / tileSize) + 2;
+            while ((estimatedColumns * estimatedRows) > 6000)
             {
-                for (int tileX = minTileX; tileX <= maxTileX; tileX++)
+                stride *= 2;
+                tileSize = baseTileSize * stride;
+                estimatedColumns = (int)Math.Ceiling(canvasWidth / tileSize) + 2;
+                estimatedRows = (int)Math.Ceiling(canvasHeight / tileSize) + 2;
+            }
+
+            int minTileX = (int)Math.Floor((-axisX) / baseTileSize) - stride;
+            int maxTileX = (int)Math.Ceiling((canvasWidth - axisX) / baseTileSize) + stride;
+            int minTileY = (int)Math.Floor((axisY - canvasHeight) / baseTileSize) - stride;
+            int maxTileY = (int)Math.Ceiling(axisY / baseTileSize) + stride;
+
+            for (int tileY = minTileY; tileY <= maxTileY; tileY += stride)
+            {
+                for (int tileX = minTileX; tileX <= maxTileX; tileX += stride)
                 {
                     var tile = new Microsoft.UI.Xaml.Shapes.Rectangle
                     {
                         Width = tileSize,
                         Height = tileSize,
-                        Fill = ((tileX + tileY) & 1) == 0 ? _frameCheckerLightBrush : _frameCheckerDarkBrush
+                        Fill = (((tileX / stride) + (tileY / stride)) & 1) == 0 ? _frameCheckerLightBrush : _frameCheckerDarkBrush
                     };
 
-                    Canvas.SetLeft(tile, axisX + (tileX * tileSize));
-                    Canvas.SetTop(tile, axisY - ((tileY + 1) * tileSize));
+                    Canvas.SetLeft(tile, axisX + (tileX * baseTileSize));
+                    Canvas.SetTop(tile, axisY - ((tileY + stride) * baseTileSize));
                     FrameCheckerboardCanvas.Children.Add(tile);
                 }
             }
