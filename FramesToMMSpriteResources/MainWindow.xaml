@@ -221,43 +221,67 @@
 
                                     <NumberBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay" MaxWidth="1000" Minimum="-1" Maximum="999999"/>
 
-                                    <Border Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
-                                        <StackPanel Spacing="12">
-                                            <TextBlock Text="Offset" Style="{StaticResource SectionHeaderStyle}"/>
-                                            <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                                            <StackPanel Spacing="4">
-                                                <Grid ColumnSpacing="8">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
+             
+                                    <Expander HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Stretch"
+                                        MaxWidth="1000"
+                                        MinHeight="0"
+                                              Padding="16 10 16 16">
+                                        <Expander.Header>
+                                            <TextBlock Text="Advanced options" Style="{StaticResource HelperTextStyle}"/>
+                                        </Expander.Header>
 
-                                                    <NumberBox Grid.Column="0" x:Name="OffsetXTextBox" PlaceholderText="0" Header="X" Maximum="999999" Minimum="-999999"/>
-                                                    <NumberBox Grid.Column="1" x:Name="OffsetYTextBox" PlaceholderText="0" Header="Y" Maximum="999999" Minimum="-999999"/>
+                                        <Expander.Content>
+                                            <Grid RowSpacing="10">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="*"/>
+                                                    <RowDefinition Height="*"/>
+                                                    <RowDefinition Height="*"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Grid.Row="0" Text="It's better not to tinker with these settings since as of v2.0.0 you can adjust and align offsets for each frame, and now I don't know if there is even a need for these options."  Style="{StaticResource HelperTextStyle}"/>
+                                                <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
+                                                    <StackPanel Spacing="12">
+                                                        <TextBlock Text="Offset" Style="{StaticResource SectionHeaderStyle}"/>
+                                                        <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+                                                        <StackPanel Spacing="4">
+                                                            <Grid ColumnSpacing="8">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                </Grid.ColumnDefinitions>
 
-                                                </Grid>
-                                                <TextBlock Text="Adjusts the offset for every sprite within the selected animation"  Style="{StaticResource HelperTextStyle}"/>
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </Border>
+                                                                <NumberBox Grid.Column="0" x:Name="OffsetXTextBox" PlaceholderText="0" Header="X" Maximum="999999" Minimum="-999999"/>
+                                                                <NumberBox Grid.Column="1" x:Name="OffsetYTextBox" PlaceholderText="0" Header="Y" Maximum="999999" Minimum="-999999"/>
 
-                                    <Border Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
-                                        <StackPanel Spacing="12">
-                                            <TextBlock Text="Recover cropped offset" Style="{StaticResource SectionHeaderStyle}"/>
-                                            <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                                            <StackPanel Spacing="4">
-                                                <Grid ColumnSpacing="8">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <CheckBox Grid.Column="0" x:Name="RecoverXCheckBox" Content="X"/>
-                                                    <CheckBox Grid.Column="1" x:Name="RecoverYCheckBox" Content="Y"/>
-                                                </Grid>
-                                                <TextBlock Text="If enabled, the offsets will be adjusted to account for any cropping that was done"  Style="{StaticResource HelperTextStyle}"/>
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </Border>
+                                                            </Grid>
+                                                            <TextBlock Text="Adjusts the offset of every frame after processing"  Style="{StaticResource HelperTextStyle}"/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}"
+    HorizontalAlignment="Stretch">
+                                                    <StackPanel Spacing="12">
+                                                        <TextBlock Text="Recover cropped offset" Style="{StaticResource SectionHeaderStyle}"/>
+                                                        <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+                                                        <StackPanel Spacing="4">
+                                                            <Grid ColumnSpacing="8">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                    <ColumnDefinition Width="*"/>
+                                                                </Grid.ColumnDefinitions>
+                                                                <CheckBox Grid.Column="0" x:Name="RecoverXCheckBox" Content="X"/>
+                                                                <CheckBox Grid.Column="1" x:Name="RecoverYCheckBox" Content="Y"/>
+                                                            </Grid>
+                                                            <TextBlock Text="If enabled, the offsets will be adjusted to account for any cropping that was done"
+                Style="{StaticResource HelperTextStyle}"/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </Border>
+                                            </Grid>
+                                            
+                                        </Expander.Content>
+                                    </Expander>
+
 
                                 </StackPanel>
                             </ScrollViewer>
@@ -304,7 +328,9 @@
                                                 </Grid>
                                                 <TextBlock Text="Please provide a path where your folders and files will be / are located"  Style="{StaticResource HelperTextStyle}"/>
 
+                                                
                                             </StackPanel>
+                                            <ToggleSwitch x:Name="AnimationsToggleSwitch" Header="Reduce animations"/>
                                             <StackPanel Spacing="8">
                                                 <TextBlock Text="Manage program"/>
                                                 <StackPanel Orientation="Horizontal" Spacing="8">

@@ -21,11 +21,17 @@ namespace FramesToMMSpriteResources
         [JsonPropertyName("selected_nodes")]
         public HashSet<string>? SelectedNodes;
 
+        [JsonPropertyName("last_selected_nodes")]
+        public string? LastSelectedNode;
+
         [JsonPropertyName("is_hd")]
 
         public bool IsHd = true;
         [JsonPropertyName("last_update_check")]
         public DateTime? LastUpdateCheck { get; set; }
+
+        [JsonPropertyName("animations")]
+        public bool Animations = true;
 
         [JsonIgnore]
         public Dictionary<string, GameThemeConfig>? GameThemeConfigs = [];
