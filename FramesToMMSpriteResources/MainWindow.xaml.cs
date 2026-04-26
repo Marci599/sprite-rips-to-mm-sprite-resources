@@ -8,7 +8,6 @@ using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
-using Microsoft.UI.Xaml.Media.Imaging;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -18,18 +17,14 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Windows.ApplicationModel;
-using Windows.Graphics.Imaging;
 using Windows.Media.Core;
 using Windows.Media.Playback;
-using Windows.Storage;
 using Windows.Storage.Pickers;
-using Windows.Storage.Streams;
 using Windows.UI.Composition;
 
 namespace FramesToMMSpriteResources
@@ -229,22 +224,6 @@ namespace FramesToMMSpriteResources
         private bool _isCtrlHeld = false;
         public bool IsCtrlHeld => _isCtrlHeld;
 
-        private Vector2 _frameCanvasPan = Vector2.Zero;
-        private Vector2 _frameSpritePosition = Vector2.Zero;
-        private Vector2 _frameDragStartPointer;
-        private Vector2 _frameDragStartPan;
-        private bool _isFrameCanvasDragging;
-        private float _frameCanvasZoom = 1.0f;
-        private const float FrameCanvasMinZoom = 0.2f;
-        private const float FrameCanvasMaxZoom = 14.0f;
-        private const double FrameSpriteBaseSize = 48.0;
-        private WriteableBitmap? _frameCheckerBitmap;
-        private byte[]? _frameCheckerPixels;
-        private byte[]? _frameSpriteSourcePixels;
-        private int _frameSpriteSourceWidth;
-        private int _frameSpriteSourceHeight;
-        private int _frameSpriteRenderedSize = -1;
-        private WriteableBitmap? _frameSpriteBitmap;
 
         [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(TreeItem))]
         public MainWindow()
@@ -278,8 +257,7 @@ namespace FramesToMMSpriteResources
             HeaderBreadcrumbBar.ItemClicked += BreadcrumbBar_ItemClicked;
 
             ProgramNameTextBlock.Text += GetCurrentVersion();
-            InitializeFrameCoordinatePlane();
-            InitializeFrameSpriteSourceAsync();
+            _ = FrameCoordinateEditorControl.SetSpriteImageUriAsync("ms-appx:///Assets/icon.png");
 
         
             CheckForUpdateIfNeeded();
@@ -1457,7 +1435,7 @@ namespace FramesToMMSpriteResources
                         currentConfigs.Add(programConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].frameCongfigs[int.Parse(selectedNodeName)]);
                     }
 
-                   
+                    FrameCoordinateEditorControl.SpritePosition = Vector2.Zero;
 
 
 
@@ -1469,277 +1447,6 @@ namespace FramesToMMSpriteResources
 
 
 
-        }
-
-        private void InitializeFrameCoordinatePlane()
-        {
-            _frameCanvasPan = Vector2.Zero;
-            _frameSpritePosition = Vector2.Zero;
-            _isFrameCanvasDragging = false;
-            _frameCanvasZoom = 1.0f;
-            FrameVectorXTextBox.Value = 0;
-            FrameVectorYTextBox.Value = 0;
-
-            UpdateFrameCoordinateVisuals();
-        }
-
-        private async void InitializeFrameSpriteSourceAsync()
-        {
-            try
-            {
-                StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(new Uri("ms-appx:///Assets/icon.png"));
-                using IRandomAccessStream stream = await file.OpenReadAsync();
-                BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
-                PixelDataProvider pixelData = await decoder.GetPixelDataAsync(
-                    BitmapPixelFormat.Bgra8,
-                    BitmapAlphaMode.Premultiplied,
-                    new BitmapTransform(),
-                    ExifOrientationMode.IgnoreExifOrientation,
-                    ColorManagementMode.DoNotColorManage);
-
-                _frameSpriteSourcePixels = pixelData.DetachPixelData();
-                _frameSpriteSourceWidth = (int)decoder.PixelWidth;
-                _frameSpriteSourceHeight = (int)decoder.PixelHeight;
-                _frameSpriteRenderedSize = -1;
-
-                UpdateFrameCoordinateVisuals();
-            }
-            catch
-            {
-                // Keep default image source if loading/scaling pipeline is unavailable.
-            }
-        }
-
-        private void UpdateFrameSpriteBitmap(int targetSize)
-        {
-            if (_frameSpriteSourcePixels == null || _frameSpriteSourceWidth <= 0 || _frameSpriteSourceHeight <= 0 || targetSize <= 0)
-            {
-                return;
-            }
-
-            if (_frameSpriteBitmap != null && _frameSpriteRenderedSize == targetSize)
-            {
-                return;
-            }
-
-            _frameSpriteBitmap = new WriteableBitmap(targetSize, targetSize);
-            byte[] scaledPixels = new byte[targetSize * targetSize * 4];
-
-            for (int y = 0; y < targetSize; y++)
-            {
-                int sourceY = Math.Min(_frameSpriteSourceHeight - 1, (int)((y / (double)targetSize) * _frameSpriteSourceHeight));
-                for (int x = 0; x < targetSize; x++)
-                {
-                    int sourceX = Math.Min(_frameSpriteSourceWidth - 1, (int)((x / (double)targetSize) * _frameSpriteSourceWidth));
-
-                    int src = ((sourceY * _frameSpriteSourceWidth) + sourceX) * 4;
-                    int dst = ((y * targetSize) + x) * 4;
-
-                    scaledPixels[dst] = _frameSpriteSourcePixels[src];
-                    scaledPixels[dst + 1] = _frameSpriteSourcePixels[src + 1];
-                    scaledPixels[dst + 2] = _frameSpriteSourcePixels[src + 2];
-                    scaledPixels[dst + 3] = _frameSpriteSourcePixels[src + 3];
-                }
-            }
-
-            using (Stream stream = _frameSpriteBitmap.PixelBuffer.AsStream())
-            {
-                stream.Position = 0;
-                stream.Write(scaledPixels, 0, scaledPixels.Length);
-            }
-
-            _frameSpriteBitmap.Invalidate();
-            FrameCoordinateSpriteImage.Source = _frameSpriteBitmap;
-            _frameSpriteRenderedSize = targetSize;
-        }
-
-        private void UpdateFrameCoordinateVisuals()
-        {
-            if (FrameCoordinateCanvas == null)
-            {
-                return;
-            }
-
-            double canvasWidth = FrameCoordinateCanvas.ActualWidth;
-            double canvasHeight = FrameCoordinateCanvas.ActualHeight;
-
-            if (canvasWidth <= 0 || canvasHeight <= 0)
-            {
-                return;
-            }
-
-            double centerX = canvasWidth / 2.0;
-            double centerY = canvasHeight / 2.0;
-
-            double axisX = centerX + _frameCanvasPan.X;
-            double axisY = centerY + _frameCanvasPan.Y;
-
-            UpdateFrameCheckerboard(canvasWidth, canvasHeight, axisX, axisY);
-
-            FrameXAxis.Width = canvasWidth;
-            Canvas.SetLeft(FrameXAxis, 0);
-            Canvas.SetTop(FrameXAxis, axisY - (FrameXAxis.Height / 2.0));
-
-            FrameYAxis.Height = canvasHeight;
-            Canvas.SetLeft(FrameYAxis, axisX - (FrameYAxis.Width / 2.0));
-            Canvas.SetTop(FrameYAxis, 0);
-
-            double spriteCanvasX = axisX + (_frameSpritePosition.X * _frameCanvasZoom);
-            double spriteCanvasY = axisY - (_frameSpritePosition.Y * _frameCanvasZoom);
-
-            double spriteSize = FrameSpriteBaseSize * _frameCanvasZoom;
-            UpdateFrameSpriteBitmap(Math.Max(1, (int)Math.Round(spriteSize)));
-            FrameCoordinateSpriteImage.Width = spriteSize;
-            FrameCoordinateSpriteImage.Height = spriteSize;
-
-            Canvas.SetLeft(FrameCoordinateSpriteImage, spriteCanvasX - (spriteSize / 2.0));
-            Canvas.SetTop(FrameCoordinateSpriteImage, spriteCanvasY - (spriteSize / 2.0));
-
-            FrameZoomTextBlock.Text = $"Zoom: {(int)Math.Round(_frameCanvasZoom * 100)}%";
-        }
-
-        private void UpdateFrameCheckerboard(double canvasWidth, double canvasHeight, double axisX, double axisY)
-        {
-            int pixelWidth = Math.Max(1, (int)Math.Ceiling(canvasWidth));
-            int pixelHeight = Math.Max(1, (int)Math.Ceiling(canvasHeight));
-            int pixelCount = pixelWidth * pixelHeight;
-            int byteCount = pixelCount * 4;
-
-            if (_frameCheckerBitmap == null || _frameCheckerBitmap.PixelWidth != pixelWidth || _frameCheckerBitmap.PixelHeight != pixelHeight)
-            {
-                _frameCheckerBitmap = new WriteableBitmap(pixelWidth, pixelHeight);
-                _frameCheckerPixels = new byte[byteCount];
-                FrameCheckerboardImage.Source = _frameCheckerBitmap;
-            }
-            else if (_frameCheckerPixels == null || _frameCheckerPixels.Length != byteCount)
-            {
-                _frameCheckerPixels = new byte[byteCount];
-            }
-
-            double tileSize = 4.0 * _frameCanvasZoom;
-            if (tileSize <= 0.0001)
-            {
-                return;
-            }
-
-            const byte light = 238;
-            const byte dark = 206;
-            int idx = 0;
-
-            for (int y = 0; y < pixelHeight; y++)
-            {
-                int tileY = (int)Math.Floor((axisY - y) / tileSize);
-                for (int x = 0; x < pixelWidth; x++)
-                {
-                    int tileX = (int)Math.Floor((x - axisX) / tileSize);
-                    byte color = ((tileX + tileY) & 1) == 0 ? light : dark;
-
-                    _frameCheckerPixels![idx++] = color;
-                    _frameCheckerPixels[idx++] = color;
-                    _frameCheckerPixels[idx++] = color;
-                    _frameCheckerPixels[idx++] = 255;
-                }
-            }
-
-            using (Stream stream = _frameCheckerBitmap!.PixelBuffer.AsStream())
-            {
-                stream.Position = 0;
-                stream.Write(_frameCheckerPixels!, 0, _frameCheckerPixels!.Length);
-            }
-            _frameCheckerBitmap.Invalidate();
-        }
-
-        private void FrameCoordinateCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            UpdateFrameCoordinateVisuals();
-        }
-
-        private void FrameCoordinateCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
-        {
-            var point = e.GetCurrentPoint(FrameCoordinateCanvas);
-            _frameDragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
-            _frameDragStartPan = _frameCanvasPan;
-            _isFrameCanvasDragging = true;
-
-            FrameCoordinateCanvas.CapturePointer(e.Pointer);
-        }
-
-        private void FrameCoordinateCanvas_PointerMoved(object sender, PointerRoutedEventArgs e)
-        {
-            var point = e.GetCurrentPoint(FrameCoordinateCanvas);
-            var currentPosition = new Vector2((float)point.Position.X, (float)point.Position.Y);
-
-            if (_isFrameCanvasDragging)
-            {
-                _frameCanvasPan = _frameDragStartPan + (currentPosition - _frameDragStartPointer);
-                UpdateFrameCoordinateVisuals();
-            }
-        }
-
-        private void FrameCoordinateCanvas_PointerReleased(object sender, PointerRoutedEventArgs e)
-        {
-            _isFrameCanvasDragging = false;
-            FrameCoordinateCanvas.ReleasePointerCapture(e.Pointer);
-        }
-
-        private void FrameCoordinateCanvas_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
-        {
-            var point = e.GetCurrentPoint(FrameCoordinateCanvas);
-            int wheelDelta = point.Properties.MouseWheelDelta;
-            if (wheelDelta == 0)
-            {
-                return;
-            }
-
-            float oldZoom = _frameCanvasZoom;
-            float zoomMultiplier = wheelDelta > 0 ? 1.1f : 0.9f;
-            float newZoom = Math.Clamp(oldZoom * zoomMultiplier, FrameCanvasMinZoom, FrameCanvasMaxZoom);
-            if (Math.Abs(newZoom - oldZoom) < 0.0001f)
-            {
-                return;
-            }
-
-            double canvasWidth = FrameCoordinateCanvas.ActualWidth;
-            double canvasHeight = FrameCoordinateCanvas.ActualHeight;
-            double centerX = canvasWidth / 2.0;
-            double centerY = canvasHeight / 2.0;
-
-            double oldAxisX = centerX + _frameCanvasPan.X;
-            double oldAxisY = centerY + _frameCanvasPan.Y;
-
-            double worldXUnderPointer = (point.Position.X - oldAxisX) / oldZoom;
-            double worldYUnderPointer = (oldAxisY - point.Position.Y) / oldZoom;
-
-            _frameCanvasZoom = newZoom;
-
-            double newAxisX = point.Position.X - (worldXUnderPointer * newZoom);
-            double newAxisY = point.Position.Y + (worldYUnderPointer * newZoom);
-
-            _frameCanvasPan = new Vector2(
-                (float)(newAxisX - centerX),
-                (float)(newAxisY - centerY)
-            );
-
-            UpdateFrameCoordinateVisuals();
-            e.Handled = true;
-        }
-
-        private void CenterFrameOriginButton_Click(object sender, RoutedEventArgs e)
-        {
-            _frameCanvasPan = Vector2.Zero;
-            UpdateFrameCoordinateVisuals();
-        }
-
-        private void FrameVectorXTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
-        {
-            _frameSpritePosition = new Vector2(double.IsNaN(sender.Value) ? 0 : (float)sender.Value, _frameSpritePosition.Y);
-            UpdateFrameCoordinateVisuals();
-        }
-
-        private void FrameVectorYTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
-        {
-            _frameSpritePosition = new Vector2(_frameSpritePosition.X, double.IsNaN(sender.Value) ? 0 : (float)sender.Value);
-            UpdateFrameCoordinateVisuals();
         }
 
         private void DetachAllPanelEvents()
