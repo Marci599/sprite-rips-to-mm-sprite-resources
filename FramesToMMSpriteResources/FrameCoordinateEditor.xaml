@@ -2,40 +2,17 @@
     x:Class="FramesToMMSpriteResources.FrameCoordinateEditor"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Border Style="{StaticResource CardBorderStyle}" HorizontalAlignment="Stretch">
-        <StackPanel Spacing="12">
-            <TextBlock Text="Frame coordinates" Style="{StaticResource SectionHeaderStyle}"/>
-            <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-            <TextBlock Text="Drag to pan, mouse wheel to zoom, or edit Vector2 directly."
-                       Style="{StaticResource HelperTextStyle}"/>
-            <Grid ColumnSpacing="8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock x:Name="ZoomTextBlock" Grid.Column="0" Text="Zoom: 100%" Style="{StaticResource HelperTextStyle}" VerticalAlignment="Center"/>
-                <Button Grid.Column="1" Click="CenterOriginButton_Click">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <FontIcon Glyph="&#xE777;" FontSize="12"/>
-                        <TextBlock Text="Center origin"/>
-                    </StackPanel>
-                </Button>
-            </Grid>
+    <Border Style="{StaticResource CardBorderStyle}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-            <Grid ColumnSpacing="8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <NumberBox x:Name="VectorXTextBox" Grid.Column="0" Header="Vector2 X" Minimum="-999999" Maximum="999999" ValueChanged="VectorXTextBox_ValueChanged"/>
-                <NumberBox x:Name="VectorYTextBox" Grid.Column="1" Header="Vector2 Y" Minimum="-999999" Maximum="999999" ValueChanged="VectorYTextBox_ValueChanged"/>
-            </Grid>
-
-            <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="0" Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <Border Grid.Column="0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="0" Background="{ThemeResource LayerFillColorDefaultBrush}">
                 <Canvas x:Name="CoordinateCanvas"
-                        Height="320"
                         HorizontalAlignment="Stretch"
-                        VerticalAlignment="Top"
+                        VerticalAlignment="Stretch"
                         Background="Transparent"
                         SizeChanged="CoordinateCanvas_SizeChanged"
                         PointerPressed="CoordinateCanvas_PointerPressed"
@@ -43,13 +20,46 @@
                         PointerReleased="CoordinateCanvas_PointerReleased"
                         PointerWheelChanged="CoordinateCanvas_PointerWheelChanged"
                         PointerExited="CoordinateCanvas_PointerReleased">
-                    <Image x:Name="CheckerboardImage" IsHitTestVisible="False" Stretch="Fill"/>
+                    <Image x:Name="CheckerboardImage" IsHitTestVisible="False" Stretch="None"/>
                     <Image x:Name="SpriteImage" Width="48" Height="48" IsHitTestVisible="False"/>
                     <Rectangle x:Name="XAxis" Height="1.5" Fill="{ThemeResource TextFillColorSecondaryBrush}" Opacity="0.8"/>
                     <Rectangle x:Name="YAxis" Width="1.5" Fill="{ThemeResource TextFillColorSecondaryBrush}" Opacity="0.8"/>
-                    
                 </Canvas>
             </Border>
-        </StackPanel>
+
+            <StackPanel Grid.Column="1" Spacing="8" MinWidth="180">
+                <TextBlock Text="Frame coordinates" Style="{StaticResource SectionHeaderStyle}"/>
+                <TextBlock Text="Drag to pan, mouse wheel to zoom, or edit Vector2 directly."
+                           Style="{StaticResource HelperTextStyle}" TextWrapping="Wrap"/>
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="90"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider x:Name="ZoomSlider"
+                            Grid.Column="0"
+                            Header="Zoom"
+                            Minimum="30"
+                            Maximum="1800"
+                            StepFrequency="1"
+                            ValueChanged="ZoomSlider_ValueChanged"/>
+                    <NumberBox x:Name="ZoomNumberBox"
+                               Grid.Column="1"
+                               Header="%"
+                               Minimum="30"
+                               Maximum="1800"
+                               SpinButtonPlacementMode="Compact"
+                               ValueChanged="ZoomNumberBox_ValueChanged"/>
+                </Grid>
+                <Button Click="CenterOriginButton_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="&#xE777;" FontSize="12"/>
+                        <TextBlock Text="Center origin"/>
+                    </StackPanel>
+                </Button>
+                <NumberBox x:Name="VectorXTextBox" Header="Vector2 X" Minimum="-999999" Maximum="999999" ValueChanged="VectorXTextBox_ValueChanged"/>
+                <NumberBox x:Name="VectorYTextBox" Header="Vector2 Y" Minimum="-999999" Maximum="999999" ValueChanged="VectorYTextBox_ValueChanged"/>
+            </StackPanel>
+        </Grid>
     </Border>
 </UserControl>

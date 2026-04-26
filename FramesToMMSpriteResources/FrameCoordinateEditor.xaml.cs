@@ -1,11 +1,15 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Dispatching;
 using System;
 using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading;
+using System.Threading.Tasks;
 using Windows.Graphics.Imaging;
 using Windows.Storage;
 using Windows.Storage.Streams;
@@ -22,22 +26,38 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private float _zoom = 1.0f;
     private const float MinZoom = 0.3f;
     private const float MaxZoom = 18.0f;
-    private const double SpriteBaseSize = 48.0;
-
     private WriteableBitmap? _checkerBitmap;
     private byte[]? _checkerPixels;
 
     private byte[]? _spriteSourcePixels;
     private int _spriteSourceWidth;
     private int _spriteSourceHeight;
-    private int _spriteRenderedSize = -1;
+    private int _spriteRenderedWidth = -1;
+    private int _spriteRenderedHeight = -1;
     private WriteableBitmap? _spriteBitmap;
+    private CancellationTokenSource? _spriteRenderCts;
+    private readonly DispatcherQueueTimer _spriteRenderTimer;
+    private int _pendingSpriteWidth;
+    private int _pendingSpriteHeight;
+    private const int CheckerRenderScale = 1;
+    private DateTime _lastInteractionUtc = DateTime.MinValue;
+    private bool _isUpdatingZoomControls;
 
     public FrameCoordinateEditor()
     {
         this.InitializeComponent();
         VectorXTextBox.Value = 0;
         VectorYTextBox.Value = 0;
+        ZoomSlider.Value = 100;
+        ZoomNumberBox.Value = 100;
+        _spriteRenderTimer = DispatcherQueue.CreateTimer();
+        _spriteRenderTimer.Interval = TimeSpan.FromMilliseconds(120);
+        _spriteRenderTimer.IsRepeating = false;
+        _spriteRenderTimer.Tick += (_, _) =>
+        {
+            _spriteRenderTimer.Stop();
+            StartSpriteBitmapRender(_pendingSpriteWidth, _pendingSpriteHeight);
+        };
         _ = SetSpriteImageUriAsync("ms-appx:///Assets/icon.png");
         UpdateVisuals();
     }
@@ -58,7 +78,15 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     public async System.Threading.Tasks.Task SetSpriteImageUriAsync(string uri)
     {
-        StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri));
+        StorageFile file;
+        if (Path.IsPathRooted(uri))
+        {
+            file = await StorageFile.GetFileFromPathAsync(uri);
+        }
+        else
+        {
+            file = await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri));
+        }
         using IRandomAccessStream stream = await file.OpenReadAsync();
         BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
         PixelDataProvider pixelData = await decoder.GetPixelDataAsync(
@@ -71,7 +99,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _spriteSourcePixels = pixelData.DetachPixelData();
         _spriteSourceWidth = (int)decoder.PixelWidth;
         _spriteSourceHeight = (int)decoder.PixelHeight;
-        _spriteRenderedSize = -1;
+        _spriteRenderedWidth = -1;
+        _spriteRenderedHeight = -1;
+        _spriteRenderCts?.Cancel();
+        _spriteRenderTimer.Stop();
         UpdateVisuals();
     }
 
@@ -90,6 +121,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
         double axisY = centerY + _pan.Y;
 
         UpdateCheckerboard(canvasWidth, canvasHeight, axisX, axisY);
+        CheckerboardImage.Width = _checkerBitmap?.PixelWidth ?? canvasWidth;
+        CheckerboardImage.Height = _checkerBitmap?.PixelHeight ?? canvasHeight;
+        Canvas.SetLeft(CheckerboardImage, 0);
+        Canvas.SetTop(CheckerboardImage, 0);
 
         XAxis.Width = canvasWidth;
         Canvas.SetLeft(XAxis, 0);
@@ -99,23 +134,24 @@ public sealed partial class FrameCoordinateEditor : UserControl
         Canvas.SetLeft(YAxis, axisX - (YAxis.Width / 2.0));
         Canvas.SetTop(YAxis, 0);
 
-        double spriteSize = SpriteBaseSize * _zoom;
-        UpdateSpriteBitmap(Math.Max(1, (int)Math.Round(spriteSize)));
+        double spriteWidth = Math.Max(1.0, _spriteSourceWidth * _zoom);
+        double spriteHeight = Math.Max(1.0, _spriteSourceHeight * _zoom);
+        RequestSpriteBitmapUpdate(Math.Max(1, (int)Math.Round(spriteWidth)), Math.Max(1, (int)Math.Round(spriteHeight)));
 
         double spriteCanvasX = axisX + (_spritePosition.X * _zoom);
         double spriteCanvasY = axisY - (_spritePosition.Y * _zoom);
-        SpriteImage.Width = spriteSize;
-        SpriteImage.Height = spriteSize;
-        Canvas.SetLeft(SpriteImage, spriteCanvasX - (spriteSize / 2.0));
-        Canvas.SetTop(SpriteImage, spriteCanvasY - (spriteSize / 2.0));
+        SpriteImage.Width = spriteWidth;
+        SpriteImage.Height = spriteHeight;
+        Canvas.SetLeft(SpriteImage, spriteCanvasX - (spriteWidth / 2.0));
+        Canvas.SetTop(SpriteImage, spriteCanvasY - (spriteHeight / 2.0));
 
-        ZoomTextBlock.Text = $"Zoom: {(int)Math.Round(_zoom * 100)}%";
+        UpdateZoomControls();
     }
 
     private void UpdateCheckerboard(double canvasWidth, double canvasHeight, double axisX, double axisY)
     {
-        int pixelWidth = Math.Max(1, (int)Math.Ceiling(canvasWidth));
-        int pixelHeight = Math.Max(1, (int)Math.Ceiling(canvasHeight));
+        int pixelWidth = Math.Max(1, (int)Math.Ceiling(canvasWidth / CheckerRenderScale));
+        int pixelHeight = Math.Max(1, (int)Math.Ceiling(canvasHeight / CheckerRenderScale));
         int byteCount = pixelWidth * pixelHeight * 4;
 
         if (_checkerBitmap == null || _checkerBitmap.PixelWidth != pixelWidth || _checkerBitmap.PixelHeight != pixelHeight)
@@ -133,10 +169,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
         int idx = 0;
         for (int y = 0; y < pixelHeight; y++)
         {
-            int tileY = (int)Math.Floor((axisY - y) / tileSize);
+            double sampledCanvasY = y * CheckerRenderScale;
+            int tileY = (int)Math.Floor((axisY - sampledCanvasY) / tileSize);
             for (int x = 0; x < pixelWidth; x++)
             {
-                int tileX = (int)Math.Floor((x - axisX) / tileSize);
+                double sampledCanvasX = x * CheckerRenderScale;
+                int tileX = (int)Math.Floor((sampledCanvasX - axisX) / tileSize);
                 byte color = ((tileX + tileY) & 1) == 0 ? (byte)30 : (byte)60;
 
                 _checkerPixels![idx++] = color;
@@ -152,47 +190,124 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _checkerBitmap.Invalidate();
     }
 
-    private void UpdateSpriteBitmap(int targetSize)
+    private void RequestSpriteBitmapUpdate(int targetWidth, int targetHeight)
     {
         if (_spriteSourcePixels == null || _spriteSourceWidth <= 0 || _spriteSourceHeight <= 0)
         {
             return;
         }
 
-        if (_spriteBitmap != null && _spriteRenderedSize == targetSize)
+        if (_spriteBitmap != null && _spriteRenderedWidth == targetWidth && _spriteRenderedHeight == targetHeight)
         {
             SpriteImage.Source = _spriteBitmap;
             return;
         }
 
-        _spriteBitmap = new WriteableBitmap(targetSize, targetSize);
-        byte[] scaled = new byte[targetSize * targetSize * 4];
+        _spriteRenderedWidth = targetWidth;
+        _spriteRenderedHeight = targetHeight;
+        _pendingSpriteWidth = targetWidth;
+        _pendingSpriteHeight = targetHeight;
 
-        for (int y = 0; y < targetSize; y++)
-        {
-            int sy = Math.Min(_spriteSourceHeight - 1, (int)((y / (double)targetSize) * _spriteSourceHeight));
-            for (int x = 0; x < targetSize; x++)
-            {
-                int sx = Math.Min(_spriteSourceWidth - 1, (int)((x / (double)targetSize) * _spriteSourceWidth));
-                int src = ((sy * _spriteSourceWidth) + sx) * 4;
-                int dst = ((y * targetSize) + x) * 4;
-                scaled[dst] = _spriteSourcePixels[src];
-                scaled[dst + 1] = _spriteSourcePixels[src + 1];
-                scaled[dst + 2] = _spriteSourcePixels[src + 2];
-                scaled[dst + 3] = _spriteSourcePixels[src + 3];
-            }
-        }
-
-        using Stream stream = _spriteBitmap.PixelBuffer.AsStream();
-        stream.Position = 0;
-        stream.Write(scaled, 0, scaled.Length);
-        _spriteBitmap.Invalidate();
-
-        SpriteImage.Source = _spriteBitmap;
-        _spriteRenderedSize = targetSize;
+        _spriteRenderCts?.Cancel();
+        _spriteRenderTimer.Stop();
+        _spriteRenderTimer.Start();
     }
 
-    private void CoordinateCanvas_SizeChanged(object sender, SizeChangedEventArgs e) => UpdateVisuals();
+    private void StartSpriteBitmapRender(int targetWidth, int targetHeight)
+    {
+        if (_spriteSourcePixels == null || _spriteSourceWidth <= 0 || _spriteSourceHeight <= 0)
+        {
+            return;
+        }
+
+        if (_isDragging || (DateTime.UtcNow - _lastInteractionUtc).TotalMilliseconds < 120)
+        {
+            _spriteRenderTimer.Stop();
+            _spriteRenderTimer.Start();
+            return;
+        }
+
+        _spriteRenderCts = new CancellationTokenSource();
+        CancellationToken token = _spriteRenderCts.Token;
+        byte[] sourcePixels = _spriteSourcePixels;
+        int sourceWidth = _spriteSourceWidth;
+        int sourceHeight = _spriteSourceHeight;
+
+        _ = RenderSpriteBitmapAsync(sourcePixels, sourceWidth, sourceHeight, targetWidth, targetHeight, token);
+    }
+
+    private async Task RenderSpriteBitmapAsync(
+        byte[] sourcePixels,
+        int sourceWidth,
+        int sourceHeight,
+        int targetWidth,
+        int targetHeight,
+        CancellationToken token)
+    {
+        byte[] scaled;
+        try
+        {
+            scaled = await Task.Run(() =>
+            {
+                byte[] localScaled = new byte[targetWidth * targetHeight * 4];
+
+                for (int y = 0; y < targetHeight; y++)
+                {
+                    if (token.IsCancellationRequested)
+                    {
+                        return localScaled;
+                    }
+
+                    int sy = Math.Min(sourceHeight - 1, (int)((y / (double)targetHeight) * sourceHeight));
+                    for (int x = 0; x < targetWidth; x++)
+                    {
+                        int sx = Math.Min(sourceWidth - 1, (int)((x / (double)targetWidth) * sourceWidth));
+                        int src = ((sy * sourceWidth) + sx) * 4;
+                        int dst = ((y * targetWidth) + x) * 4;
+                        localScaled[dst] = sourcePixels[src];
+                        localScaled[dst + 1] = sourcePixels[src + 1];
+                        localScaled[dst + 2] = sourcePixels[src + 2];
+                        localScaled[dst + 3] = sourcePixels[src + 3];
+                    }
+                }
+
+                return localScaled;
+            }, token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (token.IsCancellationRequested ||
+            targetWidth != _spriteRenderedWidth ||
+            targetHeight != _spriteRenderedHeight)
+        {
+            return;
+        }
+
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (token.IsCancellationRequested ||
+                targetWidth != _spriteRenderedWidth ||
+                targetHeight != _spriteRenderedHeight)
+            {
+                return;
+            }
+
+            _spriteBitmap = new WriteableBitmap(targetWidth, targetHeight);
+            using Stream stream = _spriteBitmap.PixelBuffer.AsStream();
+            stream.Position = 0;
+            stream.Write(scaled, 0, scaled.Length);
+            _spriteBitmap.Invalidate();
+            SpriteImage.Source = _spriteBitmap;
+        });
+    }
+
+    private void CoordinateCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdateVisuals();
+    }
 
     private void CoordinateCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
     {
@@ -200,6 +315,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _dragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
         _dragStartPan = _pan;
         _isDragging = true;
+        _lastInteractionUtc = DateTime.UtcNow;
         CoordinateCanvas.CapturePointer(e.Pointer);
     }
 
@@ -213,6 +329,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         var point = e.GetCurrentPoint(CoordinateCanvas);
         var currentPosition = new Vector2((float)point.Position.X, (float)point.Position.Y);
         _pan = _dragStartPan + (currentPosition - _dragStartPointer);
+        _lastInteractionUtc = DateTime.UtcNow;
         UpdateVisuals();
     }
 
@@ -248,6 +365,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         double worldY = (oldAxisY - point.Position.Y) / oldZoom;
 
         _zoom = newZoom;
+        _lastInteractionUtc = DateTime.UtcNow;
 
         double newAxisX = point.Position.X - (worldX * newZoom);
         double newAxisY = point.Position.Y + (worldY * newZoom);
@@ -257,9 +375,60 @@ public sealed partial class FrameCoordinateEditor : UserControl
         e.Handled = true;
     }
 
+    private void UpdateZoomControls()
+    {
+        if (_isUpdatingZoomControls)
+        {
+            return;
+        }
+
+        _isUpdatingZoomControls = true;
+        double zoomPercent = Math.Round(_zoom * 100);
+        ZoomSlider.Value = zoomPercent;
+        ZoomNumberBox.Value = zoomPercent;
+        _isUpdatingZoomControls = false;
+    }
+
+    private void ZoomSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (_isUpdatingZoomControls)
+        {
+            return;
+        }
+
+        float newZoom = Math.Clamp((float)e.NewValue / 100.0f, MinZoom, MaxZoom);
+        if (Math.Abs(newZoom - _zoom) < 0.0001f)
+        {
+            return;
+        }
+
+        _zoom = newZoom;
+        _lastInteractionUtc = DateTime.UtcNow;
+        UpdateVisuals();
+    }
+
+    private void ZoomNumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    {
+        if (_isUpdatingZoomControls || double.IsNaN(sender.Value))
+        {
+            return;
+        }
+
+        float newZoom = Math.Clamp((float)sender.Value / 100.0f, MinZoom, MaxZoom);
+        if (Math.Abs(newZoom - _zoom) < 0.0001f)
+        {
+            return;
+        }
+
+        _zoom = newZoom;
+        _lastInteractionUtc = DateTime.UtcNow;
+        UpdateVisuals();
+    }
+
     private void CenterOriginButton_Click(object sender, RoutedEventArgs e)
     {
         _pan = Vector2.Zero;
+        _lastInteractionUtc = DateTime.UtcNow;
         UpdateVisuals();
     }
 
