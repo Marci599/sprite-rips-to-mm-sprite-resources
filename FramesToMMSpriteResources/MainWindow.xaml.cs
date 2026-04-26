@@ -224,6 +224,14 @@ namespace FramesToMMSpriteResources
         private bool _isCtrlHeld = false;
         public bool IsCtrlHeld => _isCtrlHeld;
 
+        private Vector2 _frameCanvasPan = Vector2.Zero;
+        private Vector2 _frameSpritePosition = Vector2.Zero;
+        private Vector2 _frameDragStartPointer;
+        private Vector2 _frameDragStartPan;
+        private bool _isFrameCanvasDragging;
+        private bool _isFrameSpriteDragging;
+        private bool _isUpdatingFrameVectorTextBoxes;
+
         [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(TreeItem))]
         public MainWindow()
         {
@@ -256,6 +264,7 @@ namespace FramesToMMSpriteResources
             HeaderBreadcrumbBar.ItemClicked += BreadcrumbBar_ItemClicked;
 
             ProgramNameTextBlock.Text += GetCurrentVersion();
+            InitializeFrameCoordinatePlane();
 
         
             CheckForUpdateIfNeeded();
@@ -1445,6 +1454,154 @@ namespace FramesToMMSpriteResources
 
 
 
+        }
+
+        private void InitializeFrameCoordinatePlane()
+        {
+            _frameCanvasPan = Vector2.Zero;
+            _frameSpritePosition = Vector2.Zero;
+            _isFrameCanvasDragging = false;
+            _isFrameSpriteDragging = false;
+
+            _isUpdatingFrameVectorTextBoxes = true;
+            FrameVectorXTextBox.Value = 0;
+            FrameVectorYTextBox.Value = 0;
+            _isUpdatingFrameVectorTextBoxes = false;
+
+            UpdateFrameCoordinateVisuals();
+        }
+
+        private void UpdateFrameCoordinateVisuals()
+        {
+            if (FrameCoordinateCanvas == null)
+            {
+                return;
+            }
+
+            double canvasWidth = FrameCoordinateCanvas.ActualWidth;
+            double canvasHeight = FrameCoordinateCanvas.ActualHeight;
+
+            if (canvasWidth <= 0 || canvasHeight <= 0)
+            {
+                return;
+            }
+
+            double centerX = canvasWidth / 2.0;
+            double centerY = canvasHeight / 2.0;
+
+            double axisX = centerX + _frameCanvasPan.X;
+            double axisY = centerY + _frameCanvasPan.Y;
+
+            FrameXAxis.Width = canvasWidth;
+            Canvas.SetLeft(FrameXAxis, 0);
+            Canvas.SetTop(FrameXAxis, axisY - (FrameXAxis.Height / 2.0));
+
+            FrameYAxis.Height = canvasHeight;
+            Canvas.SetLeft(FrameYAxis, axisX - (FrameYAxis.Width / 2.0));
+            Canvas.SetTop(FrameYAxis, 0);
+
+            double spriteCanvasX = axisX + _frameSpritePosition.X;
+            double spriteCanvasY = axisY - _frameSpritePosition.Y;
+
+            Canvas.SetLeft(FrameCoordinateSpriteImage, spriteCanvasX - (FrameCoordinateSpriteImage.Width / 2.0));
+            Canvas.SetTop(FrameCoordinateSpriteImage, spriteCanvasY - (FrameCoordinateSpriteImage.Height / 2.0));
+        }
+
+        private void FrameCoordinateCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateFrameCoordinateVisuals();
+        }
+
+        private void FrameCoordinateCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            if (_isFrameSpriteDragging)
+            {
+                return;
+            }
+
+            var point = e.GetCurrentPoint(FrameCoordinateCanvas);
+            _frameDragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
+            _frameDragStartPan = _frameCanvasPan;
+            _isFrameCanvasDragging = true;
+
+            FrameCoordinateCanvas.CapturePointer(e.Pointer);
+        }
+
+        private void FrameCoordinateCanvas_PointerMoved(object sender, PointerRoutedEventArgs e)
+        {
+            var point = e.GetCurrentPoint(FrameCoordinateCanvas);
+            var currentPosition = new Vector2((float)point.Position.X, (float)point.Position.Y);
+
+            if (_isFrameSpriteDragging)
+            {
+                double canvasWidth = FrameCoordinateCanvas.ActualWidth;
+                double canvasHeight = FrameCoordinateCanvas.ActualHeight;
+
+                double centerX = canvasWidth / 2.0;
+                double centerY = canvasHeight / 2.0;
+                double axisX = centerX + _frameCanvasPan.X;
+                double axisY = centerY + _frameCanvasPan.Y;
+
+                _frameSpritePosition = new Vector2(
+                    currentPosition.X - (float)axisX,
+                    (float)axisY - currentPosition.Y
+                );
+
+                SyncFrameVectorInputsWithSpritePosition();
+                UpdateFrameCoordinateVisuals();
+                return;
+            }
+
+            if (_isFrameCanvasDragging)
+            {
+                _frameCanvasPan = _frameDragStartPan + (currentPosition - _frameDragStartPointer);
+                UpdateFrameCoordinateVisuals();
+            }
+        }
+
+        private void FrameCoordinateCanvas_PointerReleased(object sender, PointerRoutedEventArgs e)
+        {
+            _isFrameCanvasDragging = false;
+            _isFrameSpriteDragging = false;
+            FrameCoordinateCanvas.ReleasePointerCapture(e.Pointer);
+        }
+
+        private void FrameCoordinateSpriteImage_PointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            _isFrameSpriteDragging = true;
+            _isFrameCanvasDragging = false;
+            FrameCoordinateCanvas.CapturePointer(e.Pointer);
+            e.Handled = true;
+        }
+
+        private void SyncFrameVectorInputsWithSpritePosition()
+        {
+            _isUpdatingFrameVectorTextBoxes = true;
+            FrameVectorXTextBox.Value = (int)Math.Round(_frameSpritePosition.X);
+            FrameVectorYTextBox.Value = (int)Math.Round(_frameSpritePosition.Y);
+            _isUpdatingFrameVectorTextBoxes = false;
+        }
+
+        private void FrameVectorXTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+        {
+            if (_isUpdatingFrameVectorTextBoxes)
+            {
+                return;
+            }
+
+            _frameSpritePosition = new Vector2(double.IsNaN(sender.Value) ? 0 : (float)sender.Value, _frameSpritePosition.Y);
+            UpdateFrameCoordinateVisuals();
+        }
+
+        private void FrameVectorYTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+        {
+            if (_isUpdatingFrameVectorTextBoxes)
+            {
+                return;
+            }
+
+            _frameSpritePosition = new Vector2(_frameSpritePosition.X, double.IsNaN(sender.Value) ? 0 : (float)sender.Value);
+            UpdateFrameCoordinateVisuals();
         }
 
         private void DetachAllPanelEvents()
