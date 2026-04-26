@@ -13,6 +13,8 @@ using System;
 
 namespace FramesToMMSpriteResources
 {
+
+    //DOESN'T WORK WITH TREEVIEW RECYCLING
     public static class StartEllipsisHelper
     {
         public static readonly DependencyProperty TextProperty =
@@ -90,7 +92,7 @@ namespace FramesToMMSpriteResources
             var availableWidth = tb.ActualWidth;
             var ellipsis = "…";
 
-            const double Epsilon = 1; // pixel tolerancia
+            const double Epsilon = 2; // pixel tolerancia
 
             if (MeasureTextWidth(tb, fullText) <= availableWidth + Epsilon)
             {

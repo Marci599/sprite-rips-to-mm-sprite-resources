@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace FramesToMMSpriteResources
 {
-    public class AnimationConfig
+    public class AnimationConfig : ParentConfig
     {
         [JsonPropertyName("regenerate")]
         public bool Regenerate = true;
@@ -24,6 +24,9 @@ namespace FramesToMMSpriteResources
 
         [JsonPropertyName("generated_frame_count")]
         public int GeneratedFrameCount = -1;
+
+        [JsonPropertyName("frame_configs")]
+        public List<FrameConfig> frameCongfigs;
 
         public AnimationConfig() { }
 

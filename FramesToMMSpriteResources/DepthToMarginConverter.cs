@@ -16,7 +16,7 @@ namespace FramesToMMSpriteResources
                     ItemDepth.GameTheme => new Thickness(-249, 0, 0, 0),
                     ItemDepth.Subject => new Thickness(-265, 0, 0, 0),
                     ItemDepth.Animation => new Thickness(-281, 0, 0, 0),
-                    ItemDepth.Frame => new Thickness(-290, 0, 0, 0),
+                    ItemDepth.Frame => new Thickness(-298, 0, 0, 0),
                     _ => new Thickness(-250, 0, 0, 0),
                 };
             }
