@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Shapes;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -233,7 +234,8 @@ namespace FramesToMMSpriteResources
         private const float FrameCanvasMinZoom = 0.2f;
         private const float FrameCanvasMaxZoom = 8.0f;
         private const double FrameSpriteBaseSize = 48.0;
-        private const double FrameSpriteMinSize = 14.0;
+        private readonly SolidColorBrush _frameCheckerLightBrush = new(Color.FromArgb(255, 238, 238, 238));
+        private readonly SolidColorBrush _frameCheckerDarkBrush = new(Color.FromArgb(255, 206, 206, 206));
 
         [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(TreeItem))]
         public MainWindow()
@@ -1492,6 +1494,8 @@ namespace FramesToMMSpriteResources
             double axisX = centerX + _frameCanvasPan.X;
             double axisY = centerY + _frameCanvasPan.Y;
 
+            UpdateFrameCheckerboard(canvasWidth, canvasHeight, axisX, axisY);
+
             FrameXAxis.Width = canvasWidth;
             Canvas.SetLeft(FrameXAxis, 0);
             Canvas.SetTop(FrameXAxis, axisY - (FrameXAxis.Height / 2.0));
@@ -1503,7 +1507,7 @@ namespace FramesToMMSpriteResources
             double spriteCanvasX = axisX + (_frameSpritePosition.X * _frameCanvasZoom);
             double spriteCanvasY = axisY - (_frameSpritePosition.Y * _frameCanvasZoom);
 
-            double spriteSize = Math.Max(FrameSpriteBaseSize * _frameCanvasZoom, FrameSpriteMinSize);
+            double spriteSize = FrameSpriteBaseSize * _frameCanvasZoom;
             FrameCoordinateSpriteImage.Width = spriteSize;
             FrameCoordinateSpriteImage.Height = spriteSize;
 
@@ -1511,6 +1515,41 @@ namespace FramesToMMSpriteResources
             Canvas.SetTop(FrameCoordinateSpriteImage, spriteCanvasY - (spriteSize / 2.0));
 
             FrameZoomTextBlock.Text = $"Zoom: {(int)Math.Round(_frameCanvasZoom * 100)}%";
+        }
+
+        private void UpdateFrameCheckerboard(double canvasWidth, double canvasHeight, double axisX, double axisY)
+        {
+            FrameCheckerboardCanvas.Width = canvasWidth;
+            FrameCheckerboardCanvas.Height = canvasHeight;
+            FrameCheckerboardCanvas.Children.Clear();
+
+            double tileSize = 4.0 * _frameCanvasZoom;
+            if (tileSize <= 0)
+            {
+                return;
+            }
+
+            int minTileX = (int)Math.Floor((-axisX) / tileSize) - 1;
+            int maxTileX = (int)Math.Ceiling((canvasWidth - axisX) / tileSize) + 1;
+            int minTileY = (int)Math.Floor((axisY - canvasHeight) / tileSize) - 1;
+            int maxTileY = (int)Math.Ceiling(axisY / tileSize) + 1;
+
+            for (int tileY = minTileY; tileY <= maxTileY; tileY++)
+            {
+                for (int tileX = minTileX; tileX <= maxTileX; tileX++)
+                {
+                    var tile = new Rectangle
+                    {
+                        Width = tileSize,
+                        Height = tileSize,
+                        Fill = ((tileX + tileY) & 1) == 0 ? _frameCheckerLightBrush : _frameCheckerDarkBrush
+                    };
+
+                    Canvas.SetLeft(tile, axisX + (tileX * tileSize));
+                    Canvas.SetTop(tile, axisY - ((tileY + 1) * tileSize));
+                    FrameCheckerboardCanvas.Children.Add(tile);
+                }
+            }
         }
 
         private void FrameCoordinateCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
