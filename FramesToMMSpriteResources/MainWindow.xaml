@@ -295,13 +295,11 @@
 
                         <!-- Frame Panel (hidden by default) -->
                         <Grid x:Name="FramePanel" Visibility="Collapsed">
-                            
-                            <StackPanel x:Name="FrameDetailPanel" Spacing="10" Padding="20 14 20 20" MaxWidth="1000">
-
-                                <local:FrameCoordinateEditor x:Name="FrameCoordinateEditorControl"/>
-
-                            </StackPanel>
-                            
+                            <Grid x:Name="FrameDetailPanel" Padding="20 14 20 20">
+                                <local:FrameCoordinateEditor x:Name="FrameCoordinateEditorControl"
+                                                             HorizontalAlignment="Stretch"
+                                                             VerticalAlignment="Stretch"/>
+                            </Grid>
                         </Grid>
 
 

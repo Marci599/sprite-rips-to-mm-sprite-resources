@@ -1,7 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System;
 using System.IO;
@@ -61,7 +60,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _spriteSourceWidth = (int)decoder.PixelWidth;
         _spriteSourceHeight = (int)decoder.PixelHeight;
         SpriteImage.Source = new BitmapImage(new Uri(uri));
-        RenderOptions.SetBitmapInterpolationMode(SpriteImage, BitmapInterpolationMode.NearestNeighbor);
         UpdateVisuals();
     }
 

@@ -6,7 +6,7 @@
         <Grid ColumnSpacing="12">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="280"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="0" Background="{ThemeResource LayerFillColorDefaultBrush}">
@@ -27,7 +27,7 @@
                 </Canvas>
             </Border>
 
-            <StackPanel Grid.Column="1" Spacing="8">
+            <StackPanel Grid.Column="1" Spacing="8" MinWidth="180">
                 <TextBlock Text="Frame coordinates" Style="{StaticResource SectionHeaderStyle}"/>
                 <TextBlock Text="Drag to pan, mouse wheel to zoom, or edit Vector2 directly."
                            Style="{StaticResource HelperTextStyle}" TextWrapping="Wrap"/>
