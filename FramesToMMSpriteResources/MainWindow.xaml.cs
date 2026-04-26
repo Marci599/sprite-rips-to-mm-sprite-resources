@@ -33,7 +33,8 @@ namespace FramesToMMSpriteResources
     {
         GameTheme = 0,
         Subject = 1,
-        Animation = 2
+        Animation = 2,
+        Frame = 3
     }
 
     public class TreeItem : INotifyPropertyChanged
@@ -484,10 +485,12 @@ namespace FramesToMMSpriteResources
             }
         }
 
-        private void WorkingPathTextBox_LostFocus(object sender, RoutedEventArgs e)
+        private async void WorkingPathTextBox_LostFocus(object sender, RoutedEventArgs e)
         {
+            SaveAllConfigs();
             programConfig.WorkingPath = (sender as TextBox)!.Text;
             ReloadTreeViewAndConfigs();
+            
         }
 
         private void AnimationsToggleSwitch_Toggled(object sender, RoutedEventArgs e)

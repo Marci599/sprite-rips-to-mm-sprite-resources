@@ -15,6 +15,7 @@ namespace FramesToMMSpriteResources
                     ItemDepth.GameTheme => "\uE913",
                     ItemDepth.Subject => "\uF158",
                     ItemDepth.Animation => "\uE805",
+                    ItemDepth.Frame => "\uE91B",
                     _ => "\uE10C", // Default
                 };
             }

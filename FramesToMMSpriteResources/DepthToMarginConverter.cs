@@ -13,9 +13,10 @@ namespace FramesToMMSpriteResources
                 // Adjust margins as needed for each depth
                 return depth switch
                 {
-                    ItemDepth.GameTheme => new Thickness(-244, 0, 0, 0),
-                    ItemDepth.Subject => new Thickness(-260, 0, 0, 0),
-                    ItemDepth.Animation => new Thickness(-276, 0, 0, 0),
+                    ItemDepth.GameTheme => new Thickness(-249, 0, 0, 0),
+                    ItemDepth.Subject => new Thickness(-265, 0, 0, 0),
+                    ItemDepth.Animation => new Thickness(-281, 0, 0, 0),
+                    ItemDepth.Frame => new Thickness(-290, 0, 0, 0),
                     _ => new Thickness(-250, 0, 0, 0),
                 };
             }

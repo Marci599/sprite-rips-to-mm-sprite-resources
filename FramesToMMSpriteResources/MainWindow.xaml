@@ -33,7 +33,7 @@
             </Grid.RowDefinitions>
 
 
-            <TreeView x:Name="TreeViewControl" Grid.Row="0" Margin="0 2 0 0" MinWidth="200" CanReorderItems="False" CanDragItems="False" SelectionMode="Single">
+            <TreeView x:Name="TreeViewControl" Grid.Row="0" Margin="0 2 0 0" Width="220" CanReorderItems="False" CanDragItems="False" SelectionMode="Single">
                 <TreeView.ItemContainerStyle>
                     <Style TargetType="TreeViewItem">
 
@@ -51,7 +51,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <FontIcon Grid.Column="0" Glyph="{Binding Content.Depth, Converter={StaticResource DepthToIconGlyphConverter}}" Width="20" Height="32" Margin="-4 0 0 0" Opacity="0.67" FontSize="18"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Content.Text}" VerticalAlignment="Center" Margin="0 0 0 0"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Content.Text}" VerticalAlignment="Center" Margin="0 0 0 0" TextTrimming="CharacterEllipsis"/>
                                 <Border Grid.Column="2" Background="{StaticResource SubtleFillColorSecondaryBrush}" CornerRadius="10" MinWidth="20" Height="20" Padding="6 0 6 2" Visibility="{Binding Content.CountText, Converter={StaticResource CountToVisibilityConverter}}">
                                     <TextBlock Text="{Binding Content.CountText}" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{StaticResource TextFillColorTertiaryBrush}" FontWeight="SemiBold"/>
                                 </Border>
