@@ -25,9 +25,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private WriteableBitmap? _checkerBitmap;
     private byte[]? _checkerPixels;
 
+    private byte[]? _spriteSourcePixels;
     private int _spriteSourceWidth;
     private int _spriteSourceHeight;
-    private bool _checkerboardNeedsRefresh = true;
+    private int _spriteRenderedWidth = -1;
+    private int _spriteRenderedHeight = -1;
+    private WriteableBitmap? _spriteBitmap;
 
     public FrameCoordinateEditor()
     {
@@ -57,9 +60,18 @@ public sealed partial class FrameCoordinateEditor : UserControl
         StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri));
         using IRandomAccessStream stream = await file.OpenReadAsync();
         BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
+        PixelDataProvider pixelData = await decoder.GetPixelDataAsync(
+            BitmapPixelFormat.Bgra8,
+            BitmapAlphaMode.Premultiplied,
+            new BitmapTransform(),
+            ExifOrientationMode.IgnoreExifOrientation,
+            ColorManagementMode.DoNotColorManage);
+
+        _spriteSourcePixels = pixelData.DetachPixelData();
         _spriteSourceWidth = (int)decoder.PixelWidth;
         _spriteSourceHeight = (int)decoder.PixelHeight;
-        SpriteImage.Source = new BitmapImage(new Uri(uri));
+        _spriteRenderedWidth = -1;
+        _spriteRenderedHeight = -1;
         UpdateVisuals();
     }
 
@@ -77,11 +89,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         double axisX = centerX + _pan.X;
         double axisY = centerY + _pan.Y;
 
-        if (_checkerboardNeedsRefresh)
-        {
-            UpdateCheckerboard(canvasWidth, canvasHeight);
-            _checkerboardNeedsRefresh = false;
-        }
+        UpdateCheckerboard(canvasWidth, canvasHeight, axisX, axisY);
 
         XAxis.Width = canvasWidth;
         Canvas.SetLeft(XAxis, 0);
@@ -93,6 +101,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         double spriteWidth = Math.Max(1.0, _spriteSourceWidth * _zoom);
         double spriteHeight = Math.Max(1.0, _spriteSourceHeight * _zoom);
+        UpdateSpriteBitmap(Math.Max(1, (int)Math.Round(spriteWidth)), Math.Max(1, (int)Math.Round(spriteHeight)));
 
         double spriteCanvasX = axisX + (_spritePosition.X * _zoom);
         double spriteCanvasY = axisY - (_spritePosition.Y * _zoom);
@@ -104,7 +113,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         ZoomTextBlock.Text = $"Zoom: {(int)Math.Round(_zoom * 100)}%";
     }
 
-    private void UpdateCheckerboard(double canvasWidth, double canvasHeight)
+    private void UpdateCheckerboard(double canvasWidth, double canvasHeight, double axisX, double axisY)
     {
         int pixelWidth = Math.Max(1, (int)Math.Ceiling(canvasWidth));
         int pixelHeight = Math.Max(1, (int)Math.Ceiling(canvasHeight));
@@ -121,14 +130,14 @@ public sealed partial class FrameCoordinateEditor : UserControl
             _checkerPixels = new byte[byteCount];
         }
 
-        const int tileSize = 8;
+        double tileSize = 4.0 * _zoom;
         int idx = 0;
         for (int y = 0; y < pixelHeight; y++)
         {
-            int tileY = y / tileSize;
+            int tileY = (int)Math.Floor((axisY - y) / tileSize);
             for (int x = 0; x < pixelWidth; x++)
             {
-                int tileX = x / tileSize;
+                int tileX = (int)Math.Floor((x - axisX) / tileSize);
                 byte color = ((tileX + tileY) & 1) == 0 ? (byte)30 : (byte)60;
 
                 _checkerPixels![idx++] = color;
@@ -143,9 +152,50 @@ public sealed partial class FrameCoordinateEditor : UserControl
         stream.Write(_checkerPixels!, 0, _checkerPixels!.Length);
         _checkerBitmap.Invalidate();
     }
+
+    private void UpdateSpriteBitmap(int targetWidth, int targetHeight)
+    {
+        if (_spriteSourcePixels == null || _spriteSourceWidth <= 0 || _spriteSourceHeight <= 0)
+        {
+            return;
+        }
+
+        if (_spriteBitmap != null && _spriteRenderedWidth == targetWidth && _spriteRenderedHeight == targetHeight)
+        {
+            SpriteImage.Source = _spriteBitmap;
+            return;
+        }
+
+        _spriteBitmap = new WriteableBitmap(targetWidth, targetHeight);
+        byte[] scaled = new byte[targetWidth * targetHeight * 4];
+
+        for (int y = 0; y < targetHeight; y++)
+        {
+            int sy = Math.Min(_spriteSourceHeight - 1, (int)((y / (double)targetHeight) * _spriteSourceHeight));
+            for (int x = 0; x < targetWidth; x++)
+            {
+                int sx = Math.Min(_spriteSourceWidth - 1, (int)((x / (double)targetWidth) * _spriteSourceWidth));
+                int src = ((sy * _spriteSourceWidth) + sx) * 4;
+                int dst = ((y * targetWidth) + x) * 4;
+                scaled[dst] = _spriteSourcePixels[src];
+                scaled[dst + 1] = _spriteSourcePixels[src + 1];
+                scaled[dst + 2] = _spriteSourcePixels[src + 2];
+                scaled[dst + 3] = _spriteSourcePixels[src + 3];
+            }
+        }
+
+        using Stream stream = _spriteBitmap.PixelBuffer.AsStream();
+        stream.Position = 0;
+        stream.Write(scaled, 0, scaled.Length);
+        _spriteBitmap.Invalidate();
+
+        SpriteImage.Source = _spriteBitmap;
+        _spriteRenderedWidth = targetWidth;
+        _spriteRenderedHeight = targetHeight;
+    }
+
     private void CoordinateCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        _checkerboardNeedsRefresh = true;
         UpdateVisuals();
     }
 
