@@ -73,7 +73,15 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     public async System.Threading.Tasks.Task SetSpriteImageUriAsync(string uri)
     {
-        StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri));
+        StorageFile file;
+        if (Path.IsPathRooted(uri))
+        {
+            file = await StorageFile.GetFileFromPathAsync(uri);
+        }
+        else
+        {
+            file = await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri));
+        }
         using IRandomAccessStream stream = await file.OpenReadAsync();
         BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
         PixelDataProvider pixelData = await decoder.GetPixelDataAsync(
@@ -108,6 +116,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
         double axisY = centerY + _pan.Y;
 
         UpdateCheckerboard(canvasWidth, canvasHeight, axisX, axisY);
+        CheckerboardImage.Width = canvasWidth;
+        CheckerboardImage.Height = canvasHeight;
+        Canvas.SetLeft(CheckerboardImage, 0);
+        Canvas.SetTop(CheckerboardImage, 0);
 
         XAxis.Width = canvasWidth;
         Canvas.SetLeft(XAxis, 0);

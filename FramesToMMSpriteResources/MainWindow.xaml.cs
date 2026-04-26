@@ -1435,7 +1435,7 @@ namespace FramesToMMSpriteResources
                         currentConfigs.Add(programConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].frameCongfigs[int.Parse(selectedNodeName)]);
                     }
 
-                    _ = FrameCoordinateEditorControl.SetSpriteImageUriAsync("ms-appx:///Assets/yoshi-000.png");
+                    _ = FrameCoordinateEditorControl.SetSpriteImageUriAsync(@"C:\Users\katon\GitHub\sprite-rips-to-mm-sprite-resources\Assets\NSMBU\V_Yoshi\raw\Idle\yoshi-000.png");
                     FrameCoordinateEditorControl.SpritePosition = Vector2.Zero;
 
 
