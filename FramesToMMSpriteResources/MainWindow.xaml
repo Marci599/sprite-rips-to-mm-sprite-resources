@@ -298,7 +298,7 @@
                             
                             <StackPanel x:Name="FrameDetailPanel" Spacing="10" Padding="20 14 20 20" MaxWidth="1000">
 
-                                <!-- A CANVAS LIKE THING HERE -->
+                                <local:FrameCoordinateEditor x:Name="FrameCoordinateEditorControl"/>
 
                             </StackPanel>
                             

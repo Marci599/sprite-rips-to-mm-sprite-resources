@@ -224,6 +224,7 @@ namespace FramesToMMSpriteResources
         private bool _isCtrlHeld = false;
         public bool IsCtrlHeld => _isCtrlHeld;
 
+
         [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(TreeItem))]
         public MainWindow()
         {
@@ -256,6 +257,7 @@ namespace FramesToMMSpriteResources
             HeaderBreadcrumbBar.ItemClicked += BreadcrumbBar_ItemClicked;
 
             ProgramNameTextBlock.Text += GetCurrentVersion();
+            _ = FrameCoordinateEditorControl.SetSpriteImageUriAsync("ms-appx:///Assets/icon.png");
 
         
             CheckForUpdateIfNeeded();
@@ -1433,7 +1435,7 @@ namespace FramesToMMSpriteResources
                         currentConfigs.Add(programConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].frameCongfigs[int.Parse(selectedNodeName)]);
                     }
 
-                   
+                    FrameCoordinateEditorControl.SpritePosition = Vector2.Zero;
 
 
 
