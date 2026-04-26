@@ -327,7 +327,7 @@
                                             <NumberBox x:Name="FrameVectorYTextBox" Grid.Column="1" Header="Vector2 Y" Minimum="-999999" Maximum="999999" ValueChanged="FrameVectorYTextBox_ValueChanged"/>
                                         </Grid>
 
-                                        <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="8" Background="{ThemeResource LayerFillColorDefaultBrush}">
+                                        <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Padding="0" Background="{ThemeResource LayerFillColorDefaultBrush}">
                                             <Canvas x:Name="FrameCoordinateCanvas"
                                                     Height="320"
                                                     HorizontalAlignment="Stretch"

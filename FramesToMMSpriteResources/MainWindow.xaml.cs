@@ -24,9 +24,12 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Windows.ApplicationModel;
+using Windows.Graphics.Imaging;
 using Windows.Media.Core;
 using Windows.Media.Playback;
+using Windows.Storage;
 using Windows.Storage.Pickers;
+using Windows.Storage.Streams;
 using Windows.UI.Composition;
 
 namespace FramesToMMSpriteResources
@@ -233,10 +236,15 @@ namespace FramesToMMSpriteResources
         private bool _isFrameCanvasDragging;
         private float _frameCanvasZoom = 1.0f;
         private const float FrameCanvasMinZoom = 0.2f;
-        private const float FrameCanvasMaxZoom = 8.0f;
+        private const float FrameCanvasMaxZoom = 14.0f;
         private const double FrameSpriteBaseSize = 48.0;
         private WriteableBitmap? _frameCheckerBitmap;
         private byte[]? _frameCheckerPixels;
+        private byte[]? _frameSpriteSourcePixels;
+        private int _frameSpriteSourceWidth;
+        private int _frameSpriteSourceHeight;
+        private int _frameSpriteRenderedSize = -1;
+        private WriteableBitmap? _frameSpriteBitmap;
 
         [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(TreeItem))]
         public MainWindow()
@@ -271,6 +279,7 @@ namespace FramesToMMSpriteResources
 
             ProgramNameTextBlock.Text += GetCurrentVersion();
             InitializeFrameCoordinatePlane();
+            InitializeFrameSpriteSourceAsync();
 
         
             CheckForUpdateIfNeeded();
@@ -1474,6 +1483,76 @@ namespace FramesToMMSpriteResources
             UpdateFrameCoordinateVisuals();
         }
 
+        private async void InitializeFrameSpriteSourceAsync()
+        {
+            try
+            {
+                StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(new Uri("ms-appx:///Assets/icon.png"));
+                using IRandomAccessStream stream = await file.OpenReadAsync();
+                BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
+                PixelDataProvider pixelData = await decoder.GetPixelDataAsync(
+                    BitmapPixelFormat.Bgra8,
+                    BitmapAlphaMode.Premultiplied,
+                    new BitmapTransform(),
+                    ExifOrientationMode.IgnoreExifOrientation,
+                    ColorManagementMode.DoNotColorManage);
+
+                _frameSpriteSourcePixels = pixelData.DetachPixelData();
+                _frameSpriteSourceWidth = (int)decoder.PixelWidth;
+                _frameSpriteSourceHeight = (int)decoder.PixelHeight;
+                _frameSpriteRenderedSize = -1;
+
+                UpdateFrameCoordinateVisuals();
+            }
+            catch
+            {
+                // Keep default image source if loading/scaling pipeline is unavailable.
+            }
+        }
+
+        private void UpdateFrameSpriteBitmap(int targetSize)
+        {
+            if (_frameSpriteSourcePixels == null || _frameSpriteSourceWidth <= 0 || _frameSpriteSourceHeight <= 0 || targetSize <= 0)
+            {
+                return;
+            }
+
+            if (_frameSpriteBitmap != null && _frameSpriteRenderedSize == targetSize)
+            {
+                return;
+            }
+
+            _frameSpriteBitmap = new WriteableBitmap(targetSize, targetSize);
+            byte[] scaledPixels = new byte[targetSize * targetSize * 4];
+
+            for (int y = 0; y < targetSize; y++)
+            {
+                int sourceY = Math.Min(_frameSpriteSourceHeight - 1, (int)((y / (double)targetSize) * _frameSpriteSourceHeight));
+                for (int x = 0; x < targetSize; x++)
+                {
+                    int sourceX = Math.Min(_frameSpriteSourceWidth - 1, (int)((x / (double)targetSize) * _frameSpriteSourceWidth));
+
+                    int src = ((sourceY * _frameSpriteSourceWidth) + sourceX) * 4;
+                    int dst = ((y * targetSize) + x) * 4;
+
+                    scaledPixels[dst] = _frameSpriteSourcePixels[src];
+                    scaledPixels[dst + 1] = _frameSpriteSourcePixels[src + 1];
+                    scaledPixels[dst + 2] = _frameSpriteSourcePixels[src + 2];
+                    scaledPixels[dst + 3] = _frameSpriteSourcePixels[src + 3];
+                }
+            }
+
+            using (Stream stream = _frameSpriteBitmap.PixelBuffer.AsStream())
+            {
+                stream.Position = 0;
+                stream.Write(scaledPixels, 0, scaledPixels.Length);
+            }
+
+            _frameSpriteBitmap.Invalidate();
+            FrameCoordinateSpriteImage.Source = _frameSpriteBitmap;
+            _frameSpriteRenderedSize = targetSize;
+        }
+
         private void UpdateFrameCoordinateVisuals()
         {
             if (FrameCoordinateCanvas == null)
@@ -1509,6 +1588,7 @@ namespace FramesToMMSpriteResources
             double spriteCanvasY = axisY - (_frameSpritePosition.Y * _frameCanvasZoom);
 
             double spriteSize = FrameSpriteBaseSize * _frameCanvasZoom;
+            UpdateFrameSpriteBitmap(Math.Max(1, (int)Math.Round(spriteSize)));
             FrameCoordinateSpriteImage.Width = spriteSize;
             FrameCoordinateSpriteImage.Height = spriteSize;
 
