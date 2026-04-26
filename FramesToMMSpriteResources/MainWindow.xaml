@@ -6,6 +6,7 @@
     xmlns:local="using:FramesToMMSpriteResources"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+
  
     mc:Ignorable="d"
     Title="Frames to MM sprite resources">
@@ -51,7 +52,13 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <FontIcon Grid.Column="0" Glyph="{Binding Content.Depth, Converter={StaticResource DepthToIconGlyphConverter}}" Width="20" Height="32" Margin="-4 0 0 0" Opacity="0.67" FontSize="18"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Content.Text}" VerticalAlignment="Center" Margin="0 0 0 0" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Grid.Column="1"
+ 
+                                           VerticalAlignment="Center"
+                                           Margin="0 0 0 0"
+                                           local:StartEllipsisHelper.IsEnabled="True"
+                                           local:StartEllipsisHelper.Text="{Binding Content.Text}"
+                                           TextTrimming="Clip"/>
                                 <Border Grid.Column="2" Background="{StaticResource SubtleFillColorSecondaryBrush}" CornerRadius="10" MinWidth="20" Height="20" Padding="6 0 6 2" Visibility="{Binding Content.CountText, Converter={StaticResource CountToVisibilityConverter}}">
                                     <TextBlock Text="{Binding Content.CountText}" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{StaticResource TextFillColorTertiaryBrush}" FontWeight="SemiBold"/>
                                 </Border>
