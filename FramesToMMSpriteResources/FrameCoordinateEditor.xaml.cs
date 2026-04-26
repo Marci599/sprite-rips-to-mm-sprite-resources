@@ -38,8 +38,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private readonly DispatcherQueueTimer _spriteRenderTimer;
     private int _pendingSpriteWidth;
     private int _pendingSpriteHeight;
-    private const int CheckerRenderScaleIdle = 2;
-    private const int CheckerRenderScaleInteractive = 4;
+    private const int CheckerRenderScale = 1;
     private DateTime _lastInteractionUtc = DateTime.MinValue;
 
     public FrameCoordinateEditor()
@@ -48,7 +47,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         VectorXTextBox.Value = 0;
         VectorYTextBox.Value = 0;
         _spriteRenderTimer = DispatcherQueue.CreateTimer();
-        _spriteRenderTimer.Interval = TimeSpan.FromMilliseconds(45);
+        _spriteRenderTimer.Interval = TimeSpan.FromMilliseconds(120);
         _spriteRenderTimer.IsRepeating = false;
         _spriteRenderTimer.Tick += (_, _) =>
         {
@@ -147,10 +146,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void UpdateCheckerboard(double canvasWidth, double canvasHeight, double axisX, double axisY)
     {
-        bool isInteractive = _isDragging || (DateTime.UtcNow - _lastInteractionUtc).TotalMilliseconds < 180;
-        int checkerRenderScale = isInteractive ? CheckerRenderScaleInteractive : CheckerRenderScaleIdle;
-        int pixelWidth = Math.Max(1, (int)Math.Ceiling(canvasWidth / checkerRenderScale));
-        int pixelHeight = Math.Max(1, (int)Math.Ceiling(canvasHeight / checkerRenderScale));
+        int pixelWidth = Math.Max(1, (int)Math.Ceiling(canvasWidth / CheckerRenderScale));
+        int pixelHeight = Math.Max(1, (int)Math.Ceiling(canvasHeight / CheckerRenderScale));
         int byteCount = pixelWidth * pixelHeight * 4;
 
         if (_checkerBitmap == null || _checkerBitmap.PixelWidth != pixelWidth || _checkerBitmap.PixelHeight != pixelHeight)
@@ -168,11 +165,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
         int idx = 0;
         for (int y = 0; y < pixelHeight; y++)
         {
-            double sampledCanvasY = y * checkerRenderScale;
+            double sampledCanvasY = y * CheckerRenderScale;
             int tileY = (int)Math.Floor((axisY - sampledCanvasY) / tileSize);
             for (int x = 0; x < pixelWidth; x++)
             {
-                double sampledCanvasX = x * checkerRenderScale;
+                double sampledCanvasX = x * CheckerRenderScale;
                 int tileX = (int)Math.Floor((sampledCanvasX - axisX) / tileSize);
                 byte color = ((tileX + tileY) & 1) == 0 ? (byte)30 : (byte)60;
 
@@ -216,6 +213,13 @@ public sealed partial class FrameCoordinateEditor : UserControl
     {
         if (_spriteSourcePixels == null || _spriteSourceWidth <= 0 || _spriteSourceHeight <= 0)
         {
+            return;
+        }
+
+        if (_isDragging || (DateTime.UtcNow - _lastInteractionUtc).TotalMilliseconds < 120)
+        {
+            _spriteRenderTimer.Stop();
+            _spriteRenderTimer.Start();
             return;
         }
 
