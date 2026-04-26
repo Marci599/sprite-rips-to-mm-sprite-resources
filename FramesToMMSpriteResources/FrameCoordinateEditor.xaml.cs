@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Dispatching;
 using System;
 using System.IO;
 using System.Numerics;
@@ -34,12 +35,24 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private int _spriteRenderedHeight = -1;
     private WriteableBitmap? _spriteBitmap;
     private CancellationTokenSource? _spriteRenderCts;
+    private readonly DispatcherQueueTimer _spriteRenderTimer;
+    private int _pendingSpriteWidth;
+    private int _pendingSpriteHeight;
+    private const int CheckerRenderScale = 2;
 
     public FrameCoordinateEditor()
     {
         this.InitializeComponent();
         VectorXTextBox.Value = 0;
         VectorYTextBox.Value = 0;
+        _spriteRenderTimer = DispatcherQueue.CreateTimer();
+        _spriteRenderTimer.Interval = TimeSpan.FromMilliseconds(45);
+        _spriteRenderTimer.IsRepeating = false;
+        _spriteRenderTimer.Tick += (_, _) =>
+        {
+            _spriteRenderTimer.Stop();
+            StartSpriteBitmapRender(_pendingSpriteWidth, _pendingSpriteHeight);
+        };
         _ = SetSpriteImageUriAsync("ms-appx:///Assets/icon.png");
         UpdateVisuals();
     }
@@ -76,6 +89,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _spriteRenderedWidth = -1;
         _spriteRenderedHeight = -1;
         _spriteRenderCts?.Cancel();
+        _spriteRenderTimer.Stop();
         UpdateVisuals();
     }
 
@@ -119,8 +133,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void UpdateCheckerboard(double canvasWidth, double canvasHeight, double axisX, double axisY)
     {
-        int pixelWidth = Math.Max(1, (int)Math.Ceiling(canvasWidth));
-        int pixelHeight = Math.Max(1, (int)Math.Ceiling(canvasHeight));
+        int pixelWidth = Math.Max(1, (int)Math.Ceiling(canvasWidth / CheckerRenderScale));
+        int pixelHeight = Math.Max(1, (int)Math.Ceiling(canvasHeight / CheckerRenderScale));
         int byteCount = pixelWidth * pixelHeight * 4;
 
         if (_checkerBitmap == null || _checkerBitmap.PixelWidth != pixelWidth || _checkerBitmap.PixelHeight != pixelHeight)
@@ -138,10 +152,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
         int idx = 0;
         for (int y = 0; y < pixelHeight; y++)
         {
-            int tileY = (int)Math.Floor((axisY - y) / tileSize);
+            double sampledCanvasY = y * CheckerRenderScale;
+            int tileY = (int)Math.Floor((axisY - sampledCanvasY) / tileSize);
             for (int x = 0; x < pixelWidth; x++)
             {
-                int tileX = (int)Math.Floor((x - axisX) / tileSize);
+                double sampledCanvasX = x * CheckerRenderScale;
+                int tileX = (int)Math.Floor((sampledCanvasX - axisX) / tileSize);
                 byte color = ((tileX + tileY) & 1) == 0 ? (byte)30 : (byte)60;
 
                 _checkerPixels![idx++] = color;
@@ -172,8 +188,21 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         _spriteRenderedWidth = targetWidth;
         _spriteRenderedHeight = targetHeight;
+        _pendingSpriteWidth = targetWidth;
+        _pendingSpriteHeight = targetHeight;
 
         _spriteRenderCts?.Cancel();
+        _spriteRenderTimer.Stop();
+        _spriteRenderTimer.Start();
+    }
+
+    private void StartSpriteBitmapRender(int targetWidth, int targetHeight)
+    {
+        if (_spriteSourcePixels == null || _spriteSourceWidth <= 0 || _spriteSourceHeight <= 0)
+        {
+            return;
+        }
+
         _spriteRenderCts = new CancellationTokenSource();
         CancellationToken token = _spriteRenderCts.Token;
         byte[] sourcePixels = _spriteSourcePixels;
