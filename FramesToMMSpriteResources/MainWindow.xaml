@@ -304,7 +304,19 @@
                                         <Rectangle Style="{StaticResource GroupDividerStyle}"/>
                                         <TextBlock Text="Drag in the area below to pan around the coordinate plane. You can also set the sprite position manually with X/Y values."
                                                    Style="{StaticResource HelperTextStyle}"/>
-                                        <TextBlock x:Name="FrameZoomTextBlock" Text="Zoom: 100%" Style="{StaticResource HelperTextStyle}"/>
+                                        <Grid ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock x:Name="FrameZoomTextBlock" Grid.Column="0" Text="Zoom: 100%" Style="{StaticResource HelperTextStyle}" VerticalAlignment="Center"/>
+                                            <Button Grid.Column="1" Click="CenterFrameOriginButton_Click">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <FontIcon Glyph="&#xE777;" FontSize="12"/>
+                                                    <TextBlock Text="Center origin"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
 
                                         <Grid ColumnSpacing="8">
                                             <Grid.ColumnDefinitions>

@@ -234,7 +234,6 @@ namespace FramesToMMSpriteResources
         private const float FrameCanvasMaxZoom = 8.0f;
         private const double FrameSpriteBaseSize = 48.0;
         private const double FrameSpriteMinSize = 14.0;
-        private const double FrameSpriteMaxSize = 256.0;
 
         [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(TreeItem))]
         public MainWindow()
@@ -1504,7 +1503,7 @@ namespace FramesToMMSpriteResources
             double spriteCanvasX = axisX + (_frameSpritePosition.X * _frameCanvasZoom);
             double spriteCanvasY = axisY - (_frameSpritePosition.Y * _frameCanvasZoom);
 
-            double spriteSize = Math.Clamp(FrameSpriteBaseSize * _frameCanvasZoom, FrameSpriteMinSize, FrameSpriteMaxSize);
+            double spriteSize = Math.Max(FrameSpriteBaseSize * _frameCanvasZoom, FrameSpriteMinSize);
             FrameCoordinateSpriteImage.Width = spriteSize;
             FrameCoordinateSpriteImage.Height = spriteSize;
 
@@ -1587,6 +1586,12 @@ namespace FramesToMMSpriteResources
 
             UpdateFrameCoordinateVisuals();
             e.Handled = true;
+        }
+
+        private void CenterFrameOriginButton_Click(object sender, RoutedEventArgs e)
+        {
+            _frameCanvasPan = Vector2.Zero;
+            UpdateFrameCoordinateVisuals();
         }
 
         private void FrameVectorXTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
