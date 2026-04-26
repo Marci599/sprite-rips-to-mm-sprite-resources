@@ -20,8 +20,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private Vector2 _dragStartPan;
     private bool _isDragging;
     private float _zoom = 1.0f;
-    private const float MinZoom = 0.2f;
-    private const float MaxZoom = 14.0f;
+    private const float MinZoom = 0.3f;
+    private const float MaxZoom = 18.0f;
     private const double SpriteBaseSize = 48.0;
 
     private WriteableBitmap? _checkerBitmap;
@@ -137,7 +137,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
             for (int x = 0; x < pixelWidth; x++)
             {
                 int tileX = (int)Math.Floor((x - axisX) / tileSize);
-                byte color = ((tileX + tileY) & 1) == 0 ? (byte)238 : (byte)206;
+                byte color = ((tileX + tileY) & 1) == 0 ? (byte)30 : (byte)60;
 
                 _checkerPixels![idx++] = color;
                 _checkerPixels[idx++] = color;

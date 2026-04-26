@@ -257,7 +257,7 @@ namespace FramesToMMSpriteResources
             HeaderBreadcrumbBar.ItemClicked += BreadcrumbBar_ItemClicked;
 
             ProgramNameTextBlock.Text += GetCurrentVersion();
-            _ = FrameCoordinateEditorControl.SetSpriteImageUriAsync("ms-appx:///Assets/icon.png");
+            
 
         
             CheckForUpdateIfNeeded();
@@ -1435,6 +1435,7 @@ namespace FramesToMMSpriteResources
                         currentConfigs.Add(programConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].frameCongfigs[int.Parse(selectedNodeName)]);
                     }
 
+                    _ = FrameCoordinateEditorControl.SetSpriteImageUriAsync("ms-appx:///Assets/yoshi-000.png");
                     FrameCoordinateEditorControl.SpritePosition = Vector2.Zero;
 
 
