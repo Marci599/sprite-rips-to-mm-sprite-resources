@@ -22,15 +22,14 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private float _zoom = 1.0f;
     private const float MinZoom = 0.3f;
     private const float MaxZoom = 18.0f;
-    private const double SpriteBaseSize = 48.0;
-
     private WriteableBitmap? _checkerBitmap;
     private byte[]? _checkerPixels;
 
     private byte[]? _spriteSourcePixels;
     private int _spriteSourceWidth;
     private int _spriteSourceHeight;
-    private int _spriteRenderedSize = -1;
+    private int _spriteRenderedWidth = -1;
+    private int _spriteRenderedHeight = -1;
     private WriteableBitmap? _spriteBitmap;
 
     public FrameCoordinateEditor()
@@ -71,7 +70,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _spriteSourcePixels = pixelData.DetachPixelData();
         _spriteSourceWidth = (int)decoder.PixelWidth;
         _spriteSourceHeight = (int)decoder.PixelHeight;
-        _spriteRenderedSize = -1;
+        _spriteRenderedWidth = -1;
+        _spriteRenderedHeight = -1;
         UpdateVisuals();
     }
 
@@ -99,15 +99,16 @@ public sealed partial class FrameCoordinateEditor : UserControl
         Canvas.SetLeft(YAxis, axisX - (YAxis.Width / 2.0));
         Canvas.SetTop(YAxis, 0);
 
-        double spriteSize = SpriteBaseSize * _zoom;
-        UpdateSpriteBitmap(Math.Max(1, (int)Math.Round(spriteSize)));
+        double spriteWidth = Math.Max(1.0, _spriteSourceWidth * _zoom);
+        double spriteHeight = Math.Max(1.0, _spriteSourceHeight * _zoom);
+        UpdateSpriteBitmap(Math.Max(1, (int)Math.Round(spriteWidth)), Math.Max(1, (int)Math.Round(spriteHeight)));
 
         double spriteCanvasX = axisX + (_spritePosition.X * _zoom);
         double spriteCanvasY = axisY - (_spritePosition.Y * _zoom);
-        SpriteImage.Width = spriteSize;
-        SpriteImage.Height = spriteSize;
-        Canvas.SetLeft(SpriteImage, spriteCanvasX - (spriteSize / 2.0));
-        Canvas.SetTop(SpriteImage, spriteCanvasY - (spriteSize / 2.0));
+        SpriteImage.Width = spriteWidth;
+        SpriteImage.Height = spriteHeight;
+        Canvas.SetLeft(SpriteImage, spriteCanvasX - (spriteWidth / 2.0));
+        Canvas.SetTop(SpriteImage, spriteCanvasY - (spriteHeight / 2.0));
 
         ZoomTextBlock.Text = $"Zoom: {(int)Math.Round(_zoom * 100)}%";
     }
@@ -152,30 +153,30 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _checkerBitmap.Invalidate();
     }
 
-    private void UpdateSpriteBitmap(int targetSize)
+    private void UpdateSpriteBitmap(int targetWidth, int targetHeight)
     {
         if (_spriteSourcePixels == null || _spriteSourceWidth <= 0 || _spriteSourceHeight <= 0)
         {
             return;
         }
 
-        if (_spriteBitmap != null && _spriteRenderedSize == targetSize)
+        if (_spriteBitmap != null && _spriteRenderedWidth == targetWidth && _spriteRenderedHeight == targetHeight)
         {
             SpriteImage.Source = _spriteBitmap;
             return;
         }
 
-        _spriteBitmap = new WriteableBitmap(targetSize, targetSize);
-        byte[] scaled = new byte[targetSize * targetSize * 4];
+        _spriteBitmap = new WriteableBitmap(targetWidth, targetHeight);
+        byte[] scaled = new byte[targetWidth * targetHeight * 4];
 
-        for (int y = 0; y < targetSize; y++)
+        for (int y = 0; y < targetHeight; y++)
         {
-            int sy = Math.Min(_spriteSourceHeight - 1, (int)((y / (double)targetSize) * _spriteSourceHeight));
-            for (int x = 0; x < targetSize; x++)
+            int sy = Math.Min(_spriteSourceHeight - 1, (int)((y / (double)targetHeight) * _spriteSourceHeight));
+            for (int x = 0; x < targetWidth; x++)
             {
-                int sx = Math.Min(_spriteSourceWidth - 1, (int)((x / (double)targetSize) * _spriteSourceWidth));
+                int sx = Math.Min(_spriteSourceWidth - 1, (int)((x / (double)targetWidth) * _spriteSourceWidth));
                 int src = ((sy * _spriteSourceWidth) + sx) * 4;
-                int dst = ((y * targetSize) + x) * 4;
+                int dst = ((y * targetWidth) + x) * 4;
                 scaled[dst] = _spriteSourcePixels[src];
                 scaled[dst + 1] = _spriteSourcePixels[src + 1];
                 scaled[dst + 2] = _spriteSourcePixels[src + 2];
@@ -189,7 +190,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _spriteBitmap.Invalidate();
 
         SpriteImage.Source = _spriteBitmap;
-        _spriteRenderedSize = targetSize;
+        _spriteRenderedWidth = targetWidth;
+        _spriteRenderedHeight = targetHeight;
     }
 
     private void CoordinateCanvas_SizeChanged(object sender, SizeChangedEventArgs e) => UpdateVisuals();
