@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Dispatching;
@@ -40,12 +41,15 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private int _pendingSpriteHeight;
     private const int CheckerRenderScale = 1;
     private DateTime _lastInteractionUtc = DateTime.MinValue;
+    private bool _isUpdatingZoomControls;
 
     public FrameCoordinateEditor()
     {
         this.InitializeComponent();
         VectorXTextBox.Value = 0;
         VectorYTextBox.Value = 0;
+        ZoomSlider.Value = 100;
+        ZoomNumberBox.Value = 100;
         _spriteRenderTimer = DispatcherQueue.CreateTimer();
         _spriteRenderTimer.Interval = TimeSpan.FromMilliseconds(120);
         _spriteRenderTimer.IsRepeating = false;
@@ -117,8 +121,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
         double axisY = centerY + _pan.Y;
 
         UpdateCheckerboard(canvasWidth, canvasHeight, axisX, axisY);
-        CheckerboardImage.Width = canvasWidth;
-        CheckerboardImage.Height = canvasHeight;
+        CheckerboardImage.Width = _checkerBitmap?.PixelWidth ?? canvasWidth;
+        CheckerboardImage.Height = _checkerBitmap?.PixelHeight ?? canvasHeight;
         Canvas.SetLeft(CheckerboardImage, 0);
         Canvas.SetTop(CheckerboardImage, 0);
 
@@ -141,7 +145,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         Canvas.SetLeft(SpriteImage, spriteCanvasX - (spriteWidth / 2.0));
         Canvas.SetTop(SpriteImage, spriteCanvasY - (spriteHeight / 2.0));
 
-        ZoomTextBlock.Text = $"Zoom: {(int)Math.Round(_zoom * 100)}%";
+        UpdateZoomControls();
     }
 
     private void UpdateCheckerboard(double canvasWidth, double canvasHeight, double axisX, double axisY)
@@ -369,6 +373,56 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _pan = new Vector2((float)(newAxisX - centerX), (float)(newAxisY - centerY));
         UpdateVisuals();
         e.Handled = true;
+    }
+
+    private void UpdateZoomControls()
+    {
+        if (_isUpdatingZoomControls)
+        {
+            return;
+        }
+
+        _isUpdatingZoomControls = true;
+        double zoomPercent = Math.Round(_zoom * 100);
+        ZoomSlider.Value = zoomPercent;
+        ZoomNumberBox.Value = zoomPercent;
+        _isUpdatingZoomControls = false;
+    }
+
+    private void ZoomSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (_isUpdatingZoomControls)
+        {
+            return;
+        }
+
+        float newZoom = Math.Clamp((float)e.NewValue / 100.0f, MinZoom, MaxZoom);
+        if (Math.Abs(newZoom - _zoom) < 0.0001f)
+        {
+            return;
+        }
+
+        _zoom = newZoom;
+        _lastInteractionUtc = DateTime.UtcNow;
+        UpdateVisuals();
+    }
+
+    private void ZoomNumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    {
+        if (_isUpdatingZoomControls || double.IsNaN(sender.Value))
+        {
+            return;
+        }
+
+        float newZoom = Math.Clamp((float)sender.Value / 100.0f, MinZoom, MaxZoom);
+        if (Math.Abs(newZoom - _zoom) < 0.0001f)
+        {
+            return;
+        }
+
+        _zoom = newZoom;
+        _lastInteractionUtc = DateTime.UtcNow;
+        UpdateVisuals();
     }
 
     private void CenterOriginButton_Click(object sender, RoutedEventArgs e)

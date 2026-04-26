@@ -20,7 +20,7 @@
                         PointerReleased="CoordinateCanvas_PointerReleased"
                         PointerWheelChanged="CoordinateCanvas_PointerWheelChanged"
                         PointerExited="CoordinateCanvas_PointerReleased">
-                    <Image x:Name="CheckerboardImage" IsHitTestVisible="False" Stretch="Fill"/>
+                    <Image x:Name="CheckerboardImage" IsHitTestVisible="False" Stretch="None"/>
                     <Image x:Name="SpriteImage" Width="48" Height="48" IsHitTestVisible="False"/>
                     <Rectangle x:Name="XAxis" Height="1.5" Fill="{ThemeResource TextFillColorSecondaryBrush}" Opacity="0.8"/>
                     <Rectangle x:Name="YAxis" Width="1.5" Fill="{ThemeResource TextFillColorSecondaryBrush}" Opacity="0.8"/>
@@ -31,7 +31,26 @@
                 <TextBlock Text="Frame coordinates" Style="{StaticResource SectionHeaderStyle}"/>
                 <TextBlock Text="Drag to pan, mouse wheel to zoom, or edit Vector2 directly."
                            Style="{StaticResource HelperTextStyle}" TextWrapping="Wrap"/>
-                <TextBlock x:Name="ZoomTextBlock" Text="Zoom: 100%" Style="{StaticResource HelperTextStyle}"/>
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="90"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider x:Name="ZoomSlider"
+                            Grid.Column="0"
+                            Header="Zoom"
+                            Minimum="30"
+                            Maximum="1800"
+                            StepFrequency="1"
+                            ValueChanged="ZoomSlider_ValueChanged"/>
+                    <NumberBox x:Name="ZoomNumberBox"
+                               Grid.Column="1"
+                               Header="%"
+                               Minimum="30"
+                               Maximum="1800"
+                               SpinButtonPlacementMode="Compact"
+                               ValueChanged="ZoomNumberBox_ValueChanged"/>
+                </Grid>
                 <Button Click="CenterOriginButton_Click">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <FontIcon Glyph="&#xE777;" FontSize="12"/>
