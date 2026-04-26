@@ -38,7 +38,9 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private readonly DispatcherQueueTimer _spriteRenderTimer;
     private int _pendingSpriteWidth;
     private int _pendingSpriteHeight;
-    private const int CheckerRenderScale = 2;
+    private const int CheckerRenderScaleIdle = 2;
+    private const int CheckerRenderScaleInteractive = 4;
+    private DateTime _lastInteractionUtc = DateTime.MinValue;
 
     public FrameCoordinateEditor()
     {
@@ -145,8 +147,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void UpdateCheckerboard(double canvasWidth, double canvasHeight, double axisX, double axisY)
     {
-        int pixelWidth = Math.Max(1, (int)Math.Ceiling(canvasWidth / CheckerRenderScale));
-        int pixelHeight = Math.Max(1, (int)Math.Ceiling(canvasHeight / CheckerRenderScale));
+        bool isInteractive = _isDragging || (DateTime.UtcNow - _lastInteractionUtc).TotalMilliseconds < 180;
+        int checkerRenderScale = isInteractive ? CheckerRenderScaleInteractive : CheckerRenderScaleIdle;
+        int pixelWidth = Math.Max(1, (int)Math.Ceiling(canvasWidth / checkerRenderScale));
+        int pixelHeight = Math.Max(1, (int)Math.Ceiling(canvasHeight / checkerRenderScale));
         int byteCount = pixelWidth * pixelHeight * 4;
 
         if (_checkerBitmap == null || _checkerBitmap.PixelWidth != pixelWidth || _checkerBitmap.PixelHeight != pixelHeight)
@@ -164,11 +168,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
         int idx = 0;
         for (int y = 0; y < pixelHeight; y++)
         {
-            double sampledCanvasY = y * CheckerRenderScale;
+            double sampledCanvasY = y * checkerRenderScale;
             int tileY = (int)Math.Floor((axisY - sampledCanvasY) / tileSize);
             for (int x = 0; x < pixelWidth; x++)
             {
-                double sampledCanvasX = x * CheckerRenderScale;
+                double sampledCanvasX = x * checkerRenderScale;
                 int tileX = (int)Math.Floor((sampledCanvasX - axisX) / tileSize);
                 byte color = ((tileX + tileY) & 1) == 0 ? (byte)30 : (byte)60;
 
@@ -303,6 +307,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _dragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
         _dragStartPan = _pan;
         _isDragging = true;
+        _lastInteractionUtc = DateTime.UtcNow;
         CoordinateCanvas.CapturePointer(e.Pointer);
     }
 
@@ -316,6 +321,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         var point = e.GetCurrentPoint(CoordinateCanvas);
         var currentPosition = new Vector2((float)point.Position.X, (float)point.Position.Y);
         _pan = _dragStartPan + (currentPosition - _dragStartPointer);
+        _lastInteractionUtc = DateTime.UtcNow;
         UpdateVisuals();
     }
 
@@ -351,6 +357,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         double worldY = (oldAxisY - point.Position.Y) / oldZoom;
 
         _zoom = newZoom;
+        _lastInteractionUtc = DateTime.UtcNow;
 
         double newAxisX = point.Position.X - (worldX * newZoom);
         double newAxisY = point.Position.Y + (worldY * newZoom);
@@ -363,6 +370,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private void CenterOriginButton_Click(object sender, RoutedEventArgs e)
     {
         _pan = Vector2.Zero;
+        _lastInteractionUtc = DateTime.UtcNow;
         UpdateVisuals();
     }
 
