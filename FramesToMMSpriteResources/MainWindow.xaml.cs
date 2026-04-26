@@ -8,7 +8,6 @@ using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
-using Microsoft.UI.Xaml.Shapes;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -26,6 +25,7 @@ using Windows.ApplicationModel;
 using Windows.Media.Core;
 using Windows.Media.Playback;
 using Windows.Storage.Pickers;
+using Windows.UI;
 using Windows.UI.Composition;
 
 namespace FramesToMMSpriteResources
@@ -1467,6 +1467,7 @@ namespace FramesToMMSpriteResources
             _frameSpritePosition = Vector2.Zero;
             _isFrameCanvasDragging = false;
             _frameCanvasZoom = 1.0f;
+            RenderOptions.SetBitmapInterpolationMode(FrameCoordinateSpriteImage, BitmapInterpolationMode.NearestNeighbor);
             FrameVectorXTextBox.Value = 0;
             FrameVectorYTextBox.Value = 0;
 
@@ -1538,7 +1539,7 @@ namespace FramesToMMSpriteResources
             {
                 for (int tileX = minTileX; tileX <= maxTileX; tileX++)
                 {
-                    var tile = new Rectangle
+                    var tile = new Microsoft.UI.Xaml.Shapes.Rectangle
                     {
                         Width = tileSize,
                         Height = tileSize,
