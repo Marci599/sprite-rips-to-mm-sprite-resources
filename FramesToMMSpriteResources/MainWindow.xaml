@@ -328,7 +328,7 @@
                                                     PointerExited="FrameCoordinateCanvas_PointerReleased">
                                                 <Rectangle x:Name="FrameXAxis" Height="1.5" Fill="{ThemeResource TextFillColorSecondaryBrush}" Opacity="0.8"/>
                                                 <Rectangle x:Name="FrameYAxis" Width="1.5" Fill="{ThemeResource TextFillColorSecondaryBrush}" Opacity="0.8"/>
-                                                <Image x:Name="FrameCoordinateSpriteImage" Width="48" Height="48" Source="Assets/icon.png"/>
+                                                <Image x:Name="FrameCoordinateSpriteImage" Width="48" Height="48" Source="Assets/icon.png" IsHitTestVisible="False"/>
                                             </Canvas>
                                         </Border>
                                     </StackPanel>

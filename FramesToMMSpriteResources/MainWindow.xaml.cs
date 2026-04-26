@@ -232,6 +232,9 @@ namespace FramesToMMSpriteResources
         private float _frameCanvasZoom = 1.0f;
         private const float FrameCanvasMinZoom = 0.2f;
         private const float FrameCanvasMaxZoom = 8.0f;
+        private const double FrameSpriteBaseSize = 48.0;
+        private const double FrameSpriteMinSize = 14.0;
+        private const double FrameSpriteMaxSize = 256.0;
 
         [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(TreeItem))]
         public MainWindow()
@@ -1501,8 +1504,12 @@ namespace FramesToMMSpriteResources
             double spriteCanvasX = axisX + (_frameSpritePosition.X * _frameCanvasZoom);
             double spriteCanvasY = axisY - (_frameSpritePosition.Y * _frameCanvasZoom);
 
-            Canvas.SetLeft(FrameCoordinateSpriteImage, spriteCanvasX - (FrameCoordinateSpriteImage.Width / 2.0));
-            Canvas.SetTop(FrameCoordinateSpriteImage, spriteCanvasY - (FrameCoordinateSpriteImage.Height / 2.0));
+            double spriteSize = Math.Clamp(FrameSpriteBaseSize * _frameCanvasZoom, FrameSpriteMinSize, FrameSpriteMaxSize);
+            FrameCoordinateSpriteImage.Width = spriteSize;
+            FrameCoordinateSpriteImage.Height = spriteSize;
+
+            Canvas.SetLeft(FrameCoordinateSpriteImage, spriteCanvasX - (spriteSize / 2.0));
+            Canvas.SetTop(FrameCoordinateSpriteImage, spriteCanvasY - (spriteSize / 2.0));
 
             FrameZoomTextBlock.Text = $"Zoom: {(int)Math.Round(_frameCanvasZoom * 100)}%";
         }
