@@ -6,6 +6,8 @@ using System;
 using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading;
+using System.Threading.Tasks;
 using Windows.Graphics.Imaging;
 using Windows.Storage;
 using Windows.Storage.Streams;
@@ -31,6 +33,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private int _spriteRenderedWidth = -1;
     private int _spriteRenderedHeight = -1;
     private WriteableBitmap? _spriteBitmap;
+    private CancellationTokenSource? _spriteRenderCts;
 
     public FrameCoordinateEditor()
     {
@@ -72,6 +75,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _spriteSourceHeight = (int)decoder.PixelHeight;
         _spriteRenderedWidth = -1;
         _spriteRenderedHeight = -1;
+        _spriteRenderCts?.Cancel();
         UpdateVisuals();
     }
 
@@ -101,7 +105,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         double spriteWidth = Math.Max(1.0, _spriteSourceWidth * _zoom);
         double spriteHeight = Math.Max(1.0, _spriteSourceHeight * _zoom);
-        UpdateSpriteBitmap(Math.Max(1, (int)Math.Round(spriteWidth)), Math.Max(1, (int)Math.Round(spriteHeight)));
+        RequestSpriteBitmapUpdate(Math.Max(1, (int)Math.Round(spriteWidth)), Math.Max(1, (int)Math.Round(spriteHeight)));
 
         double spriteCanvasX = axisX + (_spritePosition.X * _zoom);
         double spriteCanvasY = axisY - (_spritePosition.Y * _zoom);
@@ -153,7 +157,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _checkerBitmap.Invalidate();
     }
 
-    private void UpdateSpriteBitmap(int targetWidth, int targetHeight)
+    private void RequestSpriteBitmapUpdate(int targetWidth, int targetHeight)
     {
         if (_spriteSourcePixels == null || _spriteSourceWidth <= 0 || _spriteSourceHeight <= 0)
         {
@@ -166,32 +170,85 @@ public sealed partial class FrameCoordinateEditor : UserControl
             return;
         }
 
-        _spriteBitmap = new WriteableBitmap(targetWidth, targetHeight);
-        byte[] scaled = new byte[targetWidth * targetHeight * 4];
-
-        for (int y = 0; y < targetHeight; y++)
-        {
-            int sy = Math.Min(_spriteSourceHeight - 1, (int)((y / (double)targetHeight) * _spriteSourceHeight));
-            for (int x = 0; x < targetWidth; x++)
-            {
-                int sx = Math.Min(_spriteSourceWidth - 1, (int)((x / (double)targetWidth) * _spriteSourceWidth));
-                int src = ((sy * _spriteSourceWidth) + sx) * 4;
-                int dst = ((y * targetWidth) + x) * 4;
-                scaled[dst] = _spriteSourcePixels[src];
-                scaled[dst + 1] = _spriteSourcePixels[src + 1];
-                scaled[dst + 2] = _spriteSourcePixels[src + 2];
-                scaled[dst + 3] = _spriteSourcePixels[src + 3];
-            }
-        }
-
-        using Stream stream = _spriteBitmap.PixelBuffer.AsStream();
-        stream.Position = 0;
-        stream.Write(scaled, 0, scaled.Length);
-        _spriteBitmap.Invalidate();
-
-        SpriteImage.Source = _spriteBitmap;
         _spriteRenderedWidth = targetWidth;
         _spriteRenderedHeight = targetHeight;
+
+        _spriteRenderCts?.Cancel();
+        _spriteRenderCts = new CancellationTokenSource();
+        CancellationToken token = _spriteRenderCts.Token;
+        byte[] sourcePixels = _spriteSourcePixels;
+        int sourceWidth = _spriteSourceWidth;
+        int sourceHeight = _spriteSourceHeight;
+
+        _ = RenderSpriteBitmapAsync(sourcePixels, sourceWidth, sourceHeight, targetWidth, targetHeight, token);
+    }
+
+    private async Task RenderSpriteBitmapAsync(
+        byte[] sourcePixels,
+        int sourceWidth,
+        int sourceHeight,
+        int targetWidth,
+        int targetHeight,
+        CancellationToken token)
+    {
+        byte[] scaled;
+        try
+        {
+            scaled = await Task.Run(() =>
+            {
+                byte[] localScaled = new byte[targetWidth * targetHeight * 4];
+
+                for (int y = 0; y < targetHeight; y++)
+                {
+                    if (token.IsCancellationRequested)
+                    {
+                        return localScaled;
+                    }
+
+                    int sy = Math.Min(sourceHeight - 1, (int)((y / (double)targetHeight) * sourceHeight));
+                    for (int x = 0; x < targetWidth; x++)
+                    {
+                        int sx = Math.Min(sourceWidth - 1, (int)((x / (double)targetWidth) * sourceWidth));
+                        int src = ((sy * sourceWidth) + sx) * 4;
+                        int dst = ((y * targetWidth) + x) * 4;
+                        localScaled[dst] = sourcePixels[src];
+                        localScaled[dst + 1] = sourcePixels[src + 1];
+                        localScaled[dst + 2] = sourcePixels[src + 2];
+                        localScaled[dst + 3] = sourcePixels[src + 3];
+                    }
+                }
+
+                return localScaled;
+            }, token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (token.IsCancellationRequested ||
+            targetWidth != _spriteRenderedWidth ||
+            targetHeight != _spriteRenderedHeight)
+        {
+            return;
+        }
+
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (token.IsCancellationRequested ||
+                targetWidth != _spriteRenderedWidth ||
+                targetHeight != _spriteRenderedHeight)
+            {
+                return;
+            }
+
+            _spriteBitmap = new WriteableBitmap(targetWidth, targetHeight);
+            using Stream stream = _spriteBitmap.PixelBuffer.AsStream();
+            stream.Position = 0;
+            stream.Write(scaled, 0, scaled.Length);
+            _spriteBitmap.Invalidate();
+            SpriteImage.Source = _spriteBitmap;
+        });
     }
 
     private void CoordinateCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
