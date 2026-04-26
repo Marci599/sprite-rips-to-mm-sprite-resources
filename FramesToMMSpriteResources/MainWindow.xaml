@@ -320,6 +320,7 @@
                                                     Height="320"
                                                     HorizontalAlignment="Stretch"
                                                     VerticalAlignment="Top"
+                                                    Background="Transparent"
                                                     SizeChanged="FrameCoordinateCanvas_SizeChanged"
                                                     PointerPressed="FrameCoordinateCanvas_PointerPressed"
                                                     PointerMoved="FrameCoordinateCanvas_PointerMoved"
