@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Media.Imaging;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -17,6 +18,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -25,7 +27,6 @@ using Windows.ApplicationModel;
 using Windows.Media.Core;
 using Windows.Media.Playback;
 using Windows.Storage.Pickers;
-using Windows.UI;
 using Windows.UI.Composition;
 
 namespace FramesToMMSpriteResources
@@ -234,8 +235,8 @@ namespace FramesToMMSpriteResources
         private const float FrameCanvasMinZoom = 0.2f;
         private const float FrameCanvasMaxZoom = 8.0f;
         private const double FrameSpriteBaseSize = 48.0;
-        private readonly SolidColorBrush _frameCheckerLightBrush = new(Color.FromArgb(255, 238, 238, 238));
-        private readonly SolidColorBrush _frameCheckerDarkBrush = new(Color.FromArgb(255, 206, 206, 206));
+        private WriteableBitmap? _frameCheckerBitmap;
+        private byte[]? _frameCheckerPixels;
 
         [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(TreeItem))]
         public MainWindow()
@@ -1519,50 +1520,53 @@ namespace FramesToMMSpriteResources
 
         private void UpdateFrameCheckerboard(double canvasWidth, double canvasHeight, double axisX, double axisY)
         {
-            FrameCheckerboardCanvas.Width = canvasWidth;
-            FrameCheckerboardCanvas.Height = canvasHeight;
-            FrameCheckerboardCanvas.Children.Clear();
+            int pixelWidth = Math.Max(1, (int)Math.Ceiling(canvasWidth));
+            int pixelHeight = Math.Max(1, (int)Math.Ceiling(canvasHeight));
+            int pixelCount = pixelWidth * pixelHeight;
+            int byteCount = pixelCount * 4;
 
-            double baseTileSize = 4.0 * _frameCanvasZoom;
-            if (baseTileSize <= 0)
+            if (_frameCheckerBitmap == null || _frameCheckerBitmap.PixelWidth != pixelWidth || _frameCheckerBitmap.PixelHeight != pixelHeight)
+            {
+                _frameCheckerBitmap = new WriteableBitmap(pixelWidth, pixelHeight);
+                _frameCheckerPixels = new byte[byteCount];
+                FrameCheckerboardImage.Source = _frameCheckerBitmap;
+            }
+            else if (_frameCheckerPixels == null || _frameCheckerPixels.Length != byteCount)
+            {
+                _frameCheckerPixels = new byte[byteCount];
+            }
+
+            double tileSize = 4.0 * _frameCanvasZoom;
+            if (tileSize <= 0.0001)
             {
                 return;
             }
 
-            int stride = 1;
-            double tileSize = baseTileSize;
+            const byte light = 238;
+            const byte dark = 206;
+            int idx = 0;
 
-            int estimatedColumns = (int)Math.Ceiling(canvasWidth / tileSize) + 2;
-            int estimatedRows = (int)Math.Ceiling(canvasHeight / tileSize) + 2;
-            while ((estimatedColumns * estimatedRows) > 6000)
+            for (int y = 0; y < pixelHeight; y++)
             {
-                stride *= 2;
-                tileSize = baseTileSize * stride;
-                estimatedColumns = (int)Math.Ceiling(canvasWidth / tileSize) + 2;
-                estimatedRows = (int)Math.Ceiling(canvasHeight / tileSize) + 2;
-            }
-
-            int minTileX = (int)Math.Floor((-axisX) / baseTileSize) - stride;
-            int maxTileX = (int)Math.Ceiling((canvasWidth - axisX) / baseTileSize) + stride;
-            int minTileY = (int)Math.Floor((axisY - canvasHeight) / baseTileSize) - stride;
-            int maxTileY = (int)Math.Ceiling(axisY / baseTileSize) + stride;
-
-            for (int tileY = minTileY; tileY <= maxTileY; tileY += stride)
-            {
-                for (int tileX = minTileX; tileX <= maxTileX; tileX += stride)
+                int tileY = (int)Math.Floor((axisY - y) / tileSize);
+                for (int x = 0; x < pixelWidth; x++)
                 {
-                    var tile = new Microsoft.UI.Xaml.Shapes.Rectangle
-                    {
-                        Width = tileSize,
-                        Height = tileSize,
-                        Fill = (((tileX / stride) + (tileY / stride)) & 1) == 0 ? _frameCheckerLightBrush : _frameCheckerDarkBrush
-                    };
+                    int tileX = (int)Math.Floor((x - axisX) / tileSize);
+                    byte color = ((tileX + tileY) & 1) == 0 ? light : dark;
 
-                    Canvas.SetLeft(tile, axisX + (tileX * baseTileSize));
-                    Canvas.SetTop(tile, axisY - ((tileY + stride) * baseTileSize));
-                    FrameCheckerboardCanvas.Children.Add(tile);
+                    _frameCheckerPixels![idx++] = color;
+                    _frameCheckerPixels[idx++] = color;
+                    _frameCheckerPixels[idx++] = color;
+                    _frameCheckerPixels[idx++] = 255;
                 }
             }
+
+            using (Stream stream = _frameCheckerBitmap!.PixelBuffer.AsStream())
+            {
+                stream.Position = 0;
+                stream.Write(_frameCheckerPixels!, 0, _frameCheckerPixels!.Length);
+            }
+            _frameCheckerBitmap.Invalidate();
         }
 
         private void FrameCoordinateCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
