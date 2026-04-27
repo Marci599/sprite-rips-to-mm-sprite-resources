@@ -23,7 +23,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private WriteableBitmap? _checkerBitmap;
     private byte[]? _checkerPixels;
 
-    private SpriteFrame? spriteFrame;
     private const int CheckerRenderScale = 1;
     private DateTime _lastInteractionUtc = DateTime.MinValue;
     private bool _isUpdatingZoomControls;
@@ -52,16 +51,14 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     public event Action<IntVector2>? SpritePositionChanged;
 
-    public void SetSpriteImage(SpriteFrame spriteFrame)
+    public void SetSpriteImage(WriteableBitmap writeableBitmap)
     {
-        this.spriteFrame = spriteFrame;
-        SpriteImage.Source = spriteFrame.GetOrCreateSourceBitmap();
+        SpriteImage.Source = writeableBitmap;
         UpdateVisuals();
     }
 
     public void UnloadSprite()
     {
-        spriteFrame = null;
         SpriteImage.Source = null;
         //UpdateVisuals();
     }
@@ -95,10 +92,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
         Canvas.SetTop(YAxis, 0);
 
 
-        if (spriteFrame == null) return;
+        if (SpriteImage.Source == null) return;
 
-        double spriteWidth = Math.Max(1.0, spriteFrame.Size.X * _zoom);
-        double spriteHeight = Math.Max(1.0, spriteFrame.Size.Y * _zoom);
+        double spriteWidth = Math.Max(1.0, (SpriteImage.Source as WriteableBitmap).PixelWidth * _zoom);
+        double spriteHeight = Math.Max(1.0, (SpriteImage.Source as WriteableBitmap).PixelHeight * _zoom);
 
         double spriteCanvasX = axisX + (_spritePosition.X * _zoom);
         double spriteCanvasY = axisY - (_spritePosition.Y * _zoom);
@@ -297,13 +294,13 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private void ALignDownButton_Click(object sender, RoutedEventArgs e)
     {
         VectorXTextBox.Value = 0;
-        VectorYTextBox.Value = spriteFrame.Size.Y / 2;
+        VectorYTextBox.Value = (SpriteImage.Source as WriteableBitmap).PixelHeight / 2;
     }
 
     private void ALignTopLeftButton_Click(object sender, RoutedEventArgs e)
     {
-        VectorXTextBox.Value = (spriteFrame.Size.X / 2);
-        VectorYTextBox.Value = -(spriteFrame.Size.Y / 2);
+        VectorXTextBox.Value = ((SpriteImage.Source as WriteableBitmap).PixelWidth / 2);
+        VectorYTextBox.Value = -((SpriteImage.Source as WriteableBitmap).PixelHeight / 2);
     }
 
     private void ALignCenterButton_Click(object sender, RoutedEventArgs e)

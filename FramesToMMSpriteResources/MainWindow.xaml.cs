@@ -19,6 +19,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -138,42 +139,13 @@ namespace FramesToMMSpriteResources
     public class AnimationSpriteFrame
     {
         public string Name;
-        public List<SpriteFrame> SpriteFrames = [];
+        public List<WriteableBitmap> WriteableBitmaps = [];
         
         public AnimationSpriteFrame() { }
-        public AnimationSpriteFrame(string name, List<SpriteFrame> spriteFrames)
+        public AnimationSpriteFrame(string name, List<WriteableBitmap> writeableBitmaps)
         {
             Name = name;
-            SpriteFrames = spriteFrames;
-        }
-    }
-
-    public class SpriteFrame
-    {
-        public byte[] SpriteSourcePixels;
-        public IntVector2 Size;
-        private WriteableBitmap? _sourceBitmap;
-
-        public SpriteFrame(byte[] spriteSourcePixels, IntVector2 size)
-        {
-            this.SpriteSourcePixels = spriteSourcePixels;
-            this.Size = size;
-        }
-
-        public WriteableBitmap GetOrCreateSourceBitmap()
-        {
-            if (_sourceBitmap != null)
-            {
-                return _sourceBitmap;
-            }
-
-            _sourceBitmap = new WriteableBitmap(Size.X, Size.Y);
-            using Stream stream = _sourceBitmap.PixelBuffer.AsStream();
-            stream.Position = 0;
-            stream.Write(SpriteSourcePixels, 0, SpriteSourcePixels.Length);
-            _sourceBitmap.Invalidate();
-
-            return _sourceBitmap;
+            WriteableBitmaps = writeableBitmaps;
         }
     }
 
@@ -213,7 +185,7 @@ namespace FramesToMMSpriteResources
             set
             {
                 _isWindowActive = value;
-                CheckForToggleProgramEditing();
+                CheckForAllowProgramEditing();
             }
         }
 
@@ -224,7 +196,7 @@ namespace FramesToMMSpriteResources
             set
             {
                 _isGenerating = value;
-                CheckForToggleProgramEditing();
+                CheckForAllowProgramEditing();
             }
         }
 
@@ -239,26 +211,72 @@ namespace FramesToMMSpriteResources
             }
         }
 
+        bool _isLoadingFrames = false;
+        public bool IsLoadingFrames
+        {
+            get => _isLoadingFrames;
+            set
+            {
+                _isLoadingFrames = value;
+                CheckForAllowFrameEditing();
+            }
+        }
+
+        void CheckForAllowFrameEditing()
+        {
+            if (!_isLoadingFrames)
+            {
+                FramesLoadingBorder.Child.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                FramesLoadingBorder.Child.Visibility = Visibility.Visible;
+            }
+
+            if (!_isGenerating && !_isLoadingFrames && _isWindowActive)
+            {
+                FramesLoadingBorder.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                FramesLoadingBorder.Visibility = Visibility.Visible;
+            }
+            
+        }
+
         void CheckForAllowGenerating()
         {
             bool isEnabled = (_isWindowActive && !_isGenerating && _isEnoughFrames);
-            CanGenerate(isEnabled);
+
+            ReduceFileSizeCheckBox.IsEnabled = isEnabled;
+            GenerateButton.IsEnabled = isEnabled;
+            if (isEnabled)
+            {
+                ReduceFileSizeCheckBoxTexts.Opacity = 1;
+            }
+            else
+            {
+                ReduceFileSizeCheckBoxTexts.Opacity = 0.5;
+            }
         }
 
-        void CheckForToggleProgramEditing()
+        void CheckForAllowProgramEditing()
         {
             bool isEnabled = (_isWindowActive && !_isGenerating);
-            ToggleProgramEditing(isEnabled);
-        }
 
-        void ToggleProgramEditing(bool isEnabled)
-        {
             ControlEnabler.IsEnabled = isEnabled;
             HeaderBreadcrumbBar.IsEnabled = isEnabled;
             TreeViewControl.IsEnabled = isEnabled;
             SettingsToggleButton.IsEnabled = isEnabled;
             CheckForAllowGenerating();
+            CheckForAllowFrameEditing();
         }
+
+
+
+
+
+    
 
         public ObservableCollection<string> BreadcrumbItems { get; } = new();
 
@@ -417,8 +435,7 @@ namespace FramesToMMSpriteResources
             else
             {
                 IsWindowActive = false;
-                FramesLoadingBorder.Visibility = Visibility.Visible;
-                FramesLoadingBorder.Child.Visibility = Visibility.Collapsed;
+
 
                 ReduceFileSizeCheckBox.Click -= ReduceFileSizeCheckBox_Click;
                 WorkingPathTextBox.TextChanged -= WorkingPathTextBox_LostFocus;
@@ -1057,19 +1074,7 @@ namespace FramesToMMSpriteResources
             
         }
 
-        void CanGenerate(bool isEnabled)
-        {
-            ReduceFileSizeCheckBox.IsEnabled = isEnabled;
-            GenerateButton.IsEnabled = isEnabled;
-            if (isEnabled)
-            {
-                ReduceFileSizeCheckBoxTexts.Opacity = 1;
-            }
-            else
-            {
-                ReduceFileSizeCheckBoxTexts.Opacity = 0.5;
-            }
-        }
+   
 
 
         private static bool IsUsingGameThemes()
@@ -1281,7 +1286,7 @@ namespace FramesToMMSpriteResources
             selectedNode.IsSelected = true;
         }
 
-        private CancellationTokenSource? _loadFramesCts;
+    
 
         async void DisplayCorrectPanel(TreeViewNode node, bool animate = true, bool nowGenerated = false)
         {
@@ -1482,7 +1487,7 @@ namespace FramesToMMSpriteResources
 
                     if(animationName != animationSpriteFrame.Name)
                     {
-                        animationSpriteFrame.SpriteFrames = [];
+                        animationSpriteFrame.WriteableBitmaps = [];
                         animationSpriteFrame.Name = animationName;
                     }
 
@@ -1518,7 +1523,9 @@ namespace FramesToMMSpriteResources
                         currentConfigs.Add(programConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].frameCongfigs[int.Parse(selectedNodeName)]);
                     }
 
-
+                    //TODO: BREAK ASYNC WHEN OUT OF FOCUS OR DIFFERENT ANIMATION SELECTED
+                    if (IsLoadingFrames) break;
+                    Debug.WriteLine("01ASD");
 
                     string gameThemePath;
                     if (usingGameThemes)
@@ -1532,11 +1539,15 @@ namespace FramesToMMSpriteResources
 
                     string animationPath = Path.Combine(gameThemePath, subjectName, "raw", animationName);
 
-                    if(animationSpriteFrame.SpriteFrames.Count == 0)
+                   
+
+                    if(animationSpriteFrame.WriteableBitmaps.Count == 0)
                     {
+                        IsLoadingFrames = true;
+
                         var tempAnimationSpriteFrame = new AnimationSpriteFrame(animationSpriteFrame.Name, []);
 
-                        FramesLoadingBorder.Visibility = Visibility.Visible;
+               
                         foreach (FrameConfig frameConfigInLoop in animationConfig.frameCongfigs)
                         {
                             string framePath = Path.Combine(animationPath, frameConfigInLoop.Name) + ".png";
@@ -1557,26 +1568,42 @@ namespace FramesToMMSpriteResources
                             var spriteSourceWidth = (int)decoder.PixelWidth;
                             var spriteSourceHeight = (int)decoder.PixelHeight;
 
-                            tempAnimationSpriteFrame.SpriteFrames.Add(new SpriteFrame(spriteSourcePixels, new IntVector2(spriteSourceWidth, spriteSourceHeight)));
+                            var sourceBitmap = new WriteableBitmap(spriteSourceWidth, spriteSourceHeight);
+                            using Stream streamWritible = sourceBitmap.PixelBuffer.AsStream();
+                            streamWritible.Position = 0;
+                            streamWritible.Write(spriteSourcePixels, 0, spriteSourcePixels.Length);
+                            sourceBitmap.Invalidate();
+
+                            tempAnimationSpriteFrame.WriteableBitmaps.Add(sourceBitmap);
                         }
 
-                        if(IsWindowActive)
-                            FramesLoadingBorder.Visibility = Visibility.Collapsed;
-                        else
-                            FramesLoadingBorder.Child.Visibility = Visibility.Collapsed;
-
                         animationSpriteFrame = tempAnimationSpriteFrame;
+
+                        var selectedNodeAfter = (TreeViewControl.SelectedNode.Content as TreeItem)!;
+
+                        if (selectedNodeAfter.Depth == ItemDepth.Frame)
+                        {
+                            frameName = selectedNodeAfter.Text;
+                            selectedIndex = int.Parse(frameName);
+                            frameConfig = animationConfig.frameCongfigs[selectedIndex];
+                        }
+                        
+                        IsLoadingFrames = false;
                     }
 
 
+                    if ((TreeViewControl.SelectedNode.Content as TreeItem)!.Depth == ItemDepth.Frame)
+                    {
+                        FrameCoordinateEditorControl.SetSpriteImage(animationSpriteFrame.WriteableBitmaps[selectedIndex]);
 
-                    FrameCoordinateEditorControl.SetSpriteImage(animationSpriteFrame.SpriteFrames[selectedIndex]);
 
-                    
 
-                    FrameCoordinateEditorControl.SpritePosition = frameConfig.Offset;
 
-                    FrameCoordinateEditorControl.SpritePositionChanged += SpriteOffset_ValueChanged;
+                        FrameCoordinateEditorControl.SpritePosition = frameConfig.Offset;
+
+                        FrameCoordinateEditorControl.SpritePositionChanged += SpriteOffset_ValueChanged;
+                    }
+                        
 
 
 
