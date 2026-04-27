@@ -21,7 +21,7 @@
                         PointerWheelChanged="CoordinateCanvas_PointerWheelChanged"
                         PointerExited="CoordinateCanvas_PointerReleased">
                 <Image x:Name="CheckerboardImage" IsHitTestVisible="False" Stretch="None"/>
-                <Image x:Name="SpriteImage" Width="48" Height="48" IsHitTestVisible="False"/>
+                <Image x:Name="SpriteImage" Width="48" Height="48" IsHitTestVisible="False" RenderOptions.BitmapInterpolationMode="NearestNeighbor"/>
                 <Rectangle x:Name="XAxis" Height="1.5" Fill="{ThemeResource TextFillColorSecondaryBrush}" Opacity="0.8"/>
                 <Rectangle x:Name="YAxis" Width="1.5" Fill="{ThemeResource TextFillColorSecondaryBrush}" Opacity="0.8"/>
             </Canvas>

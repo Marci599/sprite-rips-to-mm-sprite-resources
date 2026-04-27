@@ -3,16 +3,10 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
-using Microsoft.UI.Dispatching;
 using System;
 using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices.WindowsRuntime;
-using System.Threading;
-using System.Threading.Tasks;
-using Windows.Graphics.Imaging;
-using Windows.Storage;
-using Windows.Storage.Streams;
 
 namespace FramesToMMSpriteResources;
 
@@ -30,13 +24,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private byte[]? _checkerPixels;
 
     private SpriteFrame? spriteFrame;
-    private int _spriteRenderedWidth = -1;
-    private int _spriteRenderedHeight = -1;
-    private WriteableBitmap? _spriteBitmap;
-    private CancellationTokenSource? _spriteRenderCts;
-    private readonly DispatcherQueueTimer _spriteRenderTimer;
-    private int _pendingSpriteWidth;
-    private int _pendingSpriteHeight;
     private const int CheckerRenderScale = 1;
     private DateTime _lastInteractionUtc = DateTime.MinValue;
     private bool _isUpdatingZoomControls;
@@ -48,15 +35,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         VectorYTextBox.Value = 0;
         ZoomSlider.Value = 100;
         ZoomNumberBox.Value = 100;
-        _spriteRenderTimer = DispatcherQueue.CreateTimer();
-        _spriteRenderTimer.Interval = TimeSpan.FromMilliseconds(120);
-        _spriteRenderTimer.IsRepeating = false;
-        _spriteRenderTimer.Tick += (_, _) =>
-        {
-            _spriteRenderTimer.Stop();
-            StartSpriteBitmapRender(_pendingSpriteWidth, _pendingSpriteHeight);
-        };
-
         UpdateVisuals();
     }
 
@@ -76,24 +54,14 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     public void SetSpriteImage(SpriteFrame spriteFrame)
     {
-
-
         this.spriteFrame = spriteFrame;
-        _spriteRenderedWidth = -1;
-        _spriteRenderedHeight = -1;
-        _spriteRenderCts?.Cancel();
-        _spriteRenderTimer.Stop();
+        SpriteImage.Source = spriteFrame.GetOrCreateSourceBitmap();
         UpdateVisuals();
     }
 
     public void UnloadSprite()
     {
-        _spriteRenderCts?.Cancel();
-        _spriteRenderTimer.Stop();
         spriteFrame = null;
-        _spriteRenderedWidth = -1;
-        _spriteRenderedHeight = -1;
-        _spriteBitmap = null;
         SpriteImage.Source = null;
         //UpdateVisuals();
     }
@@ -131,7 +99,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         double spriteWidth = Math.Max(1.0, spriteFrame.Size.X * _zoom);
         double spriteHeight = Math.Max(1.0, spriteFrame.Size.Y * _zoom);
-        RequestSpriteBitmapUpdate(Math.Max(1, (int)Math.Round(spriteWidth)), Math.Max(1, (int)Math.Round(spriteHeight)));
 
         double spriteCanvasX = axisX + (_spritePosition.X * _zoom);
         double spriteCanvasY = axisY - (_spritePosition.Y * _zoom);
@@ -183,120 +150,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         stream.Position = 0;
         stream.Write(_checkerPixels!, 0, _checkerPixels!.Length);
         _checkerBitmap.Invalidate();
-    }
-
-    private void RequestSpriteBitmapUpdate(int targetWidth, int targetHeight)
-    {
-        if (spriteFrame.SpriteSourcePixels == null || spriteFrame.Size.X <= 0 || spriteFrame.Size.Y <= 0)
-        {
-            return;
-        }
-
-        if (_spriteBitmap != null && _spriteRenderedWidth == targetWidth && _spriteRenderedHeight == targetHeight)
-        {
-            SpriteImage.Source = _spriteBitmap;
-            return;
-        }
-
-        _spriteRenderedWidth = targetWidth;
-        _spriteRenderedHeight = targetHeight;
-        _pendingSpriteWidth = targetWidth;
-        _pendingSpriteHeight = targetHeight;
-
-        _spriteRenderCts?.Cancel();
-        _spriteRenderTimer.Stop();
-        _spriteRenderTimer.Start();
-    }
-
-    private void StartSpriteBitmapRender(int targetWidth, int targetHeight)
-    {
-        if (spriteFrame.SpriteSourcePixels == null || spriteFrame.Size.X <= 0 || spriteFrame.Size.Y <= 0)
-        {
-            return;
-        }
-
-        if (_isDragging || (DateTime.UtcNow - _lastInteractionUtc).TotalMilliseconds < 120)
-        {
-            _spriteRenderTimer.Stop();
-            _spriteRenderTimer.Start();
-            return;
-        }
-
-        _spriteRenderCts = new CancellationTokenSource();
-        CancellationToken token = _spriteRenderCts.Token;
-        byte[] sourcePixels = spriteFrame.SpriteSourcePixels;
-        int sourceWidth = spriteFrame.Size.X;
-        int sourceHeight = spriteFrame.Size.Y;
-
-        _ = RenderSpriteBitmapAsync(sourcePixels, sourceWidth, sourceHeight, targetWidth, targetHeight, token);
-    }
-
-    private async Task RenderSpriteBitmapAsync(
-        byte[] sourcePixels,
-        int sourceWidth,
-        int sourceHeight,
-        int targetWidth,
-        int targetHeight,
-        CancellationToken token)
-    {
-        byte[] scaled;
-        try
-        {
-            scaled = await Task.Run(() =>
-            {
-                byte[] localScaled = new byte[targetWidth * targetHeight * 4];
-
-                for (int y = 0; y < targetHeight; y++)
-                {
-                    if (token.IsCancellationRequested)
-                    {
-                        return localScaled;
-                    }
-
-                    int sy = Math.Min(sourceHeight - 1, (int)((y / (double)targetHeight) * sourceHeight));
-                    for (int x = 0; x < targetWidth; x++)
-                    {
-                        int sx = Math.Min(sourceWidth - 1, (int)((x / (double)targetWidth) * sourceWidth));
-                        int src = ((sy * sourceWidth) + sx) * 4;
-                        int dst = ((y * targetWidth) + x) * 4;
-                        localScaled[dst] = sourcePixels[src];
-                        localScaled[dst + 1] = sourcePixels[src + 1];
-                        localScaled[dst + 2] = sourcePixels[src + 2];
-                        localScaled[dst + 3] = sourcePixels[src + 3];
-                    }
-                }
-
-                return localScaled;
-            }, token);
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-
-        if (token.IsCancellationRequested ||
-            targetWidth != _spriteRenderedWidth ||
-            targetHeight != _spriteRenderedHeight)
-        {
-            return;
-        }
-
-        DispatcherQueue.TryEnqueue(() =>
-        {
-            if (token.IsCancellationRequested ||
-                targetWidth != _spriteRenderedWidth ||
-                targetHeight != _spriteRenderedHeight)
-            {
-                return;
-            }
-
-            _spriteBitmap = new WriteableBitmap(targetWidth, targetHeight);
-            using Stream stream = _spriteBitmap.PixelBuffer.AsStream();
-            stream.Position = 0;
-            stream.Write(scaled, 0, scaled.Length);
-            _spriteBitmap.Invalidate();
-            SpriteImage.Source = _spriteBitmap;
-        });
     }
 
     private void CoordinateCanvas_SizeChanged(object sender, SizeChangedEventArgs e)

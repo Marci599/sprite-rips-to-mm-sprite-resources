@@ -9,6 +9,7 @@ using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Media.Imaging;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -151,11 +152,28 @@ namespace FramesToMMSpriteResources
     {
         public byte[] SpriteSourcePixels;
         public IntVector2 Size;
+        private WriteableBitmap? _sourceBitmap;
 
         public SpriteFrame(byte[] spriteSourcePixels, IntVector2 size)
         {
             this.SpriteSourcePixels = spriteSourcePixels;
             this.Size = size;
+        }
+
+        public WriteableBitmap GetOrCreateSourceBitmap()
+        {
+            if (_sourceBitmap != null)
+            {
+                return _sourceBitmap;
+            }
+
+            _sourceBitmap = new WriteableBitmap(Size.X, Size.Y);
+            using Stream stream = _sourceBitmap.PixelBuffer.AsStream();
+            stream.Position = 0;
+            stream.Write(SpriteSourcePixels, 0, SpriteSourcePixels.Length);
+            _sourceBitmap.Invalidate();
+
+            return _sourceBitmap;
         }
     }
 
