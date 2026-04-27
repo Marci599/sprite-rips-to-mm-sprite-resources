@@ -42,6 +42,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private const int CheckerRenderScale = 1;
     private DateTime _lastInteractionUtc = DateTime.MinValue;
     private bool _isUpdatingZoomControls;
+    private int _spriteLoadVersion;
 
     public FrameCoordinateEditor()
     {
@@ -58,7 +59,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
             _spriteRenderTimer.Stop();
             StartSpriteBitmapRender(_pendingSpriteWidth, _pendingSpriteHeight);
         };
-        _ = SetSpriteImageUriAsync("ms-appx:///Assets/icon.png");
         UpdateVisuals();
     }
 
@@ -76,8 +76,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     public event Action<IntVector2>? SpritePositionChanged;
 
-    public async System.Threading.Tasks.Task SetSpriteImageUriAsync(string uri)
+    public async Task<bool> LoadSpriteImageAsync(string uri, IntVector2 spritePosition, CancellationToken cancellationToken = default)
     {
+        int loadVersion = Interlocked.Increment(ref _spriteLoadVersion);
+
         StorageFile file;
         if (Path.IsPathRooted(uri))
         {
@@ -96,6 +98,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
             ExifOrientationMode.IgnoreExifOrientation,
             ColorManagementMode.DoNotColorManage);
 
+        if (cancellationToken.IsCancellationRequested || loadVersion != _spriteLoadVersion)
+        {
+            return false;
+        }
+
         _spriteSourcePixels = pixelData.DetachPixelData();
         _spriteSourceWidth = (int)decoder.PixelWidth;
         _spriteSourceHeight = (int)decoder.PixelHeight;
@@ -103,6 +110,23 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _spriteRenderedHeight = -1;
         _spriteRenderCts?.Cancel();
         _spriteRenderTimer.Stop();
+        SpritePosition = spritePosition;
+        UpdateVisuals();
+        return true;
+    }
+
+    public void UnloadSpriteImage()
+    {
+        Interlocked.Increment(ref _spriteLoadVersion);
+        _spriteRenderCts?.Cancel();
+        _spriteRenderTimer.Stop();
+        _spriteSourcePixels = null;
+        _spriteSourceWidth = 0;
+        _spriteSourceHeight = 0;
+        _spriteRenderedWidth = -1;
+        _spriteRenderedHeight = -1;
+        _spriteBitmap = null;
+        SpriteImage.Source = null;
         UpdateVisuals();
     }
 

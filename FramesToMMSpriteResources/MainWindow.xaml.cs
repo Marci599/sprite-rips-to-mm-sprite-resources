@@ -19,6 +19,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Windows.ApplicationModel;
@@ -151,6 +152,7 @@ namespace FramesToMMSpriteResources
         private string _lastValidBackgroundColor = "";
 
         MediaPlayer player = new();
+        CancellationTokenSource? _frameEditorLoadCts;
 
         int fadeOutMs = 50;
         int fadeInMs = 100;
@@ -1117,7 +1119,10 @@ namespace FramesToMMSpriteResources
                     {
 
                         //await Task.Delay(30);
-                        
+                        if (panel == FramePanel)
+                        {
+                            UnloadFrameEditorImage();
+                        }
                         panel.Visibility = Visibility.Collapsed;
                     }
                     
@@ -1145,6 +1150,10 @@ namespace FramesToMMSpriteResources
             {
                 if (!sameDepth)
                 {
+                    if (panel == FramePanel)
+                    {
+                        UnloadFrameEditorImage();
+                    }
                     panel.Visibility = Visibility.Collapsed;
                 }
                 panel.Opacity = 1.0;
@@ -1456,11 +1465,7 @@ namespace FramesToMMSpriteResources
 
                     string framePath = Path.Combine(gameThemePath, subjectName, "raw", animationName, frameConfig.Name) + ".png";
 
-                    _ = FrameCoordinateEditorControl.SetSpriteImageUriAsync($@"{framePath}");
-
-                    
-
-                    FrameCoordinateEditorControl.SpritePosition = frameConfig.Offset;
+                    _ = LoadFrameEditorImageAsync(framePath, frameConfig.Offset);
 
                     FrameCoordinateEditorControl.SpritePositionChanged += SpriteOffset_ValueChanged;
 
@@ -1475,6 +1480,34 @@ namespace FramesToMMSpriteResources
 
 
 
+        }
+
+        private void UnloadFrameEditorImage()
+        {
+            _frameEditorLoadCts?.Cancel();
+            _frameEditorLoadCts?.Dispose();
+            _frameEditorLoadCts = null;
+            FrameCoordinateEditorControl.UnloadSpriteImage();
+        }
+
+        private async Task LoadFrameEditorImageAsync(string framePath, IntVector2 spritePosition)
+        {
+            _frameEditorLoadCts?.Cancel();
+            _frameEditorLoadCts?.Dispose();
+            _frameEditorLoadCts = new CancellationTokenSource();
+            CancellationToken cancellationToken = _frameEditorLoadCts.Token;
+
+            try
+            {
+                await FrameCoordinateEditorControl.LoadSpriteImageAsync(framePath, spritePosition, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                SetInfoBar(InfoBarSeverity.Error, "Could not load frame image", ex.Message, false);
+            }
         }
 
         private void DetachAllPanelEvents()
