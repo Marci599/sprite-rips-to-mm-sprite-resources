@@ -41,15 +41,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private Vector2 _previewDragStartPointer;
     private Vector2 _previewDragStartPan;
     private readonly HashSet<Windows.System.VirtualKey> _heldNudgeKeys = [];
-    private readonly DispatcherTimer _nudgeTimer = new DispatcherTimer();
 
     public FrameCoordinateEditor()
     {
         this.InitializeComponent();
         _previewTimer.Interval = TimeSpan.FromSeconds(1.0 / 60.0);
         _previewTimer.Tick += PreviewTimer_Tick;
-        _nudgeTimer.Interval = TimeSpan.FromSeconds(1.0 / 60.0);
-        _nudgeTimer.Tick += NudgeTimer_Tick;
         VectorXTextBox.Value = 0;
         VectorYTextBox.Value = 0;
         ZoomSlider.Value = 100;
@@ -370,10 +367,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         _heldNudgeKeys.Add(key);
         ApplyHeldNudgeKeys();
-        if (!_nudgeTimer.IsEnabled)
-        {
-            _nudgeTimer.Start();
-        }
         return true;
     }
 
@@ -385,10 +378,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
 
         _heldNudgeKeys.Remove(key);
-        if (_heldNudgeKeys.Count == 0)
-        {
-            _nudgeTimer.Stop();
-        }
         return true;
     }
 
@@ -558,16 +547,5 @@ public sealed partial class FrameCoordinateEditor : UserControl
                  (_heldNudgeKeys.Contains(Windows.System.VirtualKey.S) ? 1 : 0);
 
         NudgeOffset(dx, dy);
-    }
-
-    private void NudgeTimer_Tick(object? sender, object e)
-    {
-        if (_heldNudgeKeys.Count == 0)
-        {
-            _nudgeTimer.Stop();
-            return;
-        }
-
-        ApplyHeldNudgeKeys();
     }
 }
