@@ -42,6 +42,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private const int CheckerRenderScale = 1;
     private DateTime _lastInteractionUtc = DateTime.MinValue;
     private bool _isUpdatingZoomControls;
+    private bool _isUpdatingPositionControls;
 
     public FrameCoordinateEditor()
     {
@@ -68,33 +69,71 @@ public sealed partial class FrameCoordinateEditor : UserControl
         set
         {
             _spritePosition = value;
+            _isUpdatingPositionControls = true;
             VectorXTextBox.Value = value.X;
             VectorYTextBox.Value = value.Y;
+            _isUpdatingPositionControls = false;
             UpdateVisuals();
         }
     }
 
     public event Action<IntVector2>? SpritePositionChanged;
 
+    public void UnloadSprite()
+    {
+        _spriteRenderCts?.Cancel();
+        _spriteRenderTimer.Stop();
+        _spriteSourcePixels = null;
+        _spriteSourceWidth = 0;
+        _spriteSourceHeight = 0;
+        _spriteRenderedWidth = -1;
+        _spriteRenderedHeight = -1;
+        _spriteBitmap = null;
+        SpriteImage.Source = null;
+        UpdateVisuals();
+    }
+
+    public async Task<bool> SetFrameAsync(string uri, IntVector2 spritePosition, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await SetSpriteImageUriAsync(uri, cancellationToken);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return false;
+            }
+
+            SpritePosition = spritePosition;
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+    }
+
     public async System.Threading.Tasks.Task SetSpriteImageUriAsync(string uri)
+        => await SetSpriteImageUriAsync(uri, CancellationToken.None);
+
+    public async System.Threading.Tasks.Task SetSpriteImageUriAsync(string uri, CancellationToken cancellationToken)
     {
         StorageFile file;
         if (Path.IsPathRooted(uri))
         {
-            file = await StorageFile.GetFileFromPathAsync(uri);
+            file = await StorageFile.GetFileFromPathAsync(uri).AsTask(cancellationToken);
         }
         else
         {
-            file = await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri));
+            file = await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri)).AsTask(cancellationToken);
         }
-        using IRandomAccessStream stream = await file.OpenReadAsync();
-        BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
+        using IRandomAccessStream stream = await file.OpenReadAsync().AsTask(cancellationToken);
+        BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream).AsTask(cancellationToken);
         PixelDataProvider pixelData = await decoder.GetPixelDataAsync(
             BitmapPixelFormat.Bgra8,
             BitmapAlphaMode.Premultiplied,
             new BitmapTransform(),
             ExifOrientationMode.IgnoreExifOrientation,
-            ColorManagementMode.DoNotColorManage);
+            ColorManagementMode.DoNotColorManage).AsTask(cancellationToken);
 
         _spriteSourcePixels = pixelData.DetachPixelData();
         _spriteSourceWidth = (int)decoder.PixelWidth;
@@ -103,7 +142,52 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _spriteRenderedHeight = -1;
         _spriteRenderCts?.Cancel();
         _spriteRenderTimer.Stop();
+        await RenderSpriteImmediatelyForCurrentCanvasAsync(cancellationToken);
         UpdateVisuals();
+    }
+
+    private async Task RenderSpriteImmediatelyForCurrentCanvasAsync(CancellationToken cancellationToken)
+    {
+        if (_spriteSourcePixels == null || _spriteSourceWidth <= 0 || _spriteSourceHeight <= 0)
+        {
+            return;
+        }
+
+        int targetWidth = Math.Max(1, (int)Math.Round(Math.Max(1.0, _spriteSourceWidth * _zoom)));
+        int targetHeight = Math.Max(1, (int)Math.Round(Math.Max(1.0, _spriteSourceHeight * _zoom)));
+        _spriteRenderedWidth = targetWidth;
+        _spriteRenderedHeight = targetHeight;
+
+        byte[] scaled = await Task.Run(() =>
+        {
+            byte[] localScaled = new byte[targetWidth * targetHeight * 4];
+
+            for (int y = 0; y < targetHeight; y++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                int sy = Math.Min(_spriteSourceHeight - 1, (int)((y / (double)targetHeight) * _spriteSourceHeight));
+                for (int x = 0; x < targetWidth; x++)
+                {
+                    int sx = Math.Min(_spriteSourceWidth - 1, (int)((x / (double)targetWidth) * _spriteSourceWidth));
+                    int src = ((sy * _spriteSourceWidth) + sx) * 4;
+                    int dst = ((y * targetWidth) + x) * 4;
+                    localScaled[dst] = _spriteSourcePixels[src];
+                    localScaled[dst + 1] = _spriteSourcePixels[src + 1];
+                    localScaled[dst + 2] = _spriteSourcePixels[src + 2];
+                    localScaled[dst + 3] = _spriteSourcePixels[src + 3];
+                }
+            }
+
+            return localScaled;
+        }, cancellationToken);
+
+        cancellationToken.ThrowIfCancellationRequested();
+        _spriteBitmap = new WriteableBitmap(targetWidth, targetHeight);
+        using Stream outStream = _spriteBitmap.PixelBuffer.AsStream();
+        outStream.Position = 0;
+        outStream.Write(scaled, 0, scaled.Length);
+        _spriteBitmap.Invalidate();
+        SpriteImage.Source = _spriteBitmap;
     }
 
     private void UpdateVisuals()
@@ -434,6 +518,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void VectorXTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
+        if (_isUpdatingPositionControls)
+        {
+            return;
+        }
+
         _spritePosition = new IntVector2(double.IsNaN(sender.Value) ? 0 : (int)sender.Value, _spritePosition.Y);
         UpdateVisuals();
         SpritePositionChanged?.Invoke(_spritePosition);
@@ -441,6 +530,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void VectorYTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
+        if (_isUpdatingPositionControls)
+        {
+            return;
+        }
+
         _spritePosition = new IntVector2(_spritePosition.X, double.IsNaN(sender.Value) ? 0 : (int)sender.Value);
         UpdateVisuals();
         SpritePositionChanged?.Invoke(_spritePosition);

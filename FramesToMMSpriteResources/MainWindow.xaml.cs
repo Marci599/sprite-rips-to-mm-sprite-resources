@@ -19,6 +19,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Windows.ApplicationModel;
@@ -149,6 +150,7 @@ namespace FramesToMMSpriteResources
 
         private bool _isSettingBackgroundColor;
         private string _lastValidBackgroundColor = "";
+        private CancellationTokenSource? _frameSelectionLoadCts;
 
         MediaPlayer player = new();
 
@@ -1456,11 +1458,16 @@ namespace FramesToMMSpriteResources
 
                     string framePath = Path.Combine(gameThemePath, subjectName, "raw", animationName, frameConfig.Name) + ".png";
 
-                    _ = FrameCoordinateEditorControl.SetSpriteImageUriAsync($@"{framePath}");
+                    _frameSelectionLoadCts?.Cancel();
+                    _frameSelectionLoadCts?.Dispose();
+                    _frameSelectionLoadCts = new CancellationTokenSource();
+                    CancellationToken frameSelectionToken = _frameSelectionLoadCts.Token;
 
-                    
-
-                    FrameCoordinateEditorControl.SpritePosition = frameConfig.Offset;
+                    bool loaded = await FrameCoordinateEditorControl.SetFrameAsync($@"{framePath}", frameConfig.Offset, frameSelectionToken);
+                    if (!loaded || frameSelectionToken.IsCancellationRequested)
+                    {
+                        return;
+                    }
 
                     FrameCoordinateEditorControl.SpritePositionChanged += SpriteOffset_ValueChanged;
 
@@ -1479,6 +1486,10 @@ namespace FramesToMMSpriteResources
 
         private void DetachAllPanelEvents()
         {
+            _frameSelectionLoadCts?.Cancel();
+            _frameSelectionLoadCts?.Dispose();
+            _frameSelectionLoadCts = null;
+
             IsHdCheckBox.Click -= ClickIsHdCheckBox;
             RemoveBackgroundCheckBox.Click -= ClickRemoveBackground;
             CropSpritesCheckBox.Click -= ClickCropSpritesCheckBox;
@@ -1500,6 +1511,7 @@ namespace FramesToMMSpriteResources
             OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
 
             FrameCoordinateEditorControl.SpritePositionChanged -= SpriteOffset_ValueChanged;
+            FrameCoordinateEditorControl.UnloadSprite();
         }
 
         private void SpriteOffset_ValueChanged(IntVector2 intVector2)
