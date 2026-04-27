@@ -1589,12 +1589,14 @@ namespace FramesToMMSpriteResources
                         }
                         
                         IsLoadingFrames = false;
+                        FrameCoordinateEditorControl.SetAnimationPreviewFrames(animationSpriteFrame.WriteableBitmaps, animationConfig.frameCongfigs.Select(frame => frame.Offset).ToList());
                     }
 
 
                     if ((TreeViewControl.SelectedNode.Content as TreeItem)!.Depth == ItemDepth.Frame)
                     {
                         FrameCoordinateEditorControl.SetSpriteImage(animationSpriteFrame.WriteableBitmaps[selectedIndex]);
+                    
 
 
 
@@ -2165,6 +2167,17 @@ namespace FramesToMMSpriteResources
                 e.Key == Windows.System.VirtualKey.RightControl)
             {
                 _isCtrlHeld = true;
+                return;
+            }
+
+            bool isFrameEditorOpen =
+                FramePanel.Visibility == Visibility.Visible &&
+                TreeViewControl.SelectedNode != null &&
+                (TreeViewControl.SelectedNode.Content as TreeItem)?.Depth == ItemDepth.Frame;
+
+            if (isFrameEditorOpen && FrameCoordinateEditorControl.HandleNudgeKeyDown(e.Key))
+            {
+                e.Handled = true;
             }
         }
 
@@ -2176,6 +2189,8 @@ namespace FramesToMMSpriteResources
             {
                 _isCtrlHeld = false;
             }
+
+            FrameCoordinateEditorControl.HandleNudgeKeyUp(e.Key);
         }
 
         private void ClearAllTreeItemSelections()

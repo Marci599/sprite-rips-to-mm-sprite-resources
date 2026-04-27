@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -18,7 +19,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private Vector2 _dragStartPan;
     private bool _isDragging;
     private float _zoom = 1.0f;
-    private const float MinZoom = 0.3f;
+    private const float MinZoom = 0.2f;
     private const float MaxZoom = 18.0f;
     private WriteableBitmap? _checkerBitmap;
     private byte[]? _checkerPixels;
@@ -26,10 +27,26 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private const int CheckerRenderScale = 1;
     private DateTime _lastInteractionUtc = DateTime.MinValue;
     private bool _isUpdatingZoomControls;
+    private readonly DispatcherTimer _previewTimer = new DispatcherTimer();
+    private IReadOnlyList<WriteableBitmap> _previewFrames = Array.Empty<WriteableBitmap>();
+    private IReadOnlyList<IntVector2> _previewOffsets = Array.Empty<IntVector2>();
+    private int _previewFrameIndex;
+    private int _previewTickCount;
+    private const int PreviewTicksPerFrame = 1;
+    private Vector2 _previewPan = Vector2.Zero;
+    private float _previewZoom = 1.0f;
+    private const float MinPreviewZoom = 0.1f;
+    private const float MaxPreviewZoom = 12.0f;
+    private bool _isPreviewDragging;
+    private Vector2 _previewDragStartPointer;
+    private Vector2 _previewDragStartPan;
+    private readonly HashSet<Windows.System.VirtualKey> _heldNudgeKeys = [];
 
     public FrameCoordinateEditor()
     {
         this.InitializeComponent();
+        _previewTimer.Interval = TimeSpan.FromSeconds(1.0 / 60.0);
+        _previewTimer.Tick += PreviewTimer_Tick;
         VectorXTextBox.Value = 0;
         VectorYTextBox.Value = 0;
         ZoomSlider.Value = 100;
@@ -57,10 +74,29 @@ public sealed partial class FrameCoordinateEditor : UserControl
         UpdateVisuals();
     }
 
+    public void SetAnimationPreviewFrames(IReadOnlyList<WriteableBitmap> frames, IReadOnlyList<IntVector2> offsets)
+    {
+        _previewFrames = frames;
+        _previewOffsets = offsets;
+        _previewFrameIndex = 0;
+        _previewTickCount = 0;
+ 
+        UpdateAnimationPreviewFrame();
+
+        if (_previewFrames.Count > 0)
+        {
+            _previewTimer.Start();
+        }
+        else
+        {
+            _previewTimer.Stop();
+        }
+    }
+
     public void UnloadSprite()
     {
         SpriteImage.Source = null;
-        //UpdateVisuals();
+        SetAnimationPreviewFrames(Array.Empty<WriteableBitmap>(), Array.Empty<IntVector2>());
     }
 
     private void UpdateVisuals()
@@ -156,6 +192,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void CoordinateCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
     {
+        this.Focus(FocusState.Programmatic);
         var point = e.GetCurrentPoint(CoordinateCanvas);
         _dragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
         _dragStartPan = _pan;
@@ -273,7 +310,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private void CenterOriginButton_Click(object sender, RoutedEventArgs e)
     {
         _pan = Vector2.Zero;
+        _previewPan = Vector2.Zero;
+        
         _lastInteractionUtc = DateTime.UtcNow;
+        UpdateAnimationPreviewFrame();
         UpdateVisuals();
     }
 
@@ -307,5 +347,207 @@ public sealed partial class FrameCoordinateEditor : UserControl
     {
         VectorXTextBox.Value = 0;
         VectorYTextBox.Value = 0;
+    }
+
+    public void NudgeOffset(int dx, int dy)
+    {
+        if (dx == 0 && dy == 0)
+        {
+            return;
+        }
+
+        VectorXTextBox.Value = _spritePosition.X + dx;
+        VectorYTextBox.Value = _spritePosition.Y + dy;
+    }
+
+    public bool HandleNudgeKeyDown(Windows.System.VirtualKey key)
+    {
+        if (!IsNudgeKey(key))
+        {
+            return false;
+        }
+
+        _heldNudgeKeys.Add(key);
+        ApplyHeldNudgeKeys();
+        return true;
+    }
+
+    public bool HandleNudgeKeyUp(Windows.System.VirtualKey key)
+    {
+        if (!IsNudgeKey(key))
+        {
+            return false;
+        }
+
+        _heldNudgeKeys.Remove(key);
+        return true;
+    }
+
+    private void RootGrid_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (HandleNudgeKeyDown(e.Key))
+        {
+            e.Handled = true;
+        }
+    }
+
+    private void RootGrid_KeyUp(object sender, KeyRoutedEventArgs e)
+    {
+        if (HandleNudgeKeyUp(e.Key))
+        {
+            e.Handled = true;
+        }
+    }
+
+    private void AnimationPreviewCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdateAnimationPreviewFrame();
+    }
+
+    private void AnimationPreviewCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        var point = e.GetCurrentPoint(AnimationPreviewCanvas);
+        _previewDragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
+        _previewDragStartPan = _previewPan;
+        _isPreviewDragging = true;
+        AnimationPreviewCanvas.CapturePointer(e.Pointer);
+        e.Handled = true;
+    }
+
+    private void AnimationPreviewCanvas_PointerMoved(object sender, PointerRoutedEventArgs e)
+    {
+        if (!_isPreviewDragging)
+        {
+            return;
+        }
+
+        var point = e.GetCurrentPoint(AnimationPreviewCanvas);
+        var currentPosition = new Vector2((float)point.Position.X, (float)point.Position.Y);
+        _previewPan = _previewDragStartPan + (currentPosition - _previewDragStartPointer);
+        UpdateAnimationPreviewFrame();
+        e.Handled = true;
+    }
+
+    private void AnimationPreviewCanvas_PointerReleased(object sender, PointerRoutedEventArgs e)
+    {
+        _isPreviewDragging = false;
+        AnimationPreviewCanvas.ReleasePointerCapture(e.Pointer);
+    }
+
+    private void AnimationPreviewCanvas_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
+    {
+        var point = e.GetCurrentPoint(AnimationPreviewCanvas);
+        int wheelDelta = point.Properties.MouseWheelDelta;
+        if (wheelDelta == 0)
+        {
+            return;
+        }
+
+        float oldZoom = _previewZoom;
+        float zoomMultiplier = wheelDelta > 0 ? 1.1f : 0.9f;
+        float newZoom = Math.Clamp(oldZoom * zoomMultiplier, MinPreviewZoom, MaxPreviewZoom);
+        if (Math.Abs(newZoom - oldZoom) < 0.0001f)
+        {
+            return;
+        }
+
+        double centerX = AnimationPreviewCanvas.ActualWidth / 2.0;
+        double centerY = AnimationPreviewCanvas.ActualHeight / 2.0;
+        double oldAxisX = centerX + _previewPan.X;
+        double oldAxisY = centerY + _previewPan.Y;
+
+        double worldX = (point.Position.X - oldAxisX) / oldZoom;
+        double worldY = (oldAxisY - point.Position.Y) / oldZoom;
+
+        _previewZoom = newZoom;
+
+        double newAxisX = point.Position.X - (worldX * newZoom);
+        double newAxisY = point.Position.Y + (worldY * newZoom);
+        _previewPan = new Vector2((float)(newAxisX - centerX), (float)(newAxisY - centerY));
+
+        UpdateAnimationPreviewFrame();
+        e.Handled = true;
+    }
+
+    private void PreviewTimer_Tick(object? sender, object e)
+    {
+        if (_previewFrames.Count == 0)
+        {
+            _previewTimer.Stop();
+            return;
+        }
+
+        _previewTickCount++;
+        if (_previewTickCount < PreviewTicksPerFrame)
+        {
+            return;
+        }
+
+        _previewTickCount = 0;
+        _previewFrameIndex = (_previewFrameIndex + 1) % _previewFrames.Count;
+        UpdateAnimationPreviewFrame();
+    }
+
+    private void UpdateAnimationPreviewFrame()
+    {
+        if (_previewFrames.Count == 0)
+        {
+            AnimationPreviewImage.Source = null;
+            return;
+        }
+
+        int frameIndex = Math.Clamp(_previewFrameIndex, 0, _previewFrames.Count - 1);
+        WriteableBitmap frame = _previewFrames[frameIndex];
+        IntVector2 offset = frameIndex < _previewOffsets.Count ? _previewOffsets[frameIndex] : new IntVector2(0, 0);
+
+        double canvasWidth = AnimationPreviewCanvas.ActualWidth;
+        double canvasHeight = AnimationPreviewCanvas.ActualHeight;
+        if (canvasWidth <= 0 || canvasHeight <= 0)
+        {
+            return;
+        }
+
+        double centerX = canvasWidth / 2.0;
+        double centerY = canvasHeight / 2.0;
+        double axisX = centerX + _previewPan.X;
+        double axisY = centerY + _previewPan.Y;
+
+        PreviewXAxis.Width = canvasWidth;
+        Canvas.SetLeft(PreviewXAxis, 0);
+        Canvas.SetTop(PreviewXAxis, axisY - (PreviewXAxis.Height / 2.0));
+
+        PreviewYAxis.Height = canvasHeight;
+        Canvas.SetLeft(PreviewYAxis, axisX - (PreviewYAxis.Width / 2.0));
+        Canvas.SetTop(PreviewYAxis, 0);
+
+        double spriteWidth = Math.Max(1.0, frame.PixelWidth * _previewZoom);
+        double spriteHeight = Math.Max(1.0, frame.PixelHeight * _previewZoom);
+        double spriteCanvasX = axisX + (offset.X * _previewZoom);
+        double spriteCanvasY = axisY - (offset.Y * _previewZoom);
+
+        AnimationPreviewImage.Source = frame;
+        AnimationPreviewImage.Width = spriteWidth;
+        AnimationPreviewImage.Height = spriteHeight;
+        AnimationPreviewImage.RenderTransform = null;
+        Canvas.SetLeft(AnimationPreviewImage, spriteCanvasX - (spriteWidth / 2.0));
+        Canvas.SetTop(AnimationPreviewImage, spriteCanvasY - (spriteHeight / 2.0));
+    }
+
+    private static bool IsNudgeKey(Windows.System.VirtualKey key)
+    {
+        return key == Windows.System.VirtualKey.W ||
+               key == Windows.System.VirtualKey.A ||
+               key == Windows.System.VirtualKey.S ||
+               key == Windows.System.VirtualKey.D;
+    }
+
+    private void ApplyHeldNudgeKeys()
+    {
+        int dx = (_heldNudgeKeys.Contains(Windows.System.VirtualKey.D) ? 1 : 0) -
+                 (_heldNudgeKeys.Contains(Windows.System.VirtualKey.A) ? 1 : 0);
+        int dy = (_heldNudgeKeys.Contains(Windows.System.VirtualKey.W) ? 1 : 0) -
+                 (_heldNudgeKeys.Contains(Windows.System.VirtualKey.S) ? 1 : 0);
+
+        NudgeOffset(dx, dy);
     }
 }
