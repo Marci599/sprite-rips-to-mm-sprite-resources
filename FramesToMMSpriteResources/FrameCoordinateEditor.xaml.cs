@@ -2,9 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
-using Microsoft.UI.Xaml.Threading;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -35,6 +33,13 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private int _previewFrameIndex;
     private int _previewTickCount;
     private const int PreviewTicksPerFrame = 2;
+    private Vector2 _previewPan = Vector2.Zero;
+    private float _previewZoom = 1.0f;
+    private const float MinPreviewZoom = 0.25f;
+    private const float MaxPreviewZoom = 12.0f;
+    private bool _isPreviewDragging;
+    private Vector2 _previewDragStartPointer;
+    private Vector2 _previewDragStartPan;
 
     public FrameCoordinateEditor()
     {
@@ -74,6 +79,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _previewOffsets = offsets;
         _previewFrameIndex = 0;
         _previewTickCount = 0;
+        _previewPan = Vector2.Zero;
+        _previewZoom = 1.0f;
         UpdateAnimationPreviewFrame();
 
         if (_previewFrames.Count > 0)
@@ -339,12 +346,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
         VectorYTextBox.Value = 0;
     }
 
-    private void RootGrid_KeyDown(object sender, KeyRoutedEventArgs e)
+    public bool TryHandleOffsetNudgeKey(Windows.System.VirtualKey key)
     {
         int nextX = _spritePosition.X;
         int nextY = _spritePosition.Y;
 
-        switch (e.Key)
+        switch (key)
         {
             case Windows.System.VirtualKey.W:
                 nextY += 1;
@@ -359,11 +366,89 @@ public sealed partial class FrameCoordinateEditor : UserControl
                 nextX += 1;
                 break;
             default:
-                return;
+                return false;
         }
 
         VectorXTextBox.Value = nextX;
         VectorYTextBox.Value = nextY;
+        return true;
+    }
+
+    private void RootGrid_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (TryHandleOffsetNudgeKey(e.Key))
+        {
+            e.Handled = true;
+        }
+    }
+
+    private void AnimationPreviewCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdateAnimationPreviewFrame();
+    }
+
+    private void AnimationPreviewCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        var point = e.GetCurrentPoint(AnimationPreviewCanvas);
+        _previewDragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
+        _previewDragStartPan = _previewPan;
+        _isPreviewDragging = true;
+        AnimationPreviewCanvas.CapturePointer(e.Pointer);
+        e.Handled = true;
+    }
+
+    private void AnimationPreviewCanvas_PointerMoved(object sender, PointerRoutedEventArgs e)
+    {
+        if (!_isPreviewDragging)
+        {
+            return;
+        }
+
+        var point = e.GetCurrentPoint(AnimationPreviewCanvas);
+        var currentPosition = new Vector2((float)point.Position.X, (float)point.Position.Y);
+        _previewPan = _previewDragStartPan + (currentPosition - _previewDragStartPointer);
+        UpdateAnimationPreviewFrame();
+        e.Handled = true;
+    }
+
+    private void AnimationPreviewCanvas_PointerReleased(object sender, PointerRoutedEventArgs e)
+    {
+        _isPreviewDragging = false;
+        AnimationPreviewCanvas.ReleasePointerCapture(e.Pointer);
+    }
+
+    private void AnimationPreviewCanvas_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
+    {
+        var point = e.GetCurrentPoint(AnimationPreviewCanvas);
+        int wheelDelta = point.Properties.MouseWheelDelta;
+        if (wheelDelta == 0)
+        {
+            return;
+        }
+
+        float oldZoom = _previewZoom;
+        float zoomMultiplier = wheelDelta > 0 ? 1.1f : 0.9f;
+        float newZoom = Math.Clamp(oldZoom * zoomMultiplier, MinPreviewZoom, MaxPreviewZoom);
+        if (Math.Abs(newZoom - oldZoom) < 0.0001f)
+        {
+            return;
+        }
+
+        double centerX = AnimationPreviewCanvas.ActualWidth / 2.0;
+        double centerY = AnimationPreviewCanvas.ActualHeight / 2.0;
+        double oldAxisX = centerX + _previewPan.X;
+        double oldAxisY = centerY + _previewPan.Y;
+
+        double worldX = (point.Position.X - oldAxisX) / oldZoom;
+        double worldY = (oldAxisY - point.Position.Y) / oldZoom;
+
+        _previewZoom = newZoom;
+
+        double newAxisX = point.Position.X - (worldX * newZoom);
+        double newAxisY = point.Position.Y + (worldY * newZoom);
+        _previewPan = new Vector2((float)(newAxisX - centerX), (float)(newAxisY - centerY));
+
+        UpdateAnimationPreviewFrame();
         e.Handled = true;
     }
 
@@ -398,13 +483,36 @@ public sealed partial class FrameCoordinateEditor : UserControl
         WriteableBitmap frame = _previewFrames[frameIndex];
         IntVector2 offset = frameIndex < _previewOffsets.Count ? _previewOffsets[frameIndex] : new IntVector2(0, 0);
 
-        AnimationPreviewImage.Source = frame;
-        AnimationPreviewImage.Width = frame.PixelWidth;
-        AnimationPreviewImage.Height = frame.PixelHeight;
-        AnimationPreviewImage.RenderTransform = new TranslateTransform
+        double canvasWidth = AnimationPreviewCanvas.ActualWidth;
+        double canvasHeight = AnimationPreviewCanvas.ActualHeight;
+        if (canvasWidth <= 0 || canvasHeight <= 0)
         {
-            X = offset.X,
-            Y = -offset.Y
-        };
+            return;
+        }
+
+        double centerX = canvasWidth / 2.0;
+        double centerY = canvasHeight / 2.0;
+        double axisX = centerX + _previewPan.X;
+        double axisY = centerY + _previewPan.Y;
+
+        PreviewXAxis.Width = canvasWidth;
+        Canvas.SetLeft(PreviewXAxis, 0);
+        Canvas.SetTop(PreviewXAxis, axisY - (PreviewXAxis.Height / 2.0));
+
+        PreviewYAxis.Height = canvasHeight;
+        Canvas.SetLeft(PreviewYAxis, axisX - (PreviewYAxis.Width / 2.0));
+        Canvas.SetTop(PreviewYAxis, 0);
+
+        double spriteWidth = Math.Max(1.0, frame.PixelWidth * _previewZoom);
+        double spriteHeight = Math.Max(1.0, frame.PixelHeight * _previewZoom);
+        double spriteCanvasX = axisX + (offset.X * _previewZoom);
+        double spriteCanvasY = axisY - (offset.Y * _previewZoom);
+
+        AnimationPreviewImage.Source = frame;
+        AnimationPreviewImage.Width = spriteWidth;
+        AnimationPreviewImage.Height = spriteHeight;
+        AnimationPreviewImage.RenderTransform = null;
+        Canvas.SetLeft(AnimationPreviewImage, spriteCanvasX - (spriteWidth / 2.0));
+        Canvas.SetTop(AnimationPreviewImage, spriteCanvasY - (spriteHeight / 2.0));
     }
 }

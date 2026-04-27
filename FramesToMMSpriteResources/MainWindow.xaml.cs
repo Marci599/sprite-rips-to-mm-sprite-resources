@@ -2166,6 +2166,17 @@ namespace FramesToMMSpriteResources
                 e.Key == Windows.System.VirtualKey.RightControl)
             {
                 _isCtrlHeld = true;
+                return;
+            }
+
+            bool isFrameEditorOpen =
+                FramePanel.Visibility == Visibility.Visible &&
+                TreeViewControl.SelectedNode != null &&
+                (TreeViewControl.SelectedNode.Content as TreeItem)?.Depth == ItemDepth.Frame;
+
+            if (isFrameEditorOpen && FrameCoordinateEditorControl.TryHandleOffsetNudgeKey(e.Key))
+            {
+                e.Handled = true;
             }
         }
 

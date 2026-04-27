@@ -39,20 +39,26 @@
                         BorderThickness="1">
                     <StackPanel Spacing="6">
                         <TextBlock Text="Animation Preview" FontSize="12" Opacity="0.9"/>
-                        <Grid Width="96" Height="96">
-                            <Rectangle Fill="#44000000"/>
+                        <Canvas x:Name="AnimationPreviewCanvas"
+                                Width="96"
+                                Height="96"
+                                Background="#44000000"
+                                SizeChanged="AnimationPreviewCanvas_SizeChanged"
+                                PointerPressed="AnimationPreviewCanvas_PointerPressed"
+                                PointerMoved="AnimationPreviewCanvas_PointerMoved"
+                                PointerReleased="AnimationPreviewCanvas_PointerReleased"
+                                PointerExited="AnimationPreviewCanvas_PointerReleased"
+                                PointerWheelChanged="AnimationPreviewCanvas_PointerWheelChanged">
                             <Rectangle x:Name="PreviewXAxis"
                                        Height="1"
                                        Fill="{ThemeResource TextFillColorSecondaryBrush}"
-                                       Opacity="0.8"
-                                       VerticalAlignment="Center"/>
+                                       Opacity="0.8"/>
                             <Rectangle x:Name="PreviewYAxis"
                                        Width="1"
                                        Fill="{ThemeResource TextFillColorSecondaryBrush}"
-                                       Opacity="0.8"
-                                       HorizontalAlignment="Center"/>
+                                       Opacity="0.8"/>
                             <Image x:Name="AnimationPreviewImage" Stretch="None"/>
-                        </Grid>
+                        </Canvas>
                     </StackPanel>
                 </Border>
             </Grid>
