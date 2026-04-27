@@ -93,6 +93,7 @@ namespace FramesToMMSpriteResources
             Y = y;
         }
 
+        [JsonIgnore]
         public int SqrMagnitude => X * X + Y * Y;
 
         public bool Equals(IntVector2 other)
@@ -889,9 +890,17 @@ namespace FramesToMMSpriteResources
                     {
                         if(Path.GetExtension(frameFile) != ".json")
                         {
-                            if(animationConfig.frameCongfigs.Count < fileCount)
+                            string fileName = Path.GetFileNameWithoutExtension(frameFile);
+                            if (animationConfig.frameCongfigs.Count < fileCount)
                             {
-                                animationConfig.frameCongfigs.Add(new FrameConfig());
+                                animationConfig.frameCongfigs.Add(new FrameConfig(fileName));
+                                
+                            }
+                            else
+                            {
+                                animationConfig.frameCongfigs[frameIndex].Name = fileName;
+                                Debug.WriteLine(animationConfig.frameCongfigs[frameIndex].Offset.ToString());
+                                
                             }
 
                             string frameName = frameIndex.ToString("D3");
@@ -1435,8 +1444,26 @@ namespace FramesToMMSpriteResources
                         currentConfigs.Add(programConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].frameCongfigs[int.Parse(selectedNodeName)]);
                     }
 
-                    _ = FrameCoordinateEditorControl.SetSpriteImageUriAsync(@"C:\Users\katon\GitHub\sprite-rips-to-mm-sprite-resources\Assets\NSMBU\V_Yoshi\raw\Idle\yoshi-000.png");
-                    FrameCoordinateEditorControl.SpritePosition = Vector2.Zero;
+                    string gameThemePath;
+                    if (usingGameThemes)
+                    {
+                        gameThemePath = Path.Combine(workingPath, gameThemeName);
+                    }
+                    else
+                    {
+                        gameThemePath = workingPath;
+                    }
+
+                    string framePath = Path.Combine(gameThemePath, subjectName, "raw", animationName, frameConfig.Name) + ".png";
+
+                    _ = FrameCoordinateEditorControl.SetSpriteImageUriAsync($@"{framePath}");
+
+                    
+
+                    FrameCoordinateEditorControl.SpritePosition = frameConfig.Offset;
+
+                    FrameCoordinateEditorControl.SpritePositionChanged += SpriteOffset_ValueChanged;
+
 
 
 
@@ -1471,6 +1498,18 @@ namespace FramesToMMSpriteResources
             DelayTextBox.ValueChanged -= DelayTextBox_ValueChanged;
             OffsetXTextBox.ValueChanged -= OffsetXTextBox_ValueChanged;
             OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
+
+            FrameCoordinateEditorControl.SpritePositionChanged -= SpriteOffset_ValueChanged;
+        }
+
+        private void SpriteOffset_ValueChanged(IntVector2 intVector2)
+        {
+            foreach (FrameConfig currentConfig in currentConfigs)
+            {
+                currentConfig!.Offset = intVector2;
+            }
+
+
         }
 
         private void OffsetYTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
@@ -1684,6 +1723,11 @@ namespace FramesToMMSpriteResources
 
             var bottomPanelVisual = ElementCompositionPreview.GetElementVisual(BottomBarStackPanel);
             bottomPanelVisual.Offset = new Vector3(0, (float)SaveBarBorder.ActualHeight, 0);
+        }
+
+        private void SetInfoBar(string debug)
+        {
+            SetInfoBar(InfoBarSeverity.Informational, debug, "");
         }
 
         private void SetInfoBar(InfoBarSeverity severity, string title, string message, bool isClosable = true)

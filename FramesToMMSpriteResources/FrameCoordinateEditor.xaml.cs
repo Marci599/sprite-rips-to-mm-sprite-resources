@@ -19,7 +19,7 @@ namespace FramesToMMSpriteResources;
 public sealed partial class FrameCoordinateEditor : UserControl
 {
     private Vector2 _pan = Vector2.Zero;
-    private Vector2 _spritePosition = Vector2.Zero;
+    private IntVector2 _spritePosition = new IntVector2(0,0);
     private Vector2 _dragStartPointer;
     private Vector2 _dragStartPan;
     private bool _isDragging;
@@ -62,7 +62,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         UpdateVisuals();
     }
 
-    public Vector2 SpritePosition
+    public IntVector2 SpritePosition
     {
         get => _spritePosition;
         set
@@ -74,7 +74,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
     }
 
-    public event Action<Vector2>? SpritePositionChanged;
+    public event Action<IntVector2>? SpritePositionChanged;
 
     public async System.Threading.Tasks.Task SetSpriteImageUriAsync(string uri)
     {
@@ -434,15 +434,33 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void VectorXTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
-        _spritePosition = new Vector2(double.IsNaN(sender.Value) ? 0 : (float)sender.Value, _spritePosition.Y);
+        _spritePosition = new IntVector2(double.IsNaN(sender.Value) ? 0 : (int)sender.Value, _spritePosition.Y);
         UpdateVisuals();
         SpritePositionChanged?.Invoke(_spritePosition);
     }
 
     private void VectorYTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
-        _spritePosition = new Vector2(_spritePosition.X, double.IsNaN(sender.Value) ? 0 : (float)sender.Value);
+        _spritePosition = new IntVector2(_spritePosition.X, double.IsNaN(sender.Value) ? 0 : (int)sender.Value);
         UpdateVisuals();
         SpritePositionChanged?.Invoke(_spritePosition);
+    }
+
+    private void ALignDownButton_Click(object sender, RoutedEventArgs e)
+    {
+        VectorXTextBox.Value = 0;
+        VectorYTextBox.Value = _spriteSourceHeight / 2;
+    }
+
+    private void ALignTopLeftButton_Click(object sender, RoutedEventArgs e)
+    {
+        VectorXTextBox.Value = (_spriteSourceWidth / 2);
+        VectorYTextBox.Value = -(_spriteSourceHeight / 2);
+    }
+
+    private void ALignCenterButton_Click(object sender, RoutedEventArgs e)
+    {
+        VectorXTextBox.Value = 0;
+        VectorYTextBox.Value = 0;
     }
 }
