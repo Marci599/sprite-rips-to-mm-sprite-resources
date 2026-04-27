@@ -2,8 +2,11 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.UI.Xaml.Threading;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -26,10 +29,18 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private const int CheckerRenderScale = 1;
     private DateTime _lastInteractionUtc = DateTime.MinValue;
     private bool _isUpdatingZoomControls;
+    private readonly DispatcherTimer _previewTimer = new DispatcherTimer();
+    private IReadOnlyList<WriteableBitmap> _previewFrames = Array.Empty<WriteableBitmap>();
+    private IReadOnlyList<IntVector2> _previewOffsets = Array.Empty<IntVector2>();
+    private int _previewFrameIndex;
+    private int _previewTickCount;
+    private const int PreviewTicksPerFrame = 2;
 
     public FrameCoordinateEditor()
     {
         this.InitializeComponent();
+        _previewTimer.Interval = TimeSpan.FromSeconds(1.0 / 60.0);
+        _previewTimer.Tick += PreviewTimer_Tick;
         VectorXTextBox.Value = 0;
         VectorYTextBox.Value = 0;
         ZoomSlider.Value = 100;
@@ -57,10 +68,28 @@ public sealed partial class FrameCoordinateEditor : UserControl
         UpdateVisuals();
     }
 
+    public void SetAnimationPreviewFrames(IReadOnlyList<WriteableBitmap> frames, IReadOnlyList<IntVector2> offsets)
+    {
+        _previewFrames = frames;
+        _previewOffsets = offsets;
+        _previewFrameIndex = 0;
+        _previewTickCount = 0;
+        UpdateAnimationPreviewFrame();
+
+        if (_previewFrames.Count > 0)
+        {
+            _previewTimer.Start();
+        }
+        else
+        {
+            _previewTimer.Stop();
+        }
+    }
+
     public void UnloadSprite()
     {
         SpriteImage.Source = null;
-        //UpdateVisuals();
+        SetAnimationPreviewFrames(Array.Empty<WriteableBitmap>(), Array.Empty<IntVector2>());
     }
 
     private void UpdateVisuals()
@@ -156,6 +185,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void CoordinateCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
     {
+        this.Focus(FocusState.Programmatic);
         var point = e.GetCurrentPoint(CoordinateCanvas);
         _dragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
         _dragStartPan = _pan;
@@ -307,5 +337,74 @@ public sealed partial class FrameCoordinateEditor : UserControl
     {
         VectorXTextBox.Value = 0;
         VectorYTextBox.Value = 0;
+    }
+
+    private void RootGrid_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        int nextX = _spritePosition.X;
+        int nextY = _spritePosition.Y;
+
+        switch (e.Key)
+        {
+            case Windows.System.VirtualKey.W:
+                nextY += 1;
+                break;
+            case Windows.System.VirtualKey.A:
+                nextX -= 1;
+                break;
+            case Windows.System.VirtualKey.S:
+                nextY -= 1;
+                break;
+            case Windows.System.VirtualKey.D:
+                nextX += 1;
+                break;
+            default:
+                return;
+        }
+
+        VectorXTextBox.Value = nextX;
+        VectorYTextBox.Value = nextY;
+        e.Handled = true;
+    }
+
+    private void PreviewTimer_Tick(object? sender, object e)
+    {
+        if (_previewFrames.Count == 0)
+        {
+            _previewTimer.Stop();
+            return;
+        }
+
+        _previewTickCount++;
+        if (_previewTickCount < PreviewTicksPerFrame)
+        {
+            return;
+        }
+
+        _previewTickCount = 0;
+        _previewFrameIndex = (_previewFrameIndex + 1) % _previewFrames.Count;
+        UpdateAnimationPreviewFrame();
+    }
+
+    private void UpdateAnimationPreviewFrame()
+    {
+        if (_previewFrames.Count == 0)
+        {
+            AnimationPreviewImage.Source = null;
+            return;
+        }
+
+        int frameIndex = Math.Clamp(_previewFrameIndex, 0, _previewFrames.Count - 1);
+        WriteableBitmap frame = _previewFrames[frameIndex];
+        IntVector2 offset = frameIndex < _previewOffsets.Count ? _previewOffsets[frameIndex] : new IntVector2(0, 0);
+
+        AnimationPreviewImage.Source = frame;
+        AnimationPreviewImage.Width = frame.PixelWidth;
+        AnimationPreviewImage.Height = frame.PixelHeight;
+        AnimationPreviewImage.RenderTransform = new TranslateTransform
+        {
+            X = offset.X,
+            Y = -offset.Y
+        };
     }
 }
