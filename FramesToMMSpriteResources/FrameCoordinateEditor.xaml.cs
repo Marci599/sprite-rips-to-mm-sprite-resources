@@ -19,7 +19,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private Vector2 _dragStartPan;
     private bool _isDragging;
     private float _zoom = 1.0f;
-    private const float MinZoom = 0.3f;
+    private const float MinZoom = 0.2f;
     private const float MaxZoom = 18.0f;
     private WriteableBitmap? _checkerBitmap;
     private byte[]? _checkerPixels;
@@ -32,10 +32,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private IReadOnlyList<IntVector2> _previewOffsets = Array.Empty<IntVector2>();
     private int _previewFrameIndex;
     private int _previewTickCount;
-    private const int PreviewTicksPerFrame = 2;
+    private const int PreviewTicksPerFrame = 1;
     private Vector2 _previewPan = Vector2.Zero;
     private float _previewZoom = 1.0f;
-    private const float MinPreviewZoom = 0.25f;
+    private const float MinPreviewZoom = 0.1f;
     private const float MaxPreviewZoom = 12.0f;
     private bool _isPreviewDragging;
     private Vector2 _previewDragStartPointer;
@@ -80,8 +80,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _previewOffsets = offsets;
         _previewFrameIndex = 0;
         _previewTickCount = 0;
-        _previewPan = Vector2.Zero;
-        _previewZoom = 1.0f;
+ 
         UpdateAnimationPreviewFrame();
 
         if (_previewFrames.Count > 0)
@@ -311,7 +310,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private void CenterOriginButton_Click(object sender, RoutedEventArgs e)
     {
         _pan = Vector2.Zero;
+        _previewPan = Vector2.Zero;
+        
         _lastInteractionUtc = DateTime.UtcNow;
+        UpdateAnimationPreviewFrame();
         UpdateVisuals();
     }
 

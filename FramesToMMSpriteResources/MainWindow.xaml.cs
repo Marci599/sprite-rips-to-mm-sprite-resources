@@ -1589,13 +1589,14 @@ namespace FramesToMMSpriteResources
                         }
                         
                         IsLoadingFrames = false;
+                        FrameCoordinateEditorControl.SetAnimationPreviewFrames(animationSpriteFrame.WriteableBitmaps, animationConfig.frameCongfigs.Select(frame => frame.Offset).ToList());
                     }
 
 
                     if ((TreeViewControl.SelectedNode.Content as TreeItem)!.Depth == ItemDepth.Frame)
                     {
                         FrameCoordinateEditorControl.SetSpriteImage(animationSpriteFrame.WriteableBitmaps[selectedIndex]);
-                        FrameCoordinateEditorControl.SetAnimationPreviewFrames(animationSpriteFrame.WriteableBitmaps, animationConfig.frameCongfigs.Select(frame => frame.Offset).ToList());
+                    
 
 
 
