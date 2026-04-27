@@ -2174,7 +2174,7 @@ namespace FramesToMMSpriteResources
                 TreeViewControl.SelectedNode != null &&
                 (TreeViewControl.SelectedNode.Content as TreeItem)?.Depth == ItemDepth.Frame;
 
-            if (isFrameEditorOpen && FrameCoordinateEditorControl.TryHandleOffsetNudgeKey(e.Key))
+            if (isFrameEditorOpen && FrameCoordinateEditorControl.HandleNudgeKeyDown(e.Key))
             {
                 e.Handled = true;
             }
@@ -2188,6 +2188,8 @@ namespace FramesToMMSpriteResources
             {
                 _isCtrlHeld = false;
             }
+
+            FrameCoordinateEditorControl.HandleNudgeKeyUp(e.Key);
         }
 
         private void ClearAllTreeItemSelections()

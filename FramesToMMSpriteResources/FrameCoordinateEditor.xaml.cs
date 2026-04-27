@@ -40,6 +40,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private bool _isPreviewDragging;
     private Vector2 _previewDragStartPointer;
     private Vector2 _previewDragStartPan;
+    private readonly HashSet<Windows.System.VirtualKey> _heldNudgeKeys = [];
 
     public FrameCoordinateEditor()
     {
@@ -346,37 +347,51 @@ public sealed partial class FrameCoordinateEditor : UserControl
         VectorYTextBox.Value = 0;
     }
 
-    public bool TryHandleOffsetNudgeKey(Windows.System.VirtualKey key)
+    public void NudgeOffset(int dx, int dy)
     {
-        int nextX = _spritePosition.X;
-        int nextY = _spritePosition.Y;
-
-        switch (key)
+        if (dx == 0 && dy == 0)
         {
-            case Windows.System.VirtualKey.W:
-                nextY += 1;
-                break;
-            case Windows.System.VirtualKey.A:
-                nextX -= 1;
-                break;
-            case Windows.System.VirtualKey.S:
-                nextY -= 1;
-                break;
-            case Windows.System.VirtualKey.D:
-                nextX += 1;
-                break;
-            default:
-                return false;
+            return;
         }
 
-        VectorXTextBox.Value = nextX;
-        VectorYTextBox.Value = nextY;
+        VectorXTextBox.Value = _spritePosition.X + dx;
+        VectorYTextBox.Value = _spritePosition.Y + dy;
+    }
+
+    public bool HandleNudgeKeyDown(Windows.System.VirtualKey key)
+    {
+        if (!IsNudgeKey(key))
+        {
+            return false;
+        }
+
+        _heldNudgeKeys.Add(key);
+        ApplyHeldNudgeKeys();
+        return true;
+    }
+
+    public bool HandleNudgeKeyUp(Windows.System.VirtualKey key)
+    {
+        if (!IsNudgeKey(key))
+        {
+            return false;
+        }
+
+        _heldNudgeKeys.Remove(key);
         return true;
     }
 
     private void RootGrid_KeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (TryHandleOffsetNudgeKey(e.Key))
+        if (HandleNudgeKeyDown(e.Key))
+        {
+            e.Handled = true;
+        }
+    }
+
+    private void RootGrid_KeyUp(object sender, KeyRoutedEventArgs e)
+    {
+        if (HandleNudgeKeyUp(e.Key))
         {
             e.Handled = true;
         }
@@ -514,5 +529,23 @@ public sealed partial class FrameCoordinateEditor : UserControl
         AnimationPreviewImage.RenderTransform = null;
         Canvas.SetLeft(AnimationPreviewImage, spriteCanvasX - (spriteWidth / 2.0));
         Canvas.SetTop(AnimationPreviewImage, spriteCanvasY - (spriteHeight / 2.0));
+    }
+
+    private static bool IsNudgeKey(Windows.System.VirtualKey key)
+    {
+        return key == Windows.System.VirtualKey.W ||
+               key == Windows.System.VirtualKey.A ||
+               key == Windows.System.VirtualKey.S ||
+               key == Windows.System.VirtualKey.D;
+    }
+
+    private void ApplyHeldNudgeKeys()
+    {
+        int dx = (_heldNudgeKeys.Contains(Windows.System.VirtualKey.D) ? 1 : 0) -
+                 (_heldNudgeKeys.Contains(Windows.System.VirtualKey.A) ? 1 : 0);
+        int dy = (_heldNudgeKeys.Contains(Windows.System.VirtualKey.W) ? 1 : 0) -
+                 (_heldNudgeKeys.Contains(Windows.System.VirtualKey.S) ? 1 : 0);
+
+        NudgeOffset(dx, dy);
     }
 }
