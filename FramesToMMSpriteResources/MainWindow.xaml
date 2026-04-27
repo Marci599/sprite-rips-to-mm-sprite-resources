@@ -295,11 +295,11 @@
 
                         <!-- Frame Panel (hidden by default) -->
                         <Grid x:Name="FramePanel" Visibility="Collapsed">
-                            <Grid x:Name="FrameDetailPanel" Padding="20 20 20 90">
+                            
                                 <local:FrameCoordinateEditor x:Name="FrameCoordinateEditorControl"
                                                              HorizontalAlignment="Stretch"
                                                              VerticalAlignment="Stretch"/>
-                            </Grid>
+                            
                         </Grid>
 
 

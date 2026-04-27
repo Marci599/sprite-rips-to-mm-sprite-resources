@@ -84,8 +84,8 @@ namespace FramesToMMSpriteResources
 
     public struct IntVector2
     {
-        public int X { get; }
-        public int Y { get; }
+        public int X { get; set; }
+        public int Y { get; set; }
 
         public IntVector2(int x, int y)
         {
@@ -899,7 +899,7 @@ namespace FramesToMMSpriteResources
                             else
                             {
                                 animationConfig.frameCongfigs[frameIndex].Name = fileName;
-                                Debug.WriteLine(animationConfig.frameCongfigs[frameIndex].Offset.ToString());
+                   
                                 
                             }
 

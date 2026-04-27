@@ -3,13 +3,13 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <Grid ColumnSpacing="10">
+    <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" CornerRadius="8" Padding="0" Background="{ThemeResource LayerFillColorDefaultBrush}">
+        <Border Margin="20 20 10 90" Grid.Column="0" CornerRadius="8" Padding="0" Background="{ThemeResource LayerFillColorDefaultBrush}">
             <Canvas x:Name="CoordinateCanvas"
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Stretch"
@@ -27,80 +27,92 @@
             </Canvas>
         </Border>
 
-        <StackPanel Grid.Column="1" Spacing="8" Width="230">
-            <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="Canvas" Style="{StaticResource SectionHeaderStyle}"/>
-                    <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                    <TextBlock Text="Drag to pan, mouse wheel to zoom"
+        <ScrollView Grid.Column="1" Width="250" CornerRadius="0">
+            <StackPanel Spacing="10"  Margin="0 20 20 90">
+                <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Canvas" Style="{StaticResource SectionHeaderStyle}"/>
+                        <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+                        <TextBlock Text="Drag to pan, mouse wheel to zoom"
                        Style="{StaticResource HelperTextStyle}" TextWrapping="Wrap"/>
-                    <Grid ColumnSpacing="8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="70"/>
-                        </Grid.ColumnDefinitions>
-                        <Slider x:Name="ZoomSlider"
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="70"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="ZoomSlider"
                             Grid.Column="0"
                             Header="Zoom"
                             Minimum="30"
                             Maximum="1800"
                             StepFrequency="1"
                             ValueChanged="ZoomSlider_ValueChanged"/>
-                        <NumberBox x:Name="ZoomNumberBox"
+                            <NumberBox x:Name="ZoomNumberBox"
                            Grid.Column="1"
                            Header="%"
                            Minimum="30"
                            Maximum="1800"
                            SpinButtonPlacementMode="Compact"
                            ValueChanged="ZoomNumberBox_ValueChanged"/>
-                    </Grid>
-                    <Button Click="CenterOriginButton_Click" HorizontalAlignment="Stretch">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <FontIcon Glyph="&#xE777;" FontSize="12"/>
-                            <TextBlock Text="Center origin"/>
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-            </Border>
+                        </Grid>
+                        <Button Click="CenterOriginButton_Click" HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE777;" FontSize="12"/>
+                                <TextBlock Text="Center origin"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
 
-            <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="Properties" Style="{StaticResource SectionHeaderStyle}"/>
-                    <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                    <TextBlock Text="WASD to move sprite"
+                <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Offset" Style="{StaticResource SectionHeaderStyle}"/>
+                        <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+                        <TextBlock Text="WASD to move"
                 Style="{StaticResource HelperTextStyle}" TextWrapping="Wrap"/>
-                    <Grid ColumnSpacing="10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <NumberBox Grid.Column="0" x:Name="VectorXTextBox" Header="X" Minimum="-999999" Maximum="999999" ValueChanged="VectorXTextBox_ValueChanged"/>
-                        <NumberBox Grid.Column="1" x:Name="VectorYTextBox" Header="Y" Minimum="-999999" Maximum="999999" ValueChanged="VectorYTextBox_ValueChanged"/>
-                    </Grid>
-                    <TextBlock Text="Align"/>
-                    <Grid ColumnSpacing="10" Margin="0 -2 0 0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Click="ALignCenterButton_Click" HorizontalAlignment="Stretch" Height="32">
-                            <FontIcon Glyph="&#xE73F;" FontSize="12"/>
-                        </Button>
-                        <Button Grid.Column="1" Click="ALignDownButton_Click" HorizontalAlignment="Stretch" Height="32">
-                            <FontIcon Glyph="&#xE74B;" FontSize="12"/>
-                        </Button>
-                        <Button Grid.Column="2" Click="ALignTopLeftButton_Click" HorizontalAlignment="Stretch" Height="32">
-                            <FontIcon Glyph="&#xEA4F;" FontSize="12"/>
-                        </Button>
-                    </Grid>
-                </StackPanel>
-            </Border>
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <NumberBox Grid.Column="0" x:Name="VectorXTextBox" Header="X" Minimum="-999999" Maximum="999999" ValueChanged="VectorXTextBox_ValueChanged"/>
+                            <NumberBox Grid.Column="1" x:Name="VectorYTextBox" Header="Y" Minimum="-999999" Maximum="999999" ValueChanged="VectorYTextBox_ValueChanged"/>
+                        </Grid>
+                        <TextBlock Text="Align"/>
+                        <Grid ColumnSpacing="10" Margin="0 -2 0 0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Click="ALignCenterButton_Click" HorizontalAlignment="Stretch" Height="32">
+                                <FontIcon Glyph="&#xE73F;" FontSize="12"/>
+                            </Button>
+                            <Button Grid.Column="1" Click="ALignDownButton_Click" HorizontalAlignment="Stretch" Height="32">
+                                <FontIcon Glyph="&#xE74B;" FontSize="12"/>
+                            </Button>
+                            <Button Grid.Column="2" Click="ALignTopLeftButton_Click" HorizontalAlignment="Stretch" Height="32">
+                                <FontIcon Glyph="&#xEA4F;" FontSize="12"/>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+
+                <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 8">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Preview" Style="{StaticResource SectionHeaderStyle}"/>
+                        <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+                        <ToggleSwitch Header="Remove background"/>
+                    </StackPanel>
+                </Border>
 
 
 
 
-        </StackPanel>
+            </StackPanel>
+        </ScrollView>
+
     </Grid>
 
 </UserControl>
