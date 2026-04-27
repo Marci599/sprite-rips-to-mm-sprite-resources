@@ -299,6 +299,9 @@
                                 <local:FrameCoordinateEditor x:Name="FrameCoordinateEditorControl"
                                                              HorizontalAlignment="Stretch"
                                                              VerticalAlignment="Stretch"/>
+                            <Border x:Name="FramesLoadingBorder" Background="{StaticResource SmokeFillColorDefaultBrush}">
+                                <ProgressRing/>
+                            </Border>
                             
                         </Grid>
 

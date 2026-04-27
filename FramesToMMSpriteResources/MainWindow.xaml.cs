@@ -1,4 +1,5 @@
-﻿using Microsoft.UI;
+﻿
+using Microsoft.UI;
 using Microsoft.UI.Composition;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -19,13 +20,18 @@ using System.Linq;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Windows.ApplicationModel;
+using Windows.Graphics.Imaging;
 using Windows.Media.Core;
 using Windows.Media.Playback;
+using Windows.Storage;
 using Windows.Storage.Pickers;
+using Windows.Storage.Streams;
 using Windows.UI.Composition;
+
 
 namespace FramesToMMSpriteResources
 {
@@ -128,6 +134,31 @@ namespace FramesToMMSpriteResources
         }
     }
 
+    public class AnimationSpriteFrame
+    {
+        public string Name;
+        public List<SpriteFrame> SpriteFrames = [];
+        
+        public AnimationSpriteFrame() { }
+        public AnimationSpriteFrame(string name, List<SpriteFrame> spriteFrames)
+        {
+            Name = name;
+            SpriteFrames = spriteFrames;
+        }
+    }
+
+    public class SpriteFrame
+    {
+        public byte[] SpriteSourcePixels;
+        public IntVector2 Size;
+
+        public SpriteFrame(byte[] spriteSourcePixels, IntVector2 size)
+        {
+            this.SpriteSourcePixels = spriteSourcePixels;
+            this.Size = size;
+        }
+    }
+
     public sealed partial class MainWindow : Window
     {
 
@@ -154,6 +185,8 @@ namespace FramesToMMSpriteResources
 
         int fadeOutMs = 50;
         int fadeInMs = 100;
+
+        AnimationSpriteFrame animationSpriteFrame = new AnimationSpriteFrame();
 
         bool _isWindowActive = false;
         public bool IsWindowActive
@@ -340,10 +373,11 @@ namespace FramesToMMSpriteResources
         {
             if (args.WindowActivationState != WindowActivationState.Deactivated)
             {
-                
 
+                FramesLoadingBorder.Child.Visibility = Visibility.Visible;
                 if (activated)
                 {
+                    animationSpriteFrame = new AnimationSpriteFrame();
                     programConfig = LoadProgramConfig();
                     ReloadTreeViewAndConfigs();
                 }
@@ -358,12 +392,15 @@ namespace FramesToMMSpriteResources
                 WorkingPathTextBox.TextChanged += WorkingPathTextBox_LostFocus;
                 AnimationsToggleSwitch.Toggled += AnimationsToggleSwitch_Toggled;
 
+
                 ActivateDelayedAsync();
 
             }
             else
             {
                 IsWindowActive = false;
+                FramesLoadingBorder.Visibility = Visibility.Visible;
+                FramesLoadingBorder.Child.Visibility = Visibility.Collapsed;
 
                 ReduceFileSizeCheckBox.Click -= ReduceFileSizeCheckBox_Click;
                 WorkingPathTextBox.TextChanged -= WorkingPathTextBox_LostFocus;
@@ -1226,6 +1263,8 @@ namespace FramesToMMSpriteResources
             selectedNode.IsSelected = true;
         }
 
+        private CancellationTokenSource? _loadFramesCts;
+
         async void DisplayCorrectPanel(TreeViewNode node, bool animate = true, bool nowGenerated = false)
         {
             
@@ -1242,7 +1281,9 @@ namespace FramesToMMSpriteResources
             switch (depth)
             {
                 case ItemDepth.GameTheme:
-        
+
+                    
+
                     AnimateSaveBarBorder(show: false);
                     gameThemeName = ((node.Content as TreeItem)!).Text;                          
                    
@@ -1283,6 +1324,8 @@ namespace FramesToMMSpriteResources
                     IsHdCheckBox.Click += ClickIsHdCheckBox;
                     break;
                 case ItemDepth.Subject:
+                    
+
                     AnimateSaveBarBorder(show: true);
                     gameThemeName = (node.Parent.Content as TreeItem)!.Text;
                     subjectName = (node.Content as TreeItem)!.Text;
@@ -1348,6 +1391,9 @@ namespace FramesToMMSpriteResources
 
                     break;
                 case ItemDepth.Animation:
+
+      
+
                     AnimateSaveBarBorder(show: true);
                     gameThemeName = (node.Parent.Parent.Content as TreeItem)!.Text;
                     subjectName = (node.Parent.Content as TreeItem)!.Text;
@@ -1407,12 +1453,20 @@ namespace FramesToMMSpriteResources
 
                     break;
                 case ItemDepth.Frame:
+
+
+
                     AnimateSaveBarBorder(show: true);
                     gameThemeName = (node.Parent.Parent.Parent.Content as TreeItem)!.Text;
                     subjectName = (node.Parent.Parent.Content as TreeItem)!.Text;
                     animationName = (node.Parent.Content as TreeItem)!.Text;
                     string frameName = (node.Content as TreeItem)!.Text;
 
+                    if(animationName != animationSpriteFrame.Name)
+                    {
+                        animationSpriteFrame.SpriteFrames = [];
+                        animationSpriteFrame.Name = animationName;
+                    }
 
                     selectedNode = (node.Content as TreeItem);
 
@@ -1437,12 +1491,16 @@ namespace FramesToMMSpriteResources
                         FramePanel.Visibility = Visibility.Visible;
                     }
                     currentConfigs = [];
-                    var frameConfig = programConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].frameCongfigs[int.Parse(frameName)];
+                    animationConfig = programConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName];
+                    int selectedIndex = int.Parse(frameName);
+                    var frameConfig = animationConfig.frameCongfigs[selectedIndex];
 
                     foreach (string selectedNodeName in programConfig.SelectedNodes)
                     {
                         currentConfigs.Add(programConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].frameCongfigs[int.Parse(selectedNodeName)]);
                     }
+
+
 
                     string gameThemePath;
                     if (usingGameThemes)
@@ -1454,9 +1512,47 @@ namespace FramesToMMSpriteResources
                         gameThemePath = workingPath;
                     }
 
-                    string framePath = Path.Combine(gameThemePath, subjectName, "raw", animationName, frameConfig.Name) + ".png";
+                    string animationPath = Path.Combine(gameThemePath, subjectName, "raw", animationName);
 
-                    _ = FrameCoordinateEditorControl.SetSpriteImageUriAsync($@"{framePath}");
+                    if(animationSpriteFrame.SpriteFrames.Count == 0)
+                    {
+                        var tempAnimationSpriteFrame = new AnimationSpriteFrame(animationSpriteFrame.Name, []);
+
+                        FramesLoadingBorder.Visibility = Visibility.Visible;
+                        foreach (FrameConfig frameConfigInLoop in animationConfig.frameCongfigs)
+                        {
+                            string framePath = Path.Combine(animationPath, frameConfigInLoop.Name) + ".png";
+                            StorageFile file;
+                     
+                            file = await StorageFile.GetFileFromPathAsync(framePath);
+                   
+                            using IRandomAccessStream stream = await file.OpenReadAsync();
+                            BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
+                            PixelDataProvider pixelData = await decoder.GetPixelDataAsync(
+                                BitmapPixelFormat.Bgra8,
+                                BitmapAlphaMode.Premultiplied,
+                                new BitmapTransform(),
+                                ExifOrientationMode.IgnoreExifOrientation,
+                                ColorManagementMode.DoNotColorManage);
+
+                            var spriteSourcePixels = pixelData.DetachPixelData();
+                            var spriteSourceWidth = (int)decoder.PixelWidth;
+                            var spriteSourceHeight = (int)decoder.PixelHeight;
+
+                            tempAnimationSpriteFrame.SpriteFrames.Add(new SpriteFrame(spriteSourcePixels, new IntVector2(spriteSourceWidth, spriteSourceHeight)));
+                        }
+
+                        if(IsWindowActive)
+                            FramesLoadingBorder.Visibility = Visibility.Collapsed;
+                        else
+                            FramesLoadingBorder.Child.Visibility = Visibility.Collapsed;
+
+                        animationSpriteFrame = tempAnimationSpriteFrame;
+                    }
+
+
+
+                    FrameCoordinateEditorControl.SetSpriteImage(animationSpriteFrame.SpriteFrames[selectedIndex]);
 
                     
 

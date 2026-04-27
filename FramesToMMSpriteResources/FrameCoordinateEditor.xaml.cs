@@ -29,9 +29,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private WriteableBitmap? _checkerBitmap;
     private byte[]? _checkerPixels;
 
-    private byte[]? _spriteSourcePixels;
-    private int _spriteSourceWidth;
-    private int _spriteSourceHeight;
+    private SpriteFrame? spriteFrame;
     private int _spriteRenderedWidth = -1;
     private int _spriteRenderedHeight = -1;
     private WriteableBitmap? _spriteBitmap;
@@ -58,7 +56,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
             _spriteRenderTimer.Stop();
             StartSpriteBitmapRender(_pendingSpriteWidth, _pendingSpriteHeight);
         };
-        _ = SetSpriteImageUriAsync("ms-appx:///Assets/icon.png");
+
         UpdateVisuals();
     }
 
@@ -76,34 +74,28 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     public event Action<IntVector2>? SpritePositionChanged;
 
-    public async System.Threading.Tasks.Task SetSpriteImageUriAsync(string uri)
+    public void SetSpriteImage(SpriteFrame spriteFrame)
     {
-        StorageFile file;
-        if (Path.IsPathRooted(uri))
-        {
-            file = await StorageFile.GetFileFromPathAsync(uri);
-        }
-        else
-        {
-            file = await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri));
-        }
-        using IRandomAccessStream stream = await file.OpenReadAsync();
-        BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
-        PixelDataProvider pixelData = await decoder.GetPixelDataAsync(
-            BitmapPixelFormat.Bgra8,
-            BitmapAlphaMode.Premultiplied,
-            new BitmapTransform(),
-            ExifOrientationMode.IgnoreExifOrientation,
-            ColorManagementMode.DoNotColorManage);
 
-        _spriteSourcePixels = pixelData.DetachPixelData();
-        _spriteSourceWidth = (int)decoder.PixelWidth;
-        _spriteSourceHeight = (int)decoder.PixelHeight;
+
+        this.spriteFrame = spriteFrame;
         _spriteRenderedWidth = -1;
         _spriteRenderedHeight = -1;
         _spriteRenderCts?.Cancel();
         _spriteRenderTimer.Stop();
         UpdateVisuals();
+    }
+
+    public void UnloadSprite()
+    {
+        _spriteRenderCts?.Cancel();
+        _spriteRenderTimer.Stop();
+        spriteFrame = null;
+        _spriteRenderedWidth = -1;
+        _spriteRenderedHeight = -1;
+        _spriteBitmap = null;
+        SpriteImage.Source = null;
+        //UpdateVisuals();
     }
 
     private void UpdateVisuals()
@@ -134,8 +126,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
         Canvas.SetLeft(YAxis, axisX - (YAxis.Width / 2.0));
         Canvas.SetTop(YAxis, 0);
 
-        double spriteWidth = Math.Max(1.0, _spriteSourceWidth * _zoom);
-        double spriteHeight = Math.Max(1.0, _spriteSourceHeight * _zoom);
+
+        if (spriteFrame == null) return;
+
+        double spriteWidth = Math.Max(1.0, spriteFrame.Size.X * _zoom);
+        double spriteHeight = Math.Max(1.0, spriteFrame.Size.Y * _zoom);
         RequestSpriteBitmapUpdate(Math.Max(1, (int)Math.Round(spriteWidth)), Math.Max(1, (int)Math.Round(spriteHeight)));
 
         double spriteCanvasX = axisX + (_spritePosition.X * _zoom);
@@ -192,7 +187,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void RequestSpriteBitmapUpdate(int targetWidth, int targetHeight)
     {
-        if (_spriteSourcePixels == null || _spriteSourceWidth <= 0 || _spriteSourceHeight <= 0)
+        if (spriteFrame.SpriteSourcePixels == null || spriteFrame.Size.X <= 0 || spriteFrame.Size.Y <= 0)
         {
             return;
         }
@@ -215,7 +210,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void StartSpriteBitmapRender(int targetWidth, int targetHeight)
     {
-        if (_spriteSourcePixels == null || _spriteSourceWidth <= 0 || _spriteSourceHeight <= 0)
+        if (spriteFrame.SpriteSourcePixels == null || spriteFrame.Size.X <= 0 || spriteFrame.Size.Y <= 0)
         {
             return;
         }
@@ -229,9 +224,9 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         _spriteRenderCts = new CancellationTokenSource();
         CancellationToken token = _spriteRenderCts.Token;
-        byte[] sourcePixels = _spriteSourcePixels;
-        int sourceWidth = _spriteSourceWidth;
-        int sourceHeight = _spriteSourceHeight;
+        byte[] sourcePixels = spriteFrame.SpriteSourcePixels;
+        int sourceWidth = spriteFrame.Size.X;
+        int sourceHeight = spriteFrame.Size.Y;
 
         _ = RenderSpriteBitmapAsync(sourcePixels, sourceWidth, sourceHeight, targetWidth, targetHeight, token);
     }
@@ -449,13 +444,13 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private void ALignDownButton_Click(object sender, RoutedEventArgs e)
     {
         VectorXTextBox.Value = 0;
-        VectorYTextBox.Value = _spriteSourceHeight / 2;
+        VectorYTextBox.Value = spriteFrame.Size.Y / 2;
     }
 
     private void ALignTopLeftButton_Click(object sender, RoutedEventArgs e)
     {
-        VectorXTextBox.Value = (_spriteSourceWidth / 2);
-        VectorYTextBox.Value = -(_spriteSourceHeight / 2);
+        VectorXTextBox.Value = (spriteFrame.Size.X / 2);
+        VectorYTextBox.Value = -(spriteFrame.Size.Y / 2);
     }
 
     private void ALignCenterButton_Click(object sender, RoutedEventArgs e)
