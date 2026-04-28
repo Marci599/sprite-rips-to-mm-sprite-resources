@@ -14,7 +14,6 @@ namespace FramesToMMSpriteResources;
 public sealed partial class FrameCoordinateEditor : UserControl
 {
     private Vector2 _pan = Vector2.Zero;
-    private IntVector2 _spritePosition = new IntVector2(0,0);
     private Vector2 _dragStartPointer;
     private Vector2 _dragStartPan;
     private bool _isDragging;
@@ -23,16 +22,15 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private const float MaxZoom = 18.0f;
     private WriteableBitmap? _checkerBitmap;
     private byte[]? _checkerPixels;
-
+    private int _selectedFrame;
     private const int CheckerRenderScale = 1;
     private DateTime _lastInteractionUtc = DateTime.MinValue;
     private bool _isUpdatingZoomControls;
     private readonly DispatcherTimer _previewTimer = new DispatcherTimer();
     private IReadOnlyList<WriteableBitmap> _previewFrames = Array.Empty<WriteableBitmap>();
-    private IReadOnlyList<IntVector2> _previewOffsets = Array.Empty<IntVector2>();
     private int _previewFrameIndex;
     private int _previewTickCount;
-    private const int PreviewTicksPerFrame = 1;
+    private AnimationConfig _animationConfig = new();
     private Vector2 _previewPan = Vector2.Zero;
     private float _previewZoom = 1.0f;
     private const float MinPreviewZoom = 0.1f;
@@ -41,10 +39,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private Vector2 _previewDragStartPointer;
     private Vector2 _previewDragStartPan;
     private readonly HashSet<Windows.System.VirtualKey> _heldNudgeKeys = [];
+    byte lightA, lightB;
 
     public FrameCoordinateEditor()
     {
         this.InitializeComponent();
+        SetCheckeredColors();
         _previewTimer.Interval = TimeSpan.FromSeconds(1.0 / 60.0);
         _previewTimer.Tick += PreviewTimer_Tick;
         VectorXTextBox.Value = 0;
@@ -52,14 +52,40 @@ public sealed partial class FrameCoordinateEditor : UserControl
         ZoomSlider.Value = 100;
         ZoomNumberBox.Value = 100;
         UpdateVisuals();
+
+        this.ActualThemeChanged += ThemeChanged;
+    }
+
+    void ThemeChanged(FrameworkElement fe, object o)
+    {
+        SetCheckeredColors();
+
+        _checkerBitmap = null;
+        UpdateVisuals();
+    }
+
+    void SetCheckeredColors()
+    {
+        bool isLight = ActualTheme == ElementTheme.Light;
+
+        if (isLight)
+        {
+            lightA = 220;
+            lightB = 255;
+        }
+        else
+        {
+            lightA = 30;
+            lightB = 60;
+        }
     }
 
     public IntVector2 SpritePosition
     {
-        get => _spritePosition;
+        get => _animationConfig.frameCongfigs[_selectedFrame].Offset;
         set
         {
-            _spritePosition = value;
+            _animationConfig.frameCongfigs[_selectedFrame].Offset = value;
             VectorXTextBox.Value = value.X;
             VectorYTextBox.Value = value.Y;
             UpdateVisuals();
@@ -68,19 +94,24 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     public event Action<IntVector2>? SpritePositionChanged;
 
-    public void SetSpriteImage(WriteableBitmap writeableBitmap)
+    public void SetSpriteIndex(int index)
     {
-        SpriteImage.Source = writeableBitmap;
+        SpriteImage.Source = _previewFrames[index];
+        _selectedFrame = index;
+        if(index == 0)
+        {
+            index = _previewFrames.Count;
+        }
+        SpriteBeforeImage.Source = _previewFrames[index -1];
         UpdateVisuals();
     }
 
-    public void SetAnimationPreviewFrames(IReadOnlyList<WriteableBitmap> frames, IReadOnlyList<IntVector2> offsets)
+    public void SetupEditor(IReadOnlyList<WriteableBitmap> frames, AnimationConfig animationConfig)
     {
         _previewFrames = frames;
-        _previewOffsets = offsets;
         _previewFrameIndex = 0;
         _previewTickCount = 0;
- 
+        _animationConfig = animationConfig;
         UpdateAnimationPreviewFrame();
 
         if (_previewFrames.Count > 0)
@@ -96,7 +127,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
     public void UnloadSprite()
     {
         SpriteImage.Source = null;
-        SetAnimationPreviewFrames(Array.Empty<WriteableBitmap>(), Array.Empty<IntVector2>());
+        SpriteBeforeImage.Source = null;
+        SetupEditor(Array.Empty<WriteableBitmap>(), new());
     }
 
     private void UpdateVisuals()
@@ -133,12 +165,29 @@ public sealed partial class FrameCoordinateEditor : UserControl
         double spriteWidth = Math.Max(1.0, (SpriteImage.Source as WriteableBitmap).PixelWidth * _zoom);
         double spriteHeight = Math.Max(1.0, (SpriteImage.Source as WriteableBitmap).PixelHeight * _zoom);
 
-        double spriteCanvasX = axisX + (_spritePosition.X * _zoom);
-        double spriteCanvasY = axisY - (_spritePosition.Y * _zoom);
+        double spriteCanvasX = axisX + (_animationConfig.frameCongfigs[_selectedFrame].Offset.X * _zoom);
+        double spriteCanvasY = axisY - (_animationConfig.frameCongfigs[_selectedFrame].Offset.Y * _zoom);
+
+        int index = _selectedFrame;
+        if (index == 0)
+        {
+            index = _previewFrames.Count;
+        }
+
+        double spriteBeforeCanvasX = axisX + (_animationConfig.frameCongfigs[index -1].Offset.X * _zoom);
+        double spriteBeforeCanvasY = axisY - (_animationConfig.frameCongfigs[index -1].Offset.Y * _zoom);
+
         SpriteImage.Width = spriteWidth;
         SpriteImage.Height = spriteHeight;
+
+        SpriteBeforeImage.Width = spriteWidth;
+        SpriteBeforeImage.Height = spriteHeight;
+
         Canvas.SetLeft(SpriteImage, spriteCanvasX - (spriteWidth / 2.0));
         Canvas.SetTop(SpriteImage, spriteCanvasY - (spriteHeight / 2.0));
+
+        Canvas.SetLeft(SpriteBeforeImage, spriteBeforeCanvasX - (spriteWidth / 2.0));
+        Canvas.SetTop(SpriteBeforeImage, spriteBeforeCanvasY - (spriteHeight / 2.0));
 
         UpdateZoomControls();
     }
@@ -170,7 +219,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
             {
                 double sampledCanvasX = x * CheckerRenderScale;
                 int tileX = (int)Math.Floor((sampledCanvasX - axisX) / tileSize);
-                byte color = ((tileX + tileY) & 1) == 0 ? (byte)30 : (byte)60;
+                byte color = ((tileX + tileY) & 1) == 0 ? lightA : lightB;
 
                 _checkerPixels![idx++] = color;
                 _checkerPixels[idx++] = color;
@@ -319,16 +368,16 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void VectorXTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
-        _spritePosition = new IntVector2(double.IsNaN(sender.Value) ? 0 : (int)sender.Value, _spritePosition.Y);
+        SpritePositionChanged?.Invoke(new(double.IsNaN(sender.Value) ? 0 : (int)sender.Value, _animationConfig.frameCongfigs[_selectedFrame].Offset.Y));
         UpdateVisuals();
-        SpritePositionChanged?.Invoke(_spritePosition);
+
     }
 
     private void VectorYTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
-        _spritePosition = new IntVector2(_spritePosition.X, double.IsNaN(sender.Value) ? 0 : (int)sender.Value);
+        SpritePositionChanged?.Invoke(new IntVector2(_animationConfig.frameCongfigs[_selectedFrame].Offset.X, double.IsNaN(sender.Value) ? 0 : (int)sender.Value));
         UpdateVisuals();
-        SpritePositionChanged?.Invoke(_spritePosition);
+
     }
 
     private void ALignDownButton_Click(object sender, RoutedEventArgs e)
@@ -356,8 +405,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
             return;
         }
 
-        VectorXTextBox.Value = _spritePosition.X + dx;
-        VectorYTextBox.Value = _spritePosition.Y + dy;
+        VectorXTextBox.Value = _animationConfig.frameCongfigs[_selectedFrame].Offset.X + dx;
+        VectorYTextBox.Value = _animationConfig.frameCongfigs[_selectedFrame].Offset.Y + dy;
     }
 
     public bool HandleNudgeKeyDown(Windows.System.VirtualKey key)
@@ -478,7 +527,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
 
         _previewTickCount++;
-        if (_previewTickCount < PreviewTicksPerFrame)
+        if (_previewTickCount < _animationConfig.Delay)
         {
             return;
         }
@@ -498,7 +547,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         int frameIndex = Math.Clamp(_previewFrameIndex, 0, _previewFrames.Count - 1);
         WriteableBitmap frame = _previewFrames[frameIndex];
-        IntVector2 offset = frameIndex < _previewOffsets.Count ? _previewOffsets[frameIndex] : new IntVector2(0, 0);
+        IntVector2 offset = frameIndex < _animationConfig.frameCongfigs.Count ? _animationConfig.frameCongfigs[frameIndex].Offset : new IntVector2(0, 0);
 
         double canvasWidth = AnimationPreviewCanvas.ActualWidth;
         double canvasHeight = AnimationPreviewCanvas.ActualHeight;
@@ -539,6 +588,21 @@ public sealed partial class FrameCoordinateEditor : UserControl
                key == Windows.System.VirtualKey.A ||
                key == Windows.System.VirtualKey.S ||
                key == Windows.System.VirtualKey.D;
+    }
+
+    private void ShowPreviousToggleSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if ((sender as ToggleSwitch).IsOn)
+        {
+            SpriteBeforeImage.Visibility = Visibility.Visible;
+            SpriteImage.Opacity = 0.7;
+        }
+        else
+        {
+            SpriteBeforeImage.Visibility = Visibility.Collapsed;
+            SpriteImage.Opacity = 1;
+        }
+     
     }
 
     private void ApplyHeldNudgeKeys()

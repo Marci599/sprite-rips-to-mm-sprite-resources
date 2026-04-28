@@ -58,8 +58,8 @@
                                            Margin="0 0 0 0"
                                             Text="{Binding Content.Text}"
                                            TextTrimming="Clip"/>
-                                <Border Grid.Column="2" Background="{StaticResource SubtleFillColorSecondaryBrush}" CornerRadius="10" MinWidth="20" Height="20" Padding="6 0 6 2" Visibility="{Binding Content.CountText, Converter={StaticResource CountToVisibilityConverter}}">
-                                    <TextBlock Text="{Binding Content.CountText}" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{StaticResource TextFillColorTertiaryBrush}" FontWeight="SemiBold"/>
+                                <Border Grid.Column="2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="10" MinWidth="20" Height="20" Padding="6 0 6 2" Visibility="{Binding Content.CountText, Converter={StaticResource CountToVisibilityConverter}}">
+                                    <TextBlock Text="{Binding Content.CountText}" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorTertiaryBrush}" FontWeight="SemiBold"/>
                                 </Border>
 
                             </Grid>
@@ -134,7 +134,7 @@
                 </BreadcrumbBar.ItemTemplate>
             </BreadcrumbBar>
 
-            <Border Grid.Row="1" Background="{ThemeResource LayerFillColorDefaultBrush}" CornerRadius="20 0 0 0">
+            <Border Grid.Row="1" Background="{ThemeResource LayerFillColorDefaultBrush}" CornerRadius="20 0 0 0" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
                 <ContentControl x:Name="ControlEnabler" HorizontalAlignment="Stretch" 
                     VerticalAlignment="Stretch"
                     HorizontalContentAlignment="Stretch" 
@@ -168,7 +168,7 @@
 
                                                 <Rectangle Style="{StaticResource GroupDividerStyle}"/>
 
-                                                <NumberBox x:Name="ResizeTextBox" PlaceholderText="100" Header="Resize to percent" Minimum="1" Maximum="999999"/>
+                                                <NumberBox x:Name="ResizeTextBox" PlaceholderText="100" Header="Resize to percent" Minimum="1" Maximum="999999" SpinButtonPlacementMode="Inline"/>
 
                                                 <StackPanel Spacing="4">
                                                     <Grid>
@@ -183,7 +183,7 @@
                                                     <TextBlock Text="If already transparent, leave it blank" Style="{StaticResource HelperTextStyle}"/>
                                                 </StackPanel>
 
-                                                <NumberBox x:Name="ThresholdTextBox" PlaceholderText="100" Header="Color threshold" Minimum="0" Maximum="999999"/>
+                                                <NumberBox x:Name="ThresholdTextBox" PlaceholderText="100" Header="Color threshold" Minimum="0" Maximum="999999" SpinButtonPlacementMode="Inline"/>
 
                                                 <CheckBox x:Name="RemoveBackgroundCheckBox" Content="Remove background"/>
                                                 <StackPanel Spacing="4">
@@ -201,10 +201,10 @@
                                                 <TextBlock Text="Exporting" Style="{StaticResource SectionHeaderStyle}"/>
                                                 <Rectangle Style="{StaticResource GroupDividerStyle}"/>
 
-                                                <NumberBox x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width" Minimum="1" Maximum="999999"/>
+                                                <NumberBox x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width" Minimum="1" Maximum="999999" SpinButtonPlacementMode="Inline"/>
 
                                                 <StackPanel Spacing="4">
-                                                    <NumberBox x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height" Minimum="1" Maximum="999999"/>
+                                                    <NumberBox x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height" Minimum="1" Maximum="999999" SpinButtonPlacementMode="Inline"/>
                                                     <TextBlock Text="For automatic sizing, leave it blank" Style="{StaticResource HelperTextStyle}"/>
                                                 </StackPanel>
 
@@ -225,7 +225,7 @@
                                         <TextBlock Text="If disabled, manually modified offsets and sub-positions will remain unchanged"  Style="{StaticResource HelperTextStyle}"/>
                                     </StackPanel>
 
-                                    <NumberBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay" MaxWidth="1000" Minimum="-1" Maximum="999999"/>
+                                    <NumberBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay" MaxWidth="1000" Minimum="-1" Maximum="999999" SpinButtonPlacementMode="Inline"/>
 
              
                                     <Expander HorizontalAlignment="Stretch"
@@ -256,8 +256,8 @@
                                                                     <ColumnDefinition Width="*"/>
                                                                 </Grid.ColumnDefinitions>
 
-                                                                <NumberBox Grid.Column="0" x:Name="OffsetXTextBox" PlaceholderText="0" Header="X" Maximum="999999" Minimum="-999999"/>
-                                                                <NumberBox Grid.Column="1" x:Name="OffsetYTextBox" PlaceholderText="0" Header="Y" Maximum="999999" Minimum="-999999"/>
+                                                                <NumberBox Grid.Column="0" x:Name="OffsetXTextBox" PlaceholderText="0" Header="X" Maximum="999999" Minimum="-999999" SpinButtonPlacementMode="Inline"/>
+                                                                <NumberBox Grid.Column="1" x:Name="OffsetYTextBox" PlaceholderText="0" Header="Y" Maximum="999999" Minimum="-999999" SpinButtonPlacementMode="Inline"/>
 
                                                             </Grid>
                                                             <TextBlock Text="Adjusts the offset of every frame after processing"  Style="{StaticResource HelperTextStyle}"/>
@@ -299,7 +299,7 @@
                                 <local:FrameCoordinateEditor x:Name="FrameCoordinateEditorControl"
                                                              HorizontalAlignment="Stretch"
                                                              VerticalAlignment="Stretch"/>
-                            <Border x:Name="FramesLoadingBorder" Background="{StaticResource SmokeFillColorDefaultBrush}">
+                            <Border x:Name="FramesLoadingBorder" Background="{ThemeResource SmokeFillColorDefaultBrush}">
                                 <ProgressRing/>
                             </Border>
                             
@@ -405,10 +405,11 @@
                     CloseButtonClick="ClickPrimaryInfoBar"/>
                     <Border
                     x:Name="SaveBarBorder"
-                    Background="{StaticResource AcrylicBackgroundFillColorBaseBrush}"
+                    Background="{ThemeResource AcrylicBackgroundFillColorBaseBrush}"
                     CornerRadius="8"
-                    Margin="0 -1 0 0"
-  
+                    Margin="0 -2 0 0"
+                    BorderThickness="1"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                     >
 
                         <Grid ColumnSpacing="8" Padding="16">

@@ -151,8 +151,6 @@ namespace FramesToMMSpriteResources
 
     public sealed partial class MainWindow : Window
     {
-
-        //TODO: USE ORDERED SET FOR UNSELECTING IN ORDER
         //TODO: FIX COLOR FIELD BEING OVERRIDDEN
         //TODO: WHEN HIERARCHY ERROR, AT FIRST IT DOESN'T SHOW
 
@@ -353,7 +351,7 @@ namespace FramesToMMSpriteResources
             programConfig.LastUpdateCheck = now;
     
 
-            await CheckForUpdateAsync();
+            CheckForUpdateAsync();
         }
 
         private void AppWindow_Closing(AppWindow sender, AppWindowClosingEventArgs args)
@@ -390,7 +388,7 @@ namespace FramesToMMSpriteResources
             return $"{version.Major}.{version.Minor}.{version.Build}";
         }
 
-        async Task CheckForUpdateAsync()
+        async void CheckForUpdateAsync()
         {
             string current = GetCurrentVersion();
 
@@ -405,7 +403,7 @@ namespace FramesToMMSpriteResources
                 UpdateInfoBar.IsOpen = true;
             }
         }
-        private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
+        private async void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
         {
             if (args.WindowActivationState != WindowActivationState.Deactivated)
             {
@@ -413,7 +411,7 @@ namespace FramesToMMSpriteResources
                 FramesLoadingBorder.Child.Visibility = Visibility.Visible;
                 if (activated)
                 {
-                    animationSpriteFrame = new AnimationSpriteFrame();
+                    
                     programConfig = LoadProgramConfig();
                     ReloadTreeViewAndConfigs();
                 }
@@ -440,7 +438,8 @@ namespace FramesToMMSpriteResources
                 ReduceFileSizeCheckBox.Click -= ReduceFileSizeCheckBox_Click;
                 WorkingPathTextBox.TextChanged -= WorkingPathTextBox_LostFocus;
                 AnimationsToggleSwitch.Toggled -= AnimationsToggleSwitch_Toggled;
-                WaitThenSave();
+                await WaitThenSave();
+                UnloadResources();
             }
         }
 
@@ -648,6 +647,7 @@ namespace FramesToMMSpriteResources
         {
             SaveAllConfigs();
             programConfig.WorkingPath = (sender as TextBox)!.Text;
+            UnloadResources();
             ReloadTreeViewAndConfigs();
             
         }
@@ -663,7 +663,7 @@ namespace FramesToMMSpriteResources
             programConfig.ReduceFileSize = (sender as CheckBox)!.IsChecked!.Value;
         }
 
-        async void WaitThenSave()
+        async Task WaitThenSave()
         {
 
             TreeViewControl.Focus(FocusState.Programmatic);
@@ -773,9 +773,15 @@ namespace FramesToMMSpriteResources
             SaveJson(Path.Combine(AppContext.BaseDirectory, CONFIG_FILENAME), programConfig);
         }
 
+        void UnloadResources()
+        {
+            animationSpriteFrame = new AnimationSpriteFrame();
+            FrameCoordinateEditorControl.UnloadSprite();
+            programConfig.GameThemeConfigs = [];
+        }
+
         void ReloadTreeViewAndConfigs()
         {
-            programConfig.GameThemeConfigs = [];
             TreeViewControl.RootNodes.Clear();
             TryCloseInfoBar();
             SetUpTreeViewAndConfigs();
@@ -997,7 +1003,7 @@ namespace FramesToMMSpriteResources
                                 (TreeViewControl.SelectedNode.Content as TreeItem).IsSelected = true;
                                 TreeViewControl.SelectedNode = null;
 
-                                if (programConfig.LastSelectedNode == frameName)
+                                if (programConfig.SelectedNodes.Last() == frameName)
                                 {
                                     lastSelectedNode = frameTreeViewNode;
                                 }
@@ -1022,7 +1028,7 @@ namespace FramesToMMSpriteResources
                         (TreeViewControl.SelectedNode.Content as TreeItem).IsSelected = true;
                         TreeViewControl.SelectedNode = null;
 
-                        if (programConfig.LastSelectedNode == animationName)
+                        if (programConfig.SelectedNodes.Last() == animationName)
                         {
                             lastSelectedNode = animationTreeItem;
                         }
@@ -1046,7 +1052,7 @@ namespace FramesToMMSpriteResources
                     (TreeViewControl.SelectedNode.Content as TreeItem).IsSelected = true;
                     TreeViewControl.SelectedNode = null;
 
-                    if (programConfig.LastSelectedNode == subjectName)
+                    if (programConfig.SelectedNodes.Last() == subjectName)
                     {
                         lastSelectedNode = subjectTreeItem;
                     }
@@ -1065,7 +1071,7 @@ namespace FramesToMMSpriteResources
                 (TreeViewControl.SelectedNode.Content as TreeItem).IsSelected = true;
                 TreeViewControl.SelectedNode = null;
 
-                if (programConfig.LastSelectedNode == gameThemeName)
+                if (programConfig.SelectedNodes.Last() == gameThemeName)
                 {
                     lastSelectedNode = gameThemeTreeItem;
                 }
@@ -1131,14 +1137,47 @@ namespace FramesToMMSpriteResources
 
             var selectedNodesCount = programConfig.SelectedNodes?.Count ?? 0;
 
-            if (
-                (selectedNodesCount <= 1 && TreeViewControl.SelectedNode != node) ||
-                (selectedNodesCount > 1 && (!IsCtrlHeld || TreeViewControl.SelectedNode != node))
-            )
+            if(selectedNodesCount > 1)    
             {
+                if (IsCtrlHeld && node == TreeViewControl.SelectedNode)
+                {
+                    var nodeTreeItem = node.Content as TreeItem;
+                    nodeTreeItem.IsSelected = false;
+                    programConfig.SelectedNodes.RemoveAt(programConfig.SelectedNodes.Count -1);
+                    
+          
+                    foreach (TreeViewNode nodeInParent in node.Parent.Children)
+                    {
+                        if((nodeInParent.Content as TreeItem).Text == programConfig.SelectedNodes.Last())
+                        {
+                            node = nodeInParent;
+                            Debug.WriteLine((node.Content as TreeItem).Text);
+                            break;
+                        }
+                    }
+                    WaitThenSelectNode(node);
+                }
+
                 WaitThenDisplayCorrectPanel(node, programConfig.Animations);
             }
+            else
+            {
+                if(TreeViewControl.SelectedNode != node)
+                {
+                    WaitThenDisplayCorrectPanel(node, programConfig.Animations);
+                }
+                else
+                {
+                    TreeViewControl.SelectedNode = null;
+                }
+            }
 
+        }
+
+        async void WaitThenSelectNode(TreeViewNode node)
+        {
+            await Task.Delay(1);
+            TreeViewControl.SelectedNode = node;
         }
 
         void WaitThenDisplayCorrectPanel(TreeViewNode node, bool animate = true, bool nowGenerated = false)
@@ -1146,6 +1185,8 @@ namespace FramesToMMSpriteResources
             TreeViewControl.Focus(FocusState.Programmatic);
    
             SettingsToggleButton.IsChecked = false;
+
+   
             ItemDepth depth = (node.Content as TreeItem).Depth;
             bool sameDepth = false;
             if(programConfig.SelectedNodes != null && (
@@ -1270,18 +1311,18 @@ namespace FramesToMMSpriteResources
 
         void HandleSelection(TreeItem selectedNode, bool nowGenerated, List<String> newSelectedNodePath)
         {
-            
-            if ((!programConfig.SelectedNodePath.SequenceEqual(newSelectedNodePath) || !IsCtrlHeld) && !nowGenerated)
+            bool inSamePath = programConfig.SelectedNodePath.SequenceEqual(newSelectedNodePath);
+            if ((!inSamePath || !IsCtrlHeld) && !nowGenerated)
             {
                 programConfig.SelectedNodes = [];
                 ClearAllTreeItemSelections();
             }
             programConfig.SelectedNodePath = newSelectedNodePath;
-            
+
+            programConfig.SelectedNodes.Remove(selectedNode.Text);
             programConfig.SelectedNodes.Add(selectedNode.Text);
 
-            if(!nowGenerated)
-               programConfig.LastSelectedNode = selectedNode.Text;
+        
 
             selectedNode.IsSelected = true;
         }
@@ -1525,7 +1566,7 @@ namespace FramesToMMSpriteResources
 
                     //TODO: BREAK ASYNC WHEN OUT OF FOCUS OR DIFFERENT ANIMATION SELECTED
                     if (IsLoadingFrames) break;
-                    Debug.WriteLine("01ASD");
+                   
 
                     string gameThemePath;
                     if (usingGameThemes)
@@ -1579,32 +1620,43 @@ namespace FramesToMMSpriteResources
 
                         animationSpriteFrame = tempAnimationSpriteFrame;
 
-                        var selectedNodeAfter = (TreeViewControl.SelectedNode.Content as TreeItem)!;
+                        var selectedNodeAfter = TreeViewControl.SelectedNode;
 
-                        if (selectedNodeAfter.Depth == ItemDepth.Frame)
+                        if(selectedNodeAfter != null)
                         {
-                            frameName = selectedNodeAfter.Text;
-                            selectedIndex = int.Parse(frameName);
-                            frameConfig = animationConfig.frameCongfigs[selectedIndex];
+                            var selectedNodeAfterContent = selectedNodeAfter.Content as TreeItem;
+                            if (selectedNodeAfterContent.Depth == ItemDepth.Frame)
+                            {
+                                frameName = selectedNodeAfterContent.Text;
+                                selectedIndex = int.Parse(frameName);
+                                frameConfig = animationConfig.frameCongfigs[selectedIndex];
+                            }
                         }
+                            
+
+                        
                         
                         IsLoadingFrames = false;
-                        FrameCoordinateEditorControl.SetAnimationPreviewFrames(animationSpriteFrame.WriteableBitmaps, animationConfig.frameCongfigs.Select(frame => frame.Offset).ToList());
+                        FrameCoordinateEditorControl.SetupEditor(animationSpriteFrame.WriteableBitmaps, animationConfig);
                     }
 
-
-                    if ((TreeViewControl.SelectedNode.Content as TreeItem)!.Depth == ItemDepth.Frame)
+                    if(TreeViewControl.SelectedNode != null)
                     {
-                        FrameCoordinateEditorControl.SetSpriteImage(animationSpriteFrame.WriteableBitmaps[selectedIndex]);
-                    
+                        if ((TreeViewControl.SelectedNode.Content as TreeItem)!.Depth == ItemDepth.Frame)
+                        {
+                            FrameCoordinateEditorControl.SetSpriteIndex(selectedIndex);
 
 
 
 
-                        FrameCoordinateEditorControl.SpritePosition = frameConfig.Offset;
 
-                        FrameCoordinateEditorControl.SpritePositionChanged += SpriteOffset_ValueChanged;
+                            FrameCoordinateEditorControl.SpritePosition = frameConfig.Offset;
+
+                            FrameCoordinateEditorControl.SpritePositionChanged += SpriteOffset_ValueChanged;
+                        }
                     }
+
+      
                         
 
 
@@ -1922,6 +1974,7 @@ namespace FramesToMMSpriteResources
             Directory.CreateDirectory(Path.Combine(subject2Path, "Anim2"));
 
             SetInfoBar(InfoBarSeverity.Success, "Example generated", "Rename your folders and fill up the animation folders with frames");
+       
             ReloadTreeViewAndConfigs();
         }
 
@@ -1937,7 +1990,7 @@ namespace FramesToMMSpriteResources
                     sc.BackgroundColor = normalizedHex;
                 }
 
-                ColorPreviewBorder.BorderBrush = (Brush)Application.Current.Resources["SystemControlForegroundBaseLowBrush"];
+                ColorPreviewBorder.BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
             }
             else
             {
@@ -2038,7 +2091,7 @@ namespace FramesToMMSpriteResources
         {
             List<String> fullSelectionPath = [];
             fullSelectionPath.AddRange(programConfig.SelectedNodePath);
-            fullSelectionPath.Add(programConfig.LastSelectedNode);
+            fullSelectionPath.Add(programConfig.SelectedNodes.Last());
             string gameThemeName = fullSelectionPath[0];
             string subjectName = fullSelectionPath[1];
 
@@ -2060,6 +2113,7 @@ namespace FramesToMMSpriteResources
             }
 
             SaveAllConfigs();
+            UnloadResources();
             ReloadTreeViewAndConfigs();
     
             IsGenerating = false;
@@ -2078,7 +2132,6 @@ namespace FramesToMMSpriteResources
             {
                 WorkingPathTextBox.Text = folder.Path;
                 programConfig.WorkingPath = folder.Path;
-                WaitThenSave();
             }
         }
 

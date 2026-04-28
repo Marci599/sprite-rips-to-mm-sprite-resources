@@ -12,7 +12,7 @@
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
-        <Border Margin="20 20 10 90" Grid.Column="0" CornerRadius="8" Padding="0">
+        <Border Margin="20 20 10 90" Grid.Column="0" CornerRadius="8" Padding="0" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
             <Grid>
                 <Canvas x:Name="CoordinateCanvas"
                         HorizontalAlignment="Stretch"
@@ -22,10 +22,11 @@
                         PointerPressed="CoordinateCanvas_PointerPressed"
                         PointerMoved="CoordinateCanvas_PointerMoved"
                         PointerReleased="CoordinateCanvas_PointerReleased"
-                        PointerWheelChanged="CoordinateCanvas_PointerWheelChanged"
-                        PointerExited="CoordinateCanvas_PointerReleased">
+                        PointerWheelChanged="CoordinateCanvas_PointerWheelChanged">
                     <Image x:Name="CheckerboardImage" IsHitTestVisible="False" Stretch="None"/>
-                    <Image x:Name="SpriteImage" Width="48" Height="48" IsHitTestVisible="False" />
+                    <Image x:Name="SpriteBeforeImage" Width="48" Height="48" IsHitTestVisible="False" Opacity="0.5"/>
+
+                    <Image x:Name="SpriteImage" Width="48" Height="48" IsHitTestVisible="False" Opacity="0.7"/>
                     <Rectangle x:Name="XAxis" Height="1.5" Fill="{ThemeResource TextFillColorSecondaryBrush}" Opacity="0.8"/>
                     <Rectangle x:Name="YAxis" Width="1.5" Fill="{ThemeResource TextFillColorSecondaryBrush}" Opacity="0.8"/>
                 </Canvas>
@@ -48,7 +49,6 @@
                                 PointerPressed="AnimationPreviewCanvas_PointerPressed"
                                 PointerMoved="AnimationPreviewCanvas_PointerMoved"
                                 PointerReleased="AnimationPreviewCanvas_PointerReleased"
-                                PointerExited="AnimationPreviewCanvas_PointerReleased"
                                 PointerWheelChanged="AnimationPreviewCanvas_PointerWheelChanged">
                             <Image x:Name="AnimationPreviewImage" Stretch="Fill"/>
                             <Rectangle x:Name="PreviewXAxis"
@@ -114,8 +114,8 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <NumberBox Grid.Column="0" x:Name="VectorXTextBox" Header="X" Minimum="-999999" Maximum="999999" ValueChanged="VectorXTextBox_ValueChanged"/>
-                            <NumberBox Grid.Column="1" x:Name="VectorYTextBox" Header="Y" Minimum="-999999" Maximum="999999" ValueChanged="VectorYTextBox_ValueChanged"/>
+                            <NumberBox Grid.Column="0" x:Name="VectorXTextBox" Header="X" PlaceholderText="0" Minimum="-999999" Maximum="999999" ValueChanged="VectorXTextBox_ValueChanged"/>
+                            <NumberBox Grid.Column="1" x:Name="VectorYTextBox" Header="Y" PlaceholderText="0" Minimum="0" Maximum="999999" ValueChanged="VectorYTextBox_ValueChanged"/>
                         </Grid>
                         <TextBlock Text="Align"/>
                         <Grid ColumnSpacing="10" Margin="0 -2 0 0">
@@ -138,11 +138,13 @@
                 </Border>
 
 
-                <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 8">
+                <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
                     <StackPanel Spacing="12">
                         <TextBlock Text="Preview" Style="{StaticResource SectionHeaderStyle}"/>
                         <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                        <ToggleSwitch Header="Remove background"/>
+                        <ToggleSwitch Header="Remove background" Margin="0 0 0 -8"/>
+                        <ToggleSwitch Header="Crop" Margin="0 0 0 -8"/>
+                        <ToggleSwitch x:Name="ShowPreviousToggleSwitch" Header="Show previous frame behind" Toggled="ShowPreviousToggleSwitch_Toggled" IsOn="True" Margin="0 0 0 -8"/>
                     </StackPanel>
                 </Border>
 
