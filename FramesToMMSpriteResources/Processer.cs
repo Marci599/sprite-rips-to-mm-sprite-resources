@@ -60,7 +60,7 @@ namespace FramesToMMSpriteResources
 
         public static async Task StartProcessAsync(string gameThemeName, string subjectName)
         {
-            programConfig = MainWindow.programConfig;
+            programConfig = MainWindow.ProgramConfig;
             gameThemeConfig = programConfig.GameThemeConfigs[gameThemeName];
             subjectConfig = gameThemeConfig.SubjectConfigs[subjectName];
             parsedBackgroundColor = null;
@@ -70,9 +70,9 @@ namespace FramesToMMSpriteResources
                 parsedBackgroundColor = (r, g, b, a);
             }
 
-            string subjectPath = MainWindow.usingGameThemes
-                ? Path.Combine(MainWindow.workingPath, gameThemeName, subjectName)
-                : Path.Combine(MainWindow.workingPath, subjectName);
+            string subjectPath = MainWindow.IsUsingGameThemes
+                ? Path.Combine(MainWindow.WorkingPath, gameThemeName, subjectName)
+                : Path.Combine(MainWindow.WorkingPath, subjectName);
 
             List<ProcessedSprite> processedSprites = new();
             List<Dictionary<string, object>> animationsMeta = new();

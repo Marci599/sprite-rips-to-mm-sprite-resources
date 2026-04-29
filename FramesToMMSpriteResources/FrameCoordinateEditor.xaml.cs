@@ -8,6 +8,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices.WindowsRuntime;
+using Windows.Globalization;
+using Windows.Globalization.NumberFormatting;
 
 namespace FramesToMMSpriteResources;
 
@@ -18,13 +20,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private Vector2 _dragStartPan;
     private bool _isDragging;
     private float _zoom = 1.0f;
-    private const float MinZoom = 0.2f;
+    private const float MinZoom = 0.1f;
     private const float MaxZoom = 18.0f;
     private WriteableBitmap? _checkerBitmap;
     private byte[]? _checkerPixels;
     private int _selectedFrame;
-    private const int CheckerRenderScale = 1;
-    private DateTime _lastInteractionUtc = DateTime.MinValue;
     private bool _isUpdatingZoomControls;
     private readonly DispatcherTimer _previewTimer = new DispatcherTimer();
     private IReadOnlyList<WriteableBitmap> _previewFrames = Array.Empty<WriteableBitmap>();
@@ -33,7 +33,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private AnimationConfig _animationConfig = new();
     private Vector2 _previewPan = Vector2.Zero;
     private float _previewZoom = 1.0f;
-    private const float MinPreviewZoom = 0.1f;
+    private const float MinPreviewZoom = 0.05f;
     private const float MaxPreviewZoom = 12.0f;
     private bool _isPreviewDragging;
     private Vector2 _previewDragStartPointer;
@@ -49,8 +49,9 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _previewTimer.Tick += PreviewTimer_Tick;
         VectorXTextBox.Value = 0;
         VectorYTextBox.Value = 0;
-        ZoomSlider.Value = 100;
+    
         ZoomNumberBox.Value = 100;
+
         UpdateVisuals();
 
         this.ActualThemeChanged += ThemeChanged;
@@ -106,7 +107,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         UpdateVisuals();
     }
 
-    public void SetupEditor(IReadOnlyList<WriteableBitmap> frames, AnimationConfig animationConfig)
+    public void LoadAnimation(IReadOnlyList<WriteableBitmap> frames, AnimationConfig animationConfig)
     {
         _previewFrames = frames;
         _previewFrameIndex = 0;
@@ -124,11 +125,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
     }
 
-    public void UnloadSprite()
+    public void UnloadAnimation()
     {
         SpriteImage.Source = null;
         SpriteBeforeImage.Source = null;
-        SetupEditor(Array.Empty<WriteableBitmap>(), new());
+        LoadAnimation(Array.Empty<WriteableBitmap>(), new());
     }
 
     private void UpdateVisuals()
@@ -194,8 +195,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void UpdateCheckerboard(double canvasWidth, double canvasHeight, double axisX, double axisY)
     {
-        int pixelWidth = Math.Max(1, (int)Math.Ceiling(canvasWidth / CheckerRenderScale));
-        int pixelHeight = Math.Max(1, (int)Math.Ceiling(canvasHeight / CheckerRenderScale));
+        int pixelWidth = Math.Max(1, (int)Math.Ceiling(canvasWidth));
+        int pixelHeight = Math.Max(1, (int)Math.Ceiling(canvasHeight));
         int byteCount = pixelWidth * pixelHeight * 4;
 
         if (_checkerBitmap == null || _checkerBitmap.PixelWidth != pixelWidth || _checkerBitmap.PixelHeight != pixelHeight)
@@ -213,12 +214,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
         int idx = 0;
         for (int y = 0; y < pixelHeight; y++)
         {
-            double sampledCanvasY = y * CheckerRenderScale;
-            int tileY = (int)Math.Floor((axisY - sampledCanvasY) / tileSize);
+  
+            int tileY = (int)Math.Floor((axisY - y) / tileSize);
             for (int x = 0; x < pixelWidth; x++)
             {
-                double sampledCanvasX = x * CheckerRenderScale;
-                int tileX = (int)Math.Floor((sampledCanvasX - axisX) / tileSize);
+      
+                int tileX = (int)Math.Floor((x - axisX) / tileSize);
                 byte color = ((tileX + tileY) & 1) == 0 ? lightA : lightB;
 
                 _checkerPixels![idx++] = color;
@@ -246,7 +247,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _dragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
         _dragStartPan = _pan;
         _isDragging = true;
-        _lastInteractionUtc = DateTime.UtcNow;
         CoordinateCanvas.CapturePointer(e.Pointer);
     }
 
@@ -260,7 +260,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         var point = e.GetCurrentPoint(CoordinateCanvas);
         var currentPosition = new Vector2((float)point.Position.X, (float)point.Position.Y);
         _pan = _dragStartPan + (currentPosition - _dragStartPointer);
-        _lastInteractionUtc = DateTime.UtcNow;
         UpdateVisuals();
     }
 
@@ -296,7 +295,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         double worldY = (oldAxisY - point.Position.Y) / oldZoom;
 
         _zoom = newZoom;
-        _lastInteractionUtc = DateTime.UtcNow;
 
         double newAxisX = point.Position.X - (worldX * newZoom);
         double newAxisY = point.Position.Y + (worldY * newZoom);
@@ -315,7 +313,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         _isUpdatingZoomControls = true;
         double zoomPercent = Math.Round(_zoom * 100);
-        ZoomSlider.Value = zoomPercent;
+      
         ZoomNumberBox.Value = zoomPercent;
         _isUpdatingZoomControls = false;
     }
@@ -334,7 +332,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
 
         _zoom = newZoom;
-        _lastInteractionUtc = DateTime.UtcNow;
         UpdateVisuals();
     }
 
@@ -352,7 +349,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
 
         _zoom = newZoom;
-        _lastInteractionUtc = DateTime.UtcNow;
         UpdateVisuals();
     }
 
@@ -361,7 +357,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _pan = Vector2.Zero;
         _previewPan = Vector2.Zero;
         
-        _lastInteractionUtc = DateTime.UtcNow;
         UpdateAnimationPreviewFrame();
         UpdateVisuals();
     }

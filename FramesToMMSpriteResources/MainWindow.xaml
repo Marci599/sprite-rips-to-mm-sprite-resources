@@ -265,7 +265,7 @@
                                                     </StackPanel>
                                                 </Border>
                                                 <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}"
-    HorizontalAlignment="Stretch">
+                                                    HorizontalAlignment="Stretch">
                                                     <StackPanel Spacing="12">
                                                         <TextBlock Text="Recover cropped offset" Style="{StaticResource SectionHeaderStyle}"/>
                                                         <Rectangle Style="{StaticResource GroupDividerStyle}"/>
@@ -279,7 +279,7 @@
                                                                 <CheckBox Grid.Column="1" x:Name="RecoverYCheckBox" Content="Y"/>
                                                             </Grid>
                                                             <TextBlock Text="If enabled, the offsets will be adjusted to account for any cropping that was done"
-                Style="{StaticResource HelperTextStyle}"/>
+                                                                Style="{StaticResource HelperTextStyle}"/>
                                                         </StackPanel>
                                                     </StackPanel>
                                                 </Border>
@@ -312,16 +312,57 @@
                                 <StackPanel Padding="20 20 20 20" Spacing="10">
 
 
-                                    <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
+                                    <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" MaxWidth="1000" Padding="16 8 16 16">
                                         <StackPanel Spacing="12">
                                             <TextBlock x:Name="ProgramNameTextBlock" Text="Frames to MM sprite resources v" Style="{StaticResource SectionHeaderStyle}"/>
                                             <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                                            <TextBlock Text="Created by Marci599 for Mario Multiverse.&#x0a;Mario Multiverse (SFMB) created by neoarc."/>
-                                            <TextBlock Text="Using SkiaSharp and Oxipng."/>
-                                            <TextBlock Text="Check GitHub repository for help, updates, examples and issues:"/>
-                                            <HyperlinkButton NavigateUri = "https://github.com/Marci599/sprite-rips-to-mm-sprite-resources" Margin="-12 -14 -12 -4" Padding="11 0 11 4" MinHeight="0">
-                                                <TextBlock Text="github.com/Marci599/sprite-rips-to-mm-sprite-resources"/>
-                                            </HyperlinkButton>
+                                            <TextBlock Text="Created by Marci599 for Mario Multiverse (SFMB).&#x0a;Mario Multiverse (SFMB) created by neoarc."/>
+
+                                            <StackPanel Orientation="Horizontal" Spacing="10" Margin="0 -4 0 0">
+                                                <HyperlinkButton Style="{StaticResource HyperlinkButtonAsButtonStyle}" NavigateUri="https://github.com/Marci599/sprite-rips-to-mm-sprite-resources">
+                                                    <StackPanel Spacing="6" Orientation="Horizontal">
+                                                        
+                                                        <TextBlock Text="GitHub"/>
+                                                        <FontIcon Glyph="&#xE8AD;" FontSize="14"/>
+                                                    </StackPanel>
+                                                </HyperlinkButton>
+                                                <HyperlinkButton Style="{StaticResource HyperlinkButtonAsButtonStyle}" NavigateUri="https://github.com/Marci599/sprite-rips-to-mm-sprite-resources#readme">
+                                                    <StackPanel Spacing="6" Orientation="Horizontal">
+
+                                                        <TextBlock Text="Help / Controls"/>
+                                                        <FontIcon Glyph="&#xE8AD;" FontSize="14"/>
+                                                    </StackPanel>
+                                                </HyperlinkButton>
+                                                <HyperlinkButton Style="{StaticResource HyperlinkButtonAsButtonStyle}" NavigateUri="https://github.com/Marci599/sprite-rips-to-mm-sprite-resources/issues">
+                                                    <StackPanel Spacing="6" Orientation="Horizontal">
+
+                                                        <TextBlock Text="Issues"/>
+                                                        <FontIcon Glyph="&#xE8AD;" FontSize="14"/>
+                                                    </StackPanel>
+                                                </HyperlinkButton>
+                                       
+                                            </StackPanel>
+                                            
+                               
+                                            <TextBlock Text="Used for processing"/>
+                                            <StackPanel Orientation="Horizontal" Spacing="10" Margin="0 -4 0 0">
+                                                <HyperlinkButton Style="{StaticResource HyperlinkButtonAsButtonStyle}" NavigateUri="https://github.com/mono/skiasharp">
+                                                    <StackPanel Spacing="6" Orientation="Horizontal">
+
+                                                        <TextBlock Text="SkiaSharp"/>
+                                                        <FontIcon Glyph="&#xE8AD;" FontSize="14"/>
+                                                    </StackPanel>
+                                                </HyperlinkButton>
+                                                <HyperlinkButton Style="{StaticResource HyperlinkButtonAsButtonStyle}" NavigateUri="https://github.com/oxipng/oxipng">
+                                                    <StackPanel Spacing="6" Orientation="Horizontal">
+
+                                                        <TextBlock Text="Oxipng"/>
+                                                        <FontIcon Glyph="&#xE8AD;" FontSize="14"/>
+                                                    </StackPanel>
+                                                </HyperlinkButton>
+                                       
+                                            </StackPanel>
+                                            
                                         </StackPanel>
                                     </Border>
 
@@ -345,11 +386,11 @@
                                                         </StackPanel>
                                                     </Button>
                                                 </Grid>
-                                                <TextBlock Text="Please provide a path where your folders and files will be / are located"  Style="{StaticResource HelperTextStyle}"/>
+                                                <TextBlock Text="Please provide a path where your folders and files will be located or are already located"  Style="{StaticResource HelperTextStyle}"/>
 
                                                 
                                             </StackPanel>
-                                            <ToggleSwitch x:Name="AnimationsToggleSwitch" Header="Reduce animations"/>
+                   
                                             <StackPanel Spacing="8">
                                                 <TextBlock Text="Manage program"/>
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -376,12 +417,12 @@
 
                                     <InfoBar x:Name="UpdateInfoBar" IsOpen="False" Severity="Informational" MaxWidth="1000" Title="Update available" Message="Download the latest version of this program for an improved experience" IsClosable="False">
                                         <InfoBar.ActionButton>
-                                            <Button HorizontalAlignment="Right" Click="UpdateButton_Click">
+                                            <HyperlinkButton HorizontalAlignment="Right" Style="{StaticResource HyperlinkButtonAsButtonStyle}" NavigateUri="https://github.com/Marci599/sprite-rips-to-mm-sprite-resources/releases/latest">
                                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                                     <TextBlock Text="Download"/>
                                                     <FontIcon Glyph="&#xE8AD;" Opacity="0.67" FontSize="14"/>
                                                 </StackPanel>
-                                            </Button>
+                                            </HyperlinkButton>
                                         </InfoBar.ActionButton>
                                     </InfoBar>
 
@@ -414,24 +455,23 @@
 
                         <Grid ColumnSpacing="8" Padding="16">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
+         
+                   
                             </Grid.ColumnDefinitions>
 
-                            <Grid>
+                            <Grid Grid.Column="0">
 
                                 <StackPanel x:Name="ReduceFileSizeCheckBoxTexts" Margin="35 -2 0 -2">
-                                    <TextBlock Grid.Column="1" Text="Reduce file size" VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="1" Text="If enabled, expect a bit slower generation"  Style="{StaticResource HelperTextStyle}"/>
+                                    <TextBlock Grid.Column="1" Text="Reduce file size" VerticalAlignment="Center" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="1" Text="If enabled, expect a bit slower generation"  Style="{StaticResource HelperTextStyle}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
                                 <CheckBox x:Name="ReduceFileSizeCheckBox" Grid.Column="0" Content="" VerticalAlignment="Center"/>
                             </Grid>
 
 
-                            <Button x:Name="GenerateButton" Grid.Column="4" Content="Generate Subject" MinWidth="120" Click="GenerateButton_Click"/>
+                            <Button x:Name="GenerateButton" Grid.Column="1" Content="Generate Subject" MinWidth="120" Click="GenerateButton_Click"/>
                         </Grid>
                     </Border>
                 </StackPanel>

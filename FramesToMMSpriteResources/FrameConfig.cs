@@ -7,7 +7,7 @@ namespace FramesToMMSpriteResources
         [JsonPropertyName("offset")]
         public IntVector2 Offset = new IntVector2(0,0);
 
-        [JsonPropertyName("name")]
+        [JsonIgnore]
         public string Name;
 
         public FrameConfig()
