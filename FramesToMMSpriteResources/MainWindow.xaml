@@ -7,6 +7,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 
+
  
     mc:Ignorable="d"
     Title="Frames to MM sprite resources">
@@ -169,6 +170,7 @@
                                                 <Rectangle Style="{StaticResource GroupDividerStyle}"/>
 
                                                 <NumberBox x:Name="ResizeTextBox" PlaceholderText="100" Header="Resize to percent" Minimum="1" Maximum="999999" SpinButtonPlacementMode="Inline"/>
+                                      
 
                                                 <StackPanel Spacing="4">
                                                     <Grid>
@@ -176,8 +178,9 @@
                                                             <ColumnDefinition Width="*"/>
                                                             <ColumnDefinition Width="32"/>
                                                         </Grid.ColumnDefinitions>
-                                                        <TextBox x:Name="ColorTextBox" Grid.Column="0" PlaceholderText="#00000000" Header="Background color" Style="{StaticResource InsetTextBoxStyle}" CornerRadius="4 0 0 4"/>
+                                                        <TextBox x:Name="ColorTextBox" Grid.Column="0" PlaceholderText="#00000000" Header="Background color" CornerRadius="4 0 0 4"/>
                                                         <Border x:Name="ColorPreviewBorder" Grid.Column="1" BorderThickness="1" Background="White" CornerRadius="0 4 4 0" Height="32" VerticalAlignment="Bottom"/>
+                                                     
                                                     </Grid>
 
                                                     <TextBlock Text="If already transparent, leave it blank" Style="{StaticResource HelperTextStyle}"/>
@@ -475,9 +478,11 @@
                         </Grid>
                     </Border>
                 </StackPanel>
+                
             </Grid>
-
+            
         </Grid>
+        
     </Grid>
 
 </Window>

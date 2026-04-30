@@ -41,9 +41,6 @@
                     <Setter Property="TextWrapping" Value="Wrap" />
                 </Style>
 
-                <Style x:Key="InsetTextBoxStyle" TargetType="TextBox">
-                    <Setter Property="CornerRadius" Value="4" />
-                </Style>
 
             <Style TargetType="CheckBox" BasedOn="{StaticResource DefaultCheckBoxStyle}">
                 
@@ -182,6 +179,8 @@
                     </Setter.Value>
                 </Setter>
             </Style>
+
+            
         </ResourceDictionary>
     </Application.Resources>
 </Application>

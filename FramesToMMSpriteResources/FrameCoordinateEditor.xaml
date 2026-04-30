@@ -30,19 +30,24 @@
                     <Rectangle x:Name="XAxis" Height="1.5" Fill="{ThemeResource TextFillColorSecondaryBrush}" Opacity="0.8"/>
                     <Rectangle x:Name="YAxis" Width="1.5" Fill="{ThemeResource TextFillColorSecondaryBrush}" Opacity="0.8"/>
                 </Canvas>
-                <Border HorizontalAlignment="Right"
-                        VerticalAlignment="Top"
-                        Margin="10"
+                <StackPanel
+                    Margin="10"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top">
+                <Border 
+                        
                       
-                        CornerRadius="8"
+                        CornerRadius="8 8 0 8"
                         Background="{ThemeResource AcrylicBackgroundFillColorBaseBrush}"
                         BorderBrush="{ThemeResource ControlStrokeColorOnAccentTertiaryBrush}"
-                        BorderThickness="1">
-                    <StackPanel Spacing="6">
+                        BorderThickness="1"
+                    MinWidth="150"
+                    MinHeight="175">
+                        
 
                         <Canvas x:Name="AnimationPreviewCanvas"
-                                Width="125"
-                                Height="150"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch"
                                Background="Transparent"
                                 SizeChanged="AnimationPreviewCanvas_SizeChanged"
                                 PointerPressed="AnimationPreviewCanvas_PointerPressed"
@@ -60,8 +65,49 @@
                                        Opacity="0.8"/>
 
                         </Canvas>
-                    </StackPanel>
+                 
                 </Border>
+                    <Border
+                   
+                        Padding="10"
+                        CornerRadius="0 0 8 8"
+                        Background="{ThemeResource AcrylicBackgroundFillColorBaseBrush}"
+                        BorderBrush="{ThemeResource ControlStrokeColorOnAccentTertiaryBrush}"
+                        Margin="0 -2 0 0"
+                        BorderThickness="1"
+                        HorizontalAlignment="Right">
+                        
+                            <Border CornerRadius="4">
+                            <StackPanel Spacing="0" Orientation="Horizontal">
+                                <NumberBox x:Name="FromNumberBox"
+                                    Width="45"
+                                           Minimum="0"
+                                    Maximum="999"
+                                           PlaceholderText="0"
+                                           ValueChanged="FromNumberBox_ValueChanged"/>
+                          
+                                <Border Background="{ThemeResource SurfaceStrokeColorDefaultBrush}"
+                                        Margin="-1 -1 -1 0"
+                                        BorderThickness="1"
+                                        BorderBrush="{ThemeResource TextControlElevationBorderBrush}"
+                                        Padding="2">
+                                    <TextBlock Text="-" VerticalAlignment="Center" Padding="0 0 0 3"/>
+                                </Border>
+                             
+                                <NumberBox x:Name="ToNumberBox" CornerRadius="0 4 4 0"
+                                      Width="45"           
+                                      Minimum="0"
+                                      Maximum="999"
+                                           PlaceholderText="n"
+                                           ValueChanged="ToNumberBox_ValueChanged"/>
+                            </StackPanel>
+                        </Border>
+                 
+
+
+              
+                    </Border>
+                </StackPanel>
                 <Border
                         Margin="10"
                         Padding="10"
@@ -108,8 +154,8 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <NumberBox Grid.Column="0" x:Name="VectorXTextBox" Header="X" PlaceholderText="0" Minimum="-999999" Maximum="999999" ValueChanged="VectorXTextBox_ValueChanged"/>
-                            <NumberBox Grid.Column="1" x:Name="VectorYTextBox" Header="Y" PlaceholderText="0" Minimum="-999999" Maximum="999999" ValueChanged="VectorYTextBox_ValueChanged"/>
+                            <NumberBox Grid.Column="0" x:Name="OffsetXTextBox" Header="X" PlaceholderText="0" Minimum="-999999" Maximum="999999"/>
+                            <NumberBox Grid.Column="1" x:Name="OffsetYTextBox" Header="Y" PlaceholderText="0" Minimum="-999999" Maximum="999999"/>
                         </Grid>
                         <TextBlock Text="Align"/>
                         <Grid ColumnSpacing="10" Margin="0 -2 0 0">
@@ -134,7 +180,7 @@
 
                 <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
                     <StackPanel Spacing="12">
-                        <TextBlock Text="Preview" Style="{StaticResource SectionHeaderStyle}"/>
+                        <TextBlock Text="Options" Style="{StaticResource SectionHeaderStyle}"/>
                         <Rectangle Style="{StaticResource GroupDividerStyle}"/>
                         <ToggleSwitch Header="Remove background" Margin="0 0 0 -8"/>
                         <ToggleSwitch Header="Crop" Margin="0 0 0 -8"/>

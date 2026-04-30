@@ -26,8 +26,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private byte[]? _checkerPixels;
     private int _selectedFrame;
     private bool _isUpdatingZoomControls;
-    private readonly DispatcherTimer _previewTimer = new DispatcherTimer();
-    private IReadOnlyList<WriteableBitmap> _previewFrames = Array.Empty<WriteableBitmap>();
+    private readonly DispatcherTimer _previewTimer = new();
+    private IReadOnlyList<WriteableBitmap> _previewFrames = [];
     private int _previewFrameIndex;
     private int _previewTickCount;
     private AnimationConfig _animationConfig = new();
@@ -43,18 +43,18 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     public FrameCoordinateEditor()
     {
-        this.InitializeComponent();
+        InitializeComponent();
         SetCheckeredColors();
         _previewTimer.Interval = TimeSpan.FromSeconds(1.0 / 60.0);
+        _previewTimer.Tick -= PreviewTimer_Tick;
         _previewTimer.Tick += PreviewTimer_Tick;
-        VectorXTextBox.Value = 0;
-        VectorYTextBox.Value = 0;
     
         ZoomNumberBox.Value = 100;
 
         UpdateVisuals();
 
-        this.ActualThemeChanged += ThemeChanged;
+        ActualThemeChanged -= ThemeChanged;
+        ActualThemeChanged += ThemeChanged;
     }
 
     void ThemeChanged(FrameworkElement fe, object o)
@@ -81,29 +81,38 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
     }
 
-    public IntVector2 SpritePosition
+    public event Action<IntVector2>? SpritePositionChanged;
+
+    public event Action<IntVector2>? SpritePositionMoved;
+
+    int GetFromValue()
     {
-        get => _animationConfig.frameCongfigs[_selectedFrame].Offset;
-        set
-        {
-            _animationConfig.frameCongfigs[_selectedFrame].Offset = value;
-            VectorXTextBox.Value = value.X;
-            VectorYTextBox.Value = value.Y;
-            UpdateVisuals();
-        }
+        return double.IsNaN(FromNumberBox.Value) ? 0 : (int)FromNumberBox.Value;
     }
 
-    public event Action<IntVector2>? SpritePositionChanged;
+    int GetToValue()
+    {
+        return double.IsNaN(ToNumberBox.Value) ? Math.Max(_previewFrames.Count - 1, 0) : (int)ToNumberBox.Value;
+    }
 
     public void SetSpriteIndex(int index)
     {
         SpriteImage.Source = _previewFrames[index];
         _selectedFrame = index;
-        if(index == 0)
+
+        OffsetXTextBox.Value = _animationConfig.frameCongfigs[index].Offset.X;
+        OffsetYTextBox.Value = _animationConfig.frameCongfigs[index].Offset.Y;
+        OffsetXTextBox.ValueChanged -= OffsetXTextBox_ValueChanged;
+        OffsetXTextBox.ValueChanged += OffsetXTextBox_ValueChanged;
+
+        OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
+        OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
+
+        if (index == 0)
         {
             index = _previewFrames.Count;
         }
-        SpriteBeforeImage.Source = _previewFrames[index -1];
+        SpriteBeforeImage.Source = _previewFrames[index - 1];
         UpdateVisuals();
     }
 
@@ -113,6 +122,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _previewFrameIndex = 0;
         _previewTickCount = 0;
         _animationConfig = animationConfig;
+        int maxFrames = Math.Max(_previewFrames.Count - 1, 0);
+        ToNumberBox.PlaceholderText = maxFrames.ToString();
+        ToNumberBox.Maximum = maxFrames;
+        FromNumberBox.Maximum = maxFrames;
+
         UpdateAnimationPreviewFrame();
 
         if (_previewFrames.Count > 0)
@@ -129,7 +143,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     {
         SpriteImage.Source = null;
         SpriteBeforeImage.Source = null;
-        LoadAnimation(Array.Empty<WriteableBitmap>(), new());
+        LoadAnimation([], new());
     }
 
     private void UpdateVisuals()
@@ -163,8 +177,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         if (SpriteImage.Source == null) return;
 
-        double spriteWidth = Math.Max(1.0, (SpriteImage.Source as WriteableBitmap).PixelWidth * _zoom);
-        double spriteHeight = Math.Max(1.0, (SpriteImage.Source as WriteableBitmap).PixelHeight * _zoom);
+        double spriteWidth = Math.Max(1.0, (SpriteImage.Source as WriteableBitmap)!.PixelWidth * _zoom);
+        double spriteHeight = Math.Max(1.0, (SpriteImage.Source as WriteableBitmap)!.PixelHeight * _zoom);
 
         double spriteCanvasX = axisX + (_animationConfig.frameCongfigs[_selectedFrame].Offset.X * _zoom);
         double spriteCanvasY = axisY - (_animationConfig.frameCongfigs[_selectedFrame].Offset.Y * _zoom);
@@ -318,23 +332,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _isUpdatingZoomControls = false;
     }
 
-    private void ZoomSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
-    {
-        if (_isUpdatingZoomControls)
-        {
-            return;
-        }
-
-        float newZoom = Math.Clamp((float)e.NewValue / 100.0f, MinZoom, MaxZoom);
-        if (Math.Abs(newZoom - _zoom) < 0.0001f)
-        {
-            return;
-        }
-
-        _zoom = newZoom;
-        UpdateVisuals();
-    }
-
     private void ZoomNumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
         if (_isUpdatingZoomControls || double.IsNaN(sender.Value))
@@ -361,14 +358,15 @@ public sealed partial class FrameCoordinateEditor : UserControl
         UpdateVisuals();
     }
 
-    private void VectorXTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    private void OffsetXTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
+
         SpritePositionChanged?.Invoke(new(double.IsNaN(sender.Value) ? 0 : (int)sender.Value, _animationConfig.frameCongfigs[_selectedFrame].Offset.Y));
         UpdateVisuals();
 
     }
 
-    private void VectorYTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    private void OffsetYTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
         SpritePositionChanged?.Invoke(new IntVector2(_animationConfig.frameCongfigs[_selectedFrame].Offset.X, double.IsNaN(sender.Value) ? 0 : (int)sender.Value));
         UpdateVisuals();
@@ -377,20 +375,20 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void ALignDownButton_Click(object sender, RoutedEventArgs e)
     {
-        VectorXTextBox.Value = 0;
-        VectorYTextBox.Value = (SpriteImage.Source as WriteableBitmap).PixelHeight / 2;
+        OffsetXTextBox.Value = 0;
+        OffsetYTextBox.Value = (SpriteImage.Source as WriteableBitmap)!.PixelHeight / 2;
     }
 
     private void ALignTopLeftButton_Click(object sender, RoutedEventArgs e)
     {
-        VectorXTextBox.Value = ((SpriteImage.Source as WriteableBitmap).PixelWidth / 2);
-        VectorYTextBox.Value = -((SpriteImage.Source as WriteableBitmap).PixelHeight / 2);
+        OffsetXTextBox.Value = ((SpriteImage.Source as WriteableBitmap)!.PixelWidth / 2);
+        OffsetYTextBox.Value = -((SpriteImage.Source as WriteableBitmap)!.PixelHeight / 2);
     }
 
     private void ALignCenterButton_Click(object sender, RoutedEventArgs e)
     {
-        VectorXTextBox.Value = 0;
-        VectorYTextBox.Value = 0;
+        OffsetXTextBox.Value = 0;
+        OffsetYTextBox.Value = 0;
     }
 
     public void NudgeOffset(int dx, int dy)
@@ -400,8 +398,14 @@ public sealed partial class FrameCoordinateEditor : UserControl
             return;
         }
 
-        VectorXTextBox.Value = _animationConfig.frameCongfigs[_selectedFrame].Offset.X + dx;
-        VectorYTextBox.Value = _animationConfig.frameCongfigs[_selectedFrame].Offset.Y + dy;
+        OffsetXTextBox.ValueChanged -= OffsetXTextBox_ValueChanged;
+        OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
+        OffsetXTextBox.Value = _animationConfig.frameCongfigs[_selectedFrame].Offset.X + dx;
+        OffsetYTextBox.Value = _animationConfig.frameCongfigs[_selectedFrame].Offset.Y + dy;
+        SpritePositionMoved?.Invoke(new(dx, dy));
+        UpdateVisuals();
+        OffsetXTextBox.ValueChanged += OffsetXTextBox_ValueChanged;
+        OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
     }
 
     public bool HandleNudgeKeyDown(Windows.System.VirtualKey key)
@@ -528,7 +532,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
 
         _previewTickCount = 0;
-        _previewFrameIndex = (_previewFrameIndex + 1) % _previewFrames.Count;
+        _previewFrameIndex = (_previewFrameIndex + 1) % (GetToValue() + 1 - GetFromValue());
         UpdateAnimationPreviewFrame();
     }
 
@@ -540,7 +544,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
             return;
         }
 
-        int frameIndex = Math.Clamp(_previewFrameIndex, 0, _previewFrames.Count - 1);
+        int frameIndex = Math.Clamp(_previewFrameIndex + GetFromValue(), GetFromValue(), GetToValue());
         WriteableBitmap frame = _previewFrames[frameIndex];
         IntVector2 offset = frameIndex < _animationConfig.frameCongfigs.Count ? _animationConfig.frameCongfigs[frameIndex].Offset : new IntVector2(0, 0);
 
@@ -587,7 +591,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void ShowPreviousToggleSwitch_Toggled(object sender, RoutedEventArgs e)
     {
-        if ((sender as ToggleSwitch).IsOn)
+        if ((sender as ToggleSwitch)!.IsOn)
         {
             SpriteBeforeImage.Visibility = Visibility.Visible;
             SpriteImage.Opacity = 0.7;
@@ -598,6 +602,16 @@ public sealed partial class FrameCoordinateEditor : UserControl
             SpriteImage.Opacity = 1;
         }
      
+    }
+
+    private void FromNumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    {
+        ToNumberBox.Minimum = GetFromValue();
+    }
+
+    private void ToNumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    {
+        FromNumberBox.Maximum = GetToValue();
     }
 
     private void ApplyHeldNudgeKeys()
