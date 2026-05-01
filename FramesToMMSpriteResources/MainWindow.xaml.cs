@@ -18,6 +18,7 @@ using System.Media;
 using System.Numerics;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Windows.ApplicationModel;
 using Windows.Graphics.Imaging;
@@ -156,16 +157,6 @@ namespace FramesToMMSpriteResources
             }
         };
 
-        public bool IsWindowActive
-        {
-            get => _isWindowActive;
-            set
-            {
-                _isWindowActive = value;
-                CheckForAllowProgramEditing();
-            }
-        }
-
         bool _isGenerating = false;
         public bool IsGenerating
         {
@@ -286,7 +277,25 @@ namespace FramesToMMSpriteResources
 
             AppWindow.Closing -= AppWindow_Closing;
             AppWindow.Closing += AppWindow_Closing;
+
+            if (Content is UIElement root)
+            {
+                root.AddHandler(UIElement.PointerPressedEvent,
+                    new PointerEventHandler(MainWindow_PointerPressed),
+                    handledEventsToo: true);
+            }
         }
+        private void MainWindow_PointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            if (_waitingForSecondaryActivation)
+            {
+                Debug.WriteLine("ACTIVATED WITH SECONDARY SOLUTION");
+                ActivateProgram();
+                _ableToRelaod = true;
+            }
+                
+        }
+
 
         private void AppWindow_Closing(AppWindow sender, AppWindowClosingEventArgs args)
         {       
@@ -303,47 +312,91 @@ namespace FramesToMMSpriteResources
             });
         }
 
+        bool _ableToRelaod = true;
+        bool _waitingForSecondaryActivation = false;
+
         private async void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
         {
+        
             if (args.WindowActivationState != WindowActivationState.Deactivated)
-            {            
-                if (_isActivated)
-                {             
-                    ProgramConfig = LoadProgramConfig();
-                    ReloadTreeViewAndConfigs();
+            {
+                if (!_ableToRelaod)
+                {
+                    Debug.WriteLine("TREID TO ACTIVATE");
+                    _waitingForSecondaryActivation = true;
+                    return;
                 }
-
-                _isActivated = true;
-
-                ReduceFileSizeCheckBox.IsChecked = ProgramConfig.ReduceFileSize;
-                WorkingPathTextBox.Text = ProgramConfig.WorkingPath;
-
-                ReduceFileSizeCheckBox.Click -= ReduceFileSizeCheckBox_Click;
-                ReduceFileSizeCheckBox.Click += ReduceFileSizeCheckBox_Click;
-
-                WorkingPathTextBox.TextChanged -= WorkingPathTextBox_LostFocus;
-                WorkingPathTextBox.TextChanged += WorkingPathTextBox_LostFocus;
-
-                await Task.Delay(1);
-                IsWindowActive = true;
+                Debug.WriteLine("ACTIVATED AS IT SHOULD");
+                ActivateProgram();
             }
             else
             {
-                IsWindowActive = false;
+                
+                _ableToRelaod = false;
+                
+                if (!_waitingForSecondaryActivation)
+                {
+                    _waitingForSecondaryActivation = false;
+                    Debug.WriteLine("DEACTIVATED");
+                    _isWindowActive = false;
+                    CheckForAllowProgramEditing();
+                    cts?.Cancel();
+                    ReduceFileSizeCheckBox.Click -= ReduceFileSizeCheckBox_Click;
+                    WorkingPathTextBox.TextChanged -= WorkingPathTextBox_LostFocus;
+                    UnloadFrameResources();
+                    TreeViewControl.Focus(FocusState.Programmatic);
+                    await Task.Delay(30);
+                    cts?.Cancel();
+                    SaveAllConfigs();
+                }
+                else
+                {
+                    _waitingForSecondaryActivation = false;
+                    Debug.WriteLine("TRIED TO DEACTIVATE");
+                }
+                
 
-                ReduceFileSizeCheckBox.Click -= ReduceFileSizeCheckBox_Click;
-                WorkingPathTextBox.TextChanged -= WorkingPathTextBox_LostFocus;
-          
-                await WaitThenSaveAsync();
-                UnloadResources();
+                
+                _ableToRelaod = true;
+
+
             }
+        }
+
+        async void ActivateProgram()
+        {
+            _waitingForSecondaryActivation = false;
+ 
+
+            if (_isActivated)
+            {
+                ProgramConfig = LoadProgramConfig();
+                ReloadTreeViewAndConfigs();
+            }
+
+            _isActivated = true;
+
+            ReduceFileSizeCheckBox.IsChecked = ProgramConfig.ReduceFileSize;
+            WorkingPathTextBox.Text = ProgramConfig.WorkingPath;
+
+            ReduceFileSizeCheckBox.Click -= ReduceFileSizeCheckBox_Click;
+            ReduceFileSizeCheckBox.Click += ReduceFileSizeCheckBox_Click;
+
+            WorkingPathTextBox.TextChanged -= WorkingPathTextBox_LostFocus;
+            WorkingPathTextBox.TextChanged += WorkingPathTextBox_LostFocus;
+   
+            _isWindowActive = true;
+
+            await Task.Delay(1);
+
+            CheckForAllowProgramEditing();
         }
 
         private async void WorkingPathTextBox_LostFocus(object sender, RoutedEventArgs e)
         {
             SaveAllConfigs();
             ProgramConfig.WorkingPath = (sender as TextBox)!.Text;
-            UnloadResources();
+            UnloadFrameResources();
             ReloadTreeViewAndConfigs();
         }
 
@@ -351,14 +404,6 @@ namespace FramesToMMSpriteResources
         {
             ProgramConfig.ReduceFileSize = (sender as CheckBox)!.IsChecked!.Value;
         }
-
-        async Task WaitThenSaveAsync()
-        {
-            TreeViewControl.Focus(FocusState.Programmatic);
-            await Task.Delay(30);
-            SaveAllConfigs();
-        }
-
 
         void SaveAllConfigs()
         {
@@ -458,16 +503,17 @@ namespace FramesToMMSpriteResources
             SaveJson(Path.Combine(AppContext.BaseDirectory, CONFIG_FILENAME), ProgramConfig);
         }
 
-        void UnloadResources()
+        void UnloadFrameResources()
         {
             _animationSpriteFrame = new AnimationSpriteFrame();
             FrameCoordinateEditorControl.UnloadAnimation();
-            ProgramConfig.GameThemeConfigs = [];
+ 
         }
 
         void ReloadTreeViewAndConfigs()
         {
             TreeViewControl.RootNodes.Clear();
+            ProgramConfig.GameThemeConfigs = [];
             TryCloseInfoBar();
             SetUpTreeViewAndConfigs();
         }
@@ -1309,6 +1355,8 @@ namespace FramesToMMSpriteResources
             OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
         }
 
+        CancellationTokenSource? cts= null;
+
         async void DisplayFrameCongifAsync(TreeViewNode node, bool animate = true, bool nowGenerated = false)
         {
             AnimateGeneratePanel(show: true);
@@ -1329,6 +1377,7 @@ namespace FramesToMMSpriteResources
                 }
                 _animationSpriteFrame.WriteableBitmaps = [];
                 _animationSpriteFrame.Path = newPath;
+                cts?.Cancel();
             }
 
             var selectedNode = (node.Content as TreeItem)!;
@@ -1363,9 +1412,24 @@ namespace FramesToMMSpriteResources
                 _currentConfigs.Add(ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].frameCongfigs[int.Parse(selectedNodeName)]);
             }
 
-            //TODO: BREAK ASYNC WHEN OUT OF FOCUS OR DIFFERENT ANIMATION SELECTED
             if (IsLoadingFrames) return;
+            cts = new();
+            try
+            {
+                await LoadCoordinateEditorAsync(cts.Token, gameThemeName, subjectName, animationName, animationConfig, frameName, selectedIndex, frameConfig);
+            }
+            catch
+            {
+                IsLoadingFrames = false;
+            }
+            finally
+            {
+                cts = null;
+            }
+        }
 
+        async Task LoadCoordinateEditorAsync(CancellationToken ct, string gameThemeName, string subjectName, string animationName, AnimationConfig animationConfig, string frameName, int selectedIndex, FrameConfig frameConfig)
+        {
             string gameThemePath;
             if (IsUsingGameThemes)
             {
@@ -1386,6 +1450,8 @@ namespace FramesToMMSpriteResources
 
                 foreach (FrameConfig frameConfigInLoop in animationConfig.frameCongfigs)
                 {
+                    ct.ThrowIfCancellationRequested();
+
                     string framePath = Path.Combine(animationPath, frameConfigInLoop.Name) + ".png";
                     StorageFile file;
 
@@ -1413,6 +1479,8 @@ namespace FramesToMMSpriteResources
                     tempAnimationSpriteFrame.WriteableBitmaps.Add(sourceBitmap);
                 }
 
+                ct.ThrowIfCancellationRequested();
+
                 _animationSpriteFrame = tempAnimationSpriteFrame;
 
                 var selectedNodeAfter = TreeViewControl.SelectedNode;
@@ -1438,7 +1506,7 @@ namespace FramesToMMSpriteResources
                 {
                     FrameCoordinateEditorControl.SetSpriteIndex(selectedIndex);
 
-     
+
                     FrameCoordinateEditorControl.SpritePositionChanged += SpriteOffset_ValueChanged;
                     FrameCoordinateEditorControl.SpritePositionMoved += SpriteOffset_ValueMoved;
                 }
@@ -1840,7 +1908,6 @@ namespace FramesToMMSpriteResources
             }
 
             SaveAllConfigs();
-            UnloadResources();
             ReloadTreeViewAndConfigs();
     
             IsGenerating = false;

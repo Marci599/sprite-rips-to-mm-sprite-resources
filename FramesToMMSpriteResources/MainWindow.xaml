@@ -16,7 +16,7 @@
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
-    <Grid x:Name="MainRootGrid" KeyDown="MainRootGrid_KeyDown" KeyUp="MainRootGrid_KeyUp" IsTabStop="True">
+    <Grid x:Name="MainRootGrid" KeyDown="MainRootGrid_KeyDown" KeyUp="MainRootGrid_KeyUp" IsTabStop="True" Background="Transparent">
         <Grid.Resources>
             <local:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
             <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
