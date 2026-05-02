@@ -2068,7 +2068,7 @@ namespace FramesToMMSpriteResources
 
             if (ctrlHeld && e.Key == Windows.System.VirtualKey.A)
             {
-                IReadOnlyList<TreeViewNode> siblings = selectedNode.Parent?.Children ?? TreeViewControl.RootNodes;
+                IList<TreeViewNode> siblings = selectedNode.Parent?.Children ?? TreeViewControl.RootNodes;
                 foreach (TreeViewNode sibling in siblings)
                 {
                     (sibling.Content as TreeItem)!.IsSelected = true;
@@ -2081,8 +2081,16 @@ namespace FramesToMMSpriteResources
                 return false;
             }
 
-            IReadOnlyList<TreeViewNode> siblingList = selectedNode.Parent?.Children ?? TreeViewControl.RootNodes;
-            int currentIndex = siblingList.IndexOf(selectedNode);
+            IList<TreeViewNode> siblingList = selectedNode.Parent?.Children ?? TreeViewControl.RootNodes;
+            int currentIndex = -1;
+            for (int i = 0; i < siblingList.Count; i++)
+            {
+                if (siblingList[i] == selectedNode)
+                {
+                    currentIndex = i;
+                    break;
+                }
+            }
             if (currentIndex < 0)
             {
                 return false;
