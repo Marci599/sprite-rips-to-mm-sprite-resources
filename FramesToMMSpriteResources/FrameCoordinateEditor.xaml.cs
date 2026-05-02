@@ -19,6 +19,9 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private Vector2 _dragStartPointer;
     private Vector2 _dragStartPan;
     private bool _isDragging;
+    private bool _isFrameDragging;
+    private Vector2 _frameDragStartPointer;
+    private IntVector2 _frameDragStartOffset;
     private float _zoom = 1.0f;
     private const float MinZoom = 0.1f;
     private const float MaxZoom = 18.0f;
@@ -258,28 +261,54 @@ public sealed partial class FrameCoordinateEditor : UserControl
     {
         this.Focus(FocusState.Programmatic);
         var point = e.GetCurrentPoint(CoordinateCanvas);
-        _dragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
-        _dragStartPan = _pan;
-        _isDragging = true;
-        CoordinateCanvas.CapturePointer(e.Pointer);
+        if (point.Properties.IsLeftButtonPressed)
+        {
+            _frameDragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
+            _frameDragStartOffset = _animationConfig.frameCongfigs[_selectedFrame].Offset;
+            _isFrameDragging = true;
+            CoordinateCanvas.CapturePointer(e.Pointer);
+        }
+        else if (point.Properties.IsRightButtonPressed)
+        {
+            _dragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
+            _dragStartPan = _pan;
+            _isDragging = true;
+            CoordinateCanvas.CapturePointer(e.Pointer);
+        }
     }
 
     private void CoordinateCanvas_PointerMoved(object sender, PointerRoutedEventArgs e)
     {
-        if (!_isDragging)
+        if (!_isDragging && !_isFrameDragging)
         {
             return;
         }
 
         var point = e.GetCurrentPoint(CoordinateCanvas);
         var currentPosition = new Vector2((float)point.Position.X, (float)point.Position.Y);
-        _pan = _dragStartPan + (currentPosition - _dragStartPointer);
-        UpdateVisuals();
+        if (_isDragging)
+        {
+            _pan = _dragStartPan + (currentPosition - _dragStartPointer);
+            UpdateVisuals();
+        }
+        else if (_isFrameDragging)
+        {
+            var delta = currentPosition - _frameDragStartPointer;
+            int dx = (int)MathF.Round(delta.X / _zoom);
+            int dy = (int)MathF.Round(-delta.Y / _zoom);
+            IntVector2 newOffset = new(_frameDragStartOffset.X + dx, _frameDragStartOffset.Y + dy);
+            IntVector2 currentOffset = _animationConfig.frameCongfigs[_selectedFrame].Offset;
+            if (newOffset != currentOffset)
+            {
+                NudgeOffset(newOffset.X - currentOffset.X, newOffset.Y - currentOffset.Y);
+            }
+        }
     }
 
     private void CoordinateCanvas_PointerReleased(object sender, PointerRoutedEventArgs e)
     {
         _isDragging = false;
+        _isFrameDragging = false;
         CoordinateCanvas.ReleasePointerCapture(e.Pointer);
     }
 
@@ -410,7 +439,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     public bool HandleNudgeKeyDown(Windows.System.VirtualKey key)
     {
-        if (!IsNudgeKey(key))
+        if (!IsNudgeKey(key) && !IsModifierKey(key))
         {
             return false;
         }
@@ -422,17 +451,25 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     public bool HandleNudgeKeyUp(Windows.System.VirtualKey key)
     {
-        if (!IsNudgeKey(key))
+        if (!IsNudgeKey(key) && !IsModifierKey(key))
         {
             return false;
         }
 
         _heldNudgeKeys.Remove(key);
+        ApplyHeldNudgeKeys();
         return true;
     }
 
     private void RootGrid_KeyDown(object sender, KeyRoutedEventArgs e)
     {
+        if (e.Key == Windows.System.VirtualKey.R)
+        {
+            ShowPreviousToggleSwitch.IsOn = !ShowPreviousToggleSwitch.IsOn;
+            e.Handled = true;
+            return;
+        }
+
         if (HandleNudgeKeyDown(e.Key))
         {
             e.Handled = true;
@@ -589,6 +626,16 @@ public sealed partial class FrameCoordinateEditor : UserControl
                key == Windows.System.VirtualKey.D;
     }
 
+    private static bool IsModifierKey(Windows.System.VirtualKey key)
+    {
+        return key == Windows.System.VirtualKey.Control ||
+               key == Windows.System.VirtualKey.LeftControl ||
+               key == Windows.System.VirtualKey.RightControl ||
+               key == Windows.System.VirtualKey.Shift ||
+               key == Windows.System.VirtualKey.LeftShift ||
+               key == Windows.System.VirtualKey.RightShift;
+    }
+
     private void ShowPreviousToggleSwitch_Toggled(object sender, RoutedEventArgs e)
     {
         if ((sender as ToggleSwitch)!.IsOn)
@@ -621,6 +668,28 @@ public sealed partial class FrameCoordinateEditor : UserControl
         int dy = (_heldNudgeKeys.Contains(Windows.System.VirtualKey.W) ? 1 : 0) -
                  (_heldNudgeKeys.Contains(Windows.System.VirtualKey.S) ? 1 : 0);
 
-        NudgeOffset(dx, dy);
+        if (dx == 0 && dy == 0)
+        {
+            return;
+        }
+
+        bool ctrlHeld = _heldNudgeKeys.Contains(Windows.System.VirtualKey.Control) ||
+                        _heldNudgeKeys.Contains(Windows.System.VirtualKey.LeftControl) ||
+                        _heldNudgeKeys.Contains(Windows.System.VirtualKey.RightControl);
+        bool shiftHeld = _heldNudgeKeys.Contains(Windows.System.VirtualKey.Shift) ||
+                         _heldNudgeKeys.Contains(Windows.System.VirtualKey.LeftShift) ||
+                         _heldNudgeKeys.Contains(Windows.System.VirtualKey.RightShift);
+
+        int multiplier = 1;
+        if (ctrlHeld ^ shiftHeld)
+        {
+            multiplier = 2;
+        }
+        else if (ctrlHeld && shiftHeld)
+        {
+            multiplier = 4;
+        }
+
+        NudgeOffset(dx * multiplier, dy * multiplier);
     }
 }

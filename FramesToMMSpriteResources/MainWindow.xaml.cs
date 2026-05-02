@@ -2016,6 +2016,12 @@ namespace FramesToMMSpriteResources
 
         private void MainRootGrid_KeyDown(object sender, KeyRoutedEventArgs e)
         {
+            if (HandleTreeViewHotkeys(e))
+            {
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == Windows.System.VirtualKey.Control ||
                 e.Key == Windows.System.VirtualKey.LeftControl ||
                 e.Key == Windows.System.VirtualKey.RightControl)
@@ -2045,6 +2051,52 @@ namespace FramesToMMSpriteResources
             }
 
             FrameCoordinateEditorControl.HandleNudgeKeyUp(e.Key);
+        }
+
+        private bool HandleTreeViewHotkeys(KeyRoutedEventArgs e)
+        {
+            TreeViewNode? selectedNode = TreeViewControl.SelectedNode;
+            if (selectedNode == null)
+            {
+                return false;
+            }
+
+            bool ctrlHeld = e.KeyStatus.IsMenuKeyDown || _isCtrlHeld ||
+                            e.Key == Windows.System.VirtualKey.Control ||
+                            e.Key == Windows.System.VirtualKey.LeftControl ||
+                            e.Key == Windows.System.VirtualKey.RightControl;
+
+            if (ctrlHeld && e.Key == Windows.System.VirtualKey.A)
+            {
+                IReadOnlyList<TreeViewNode> siblings = selectedNode.Parent?.Children ?? TreeViewControl.RootNodes;
+                foreach (TreeViewNode sibling in siblings)
+                {
+                    (sibling.Content as TreeItem)!.IsSelected = true;
+                }
+                return true;
+            }
+
+            if (e.Key != Windows.System.VirtualKey.Q && e.Key != Windows.System.VirtualKey.E)
+            {
+                return false;
+            }
+
+            IReadOnlyList<TreeViewNode> siblingList = selectedNode.Parent?.Children ?? TreeViewControl.RootNodes;
+            int currentIndex = siblingList.IndexOf(selectedNode);
+            if (currentIndex < 0)
+            {
+                return false;
+            }
+
+            int newIndex = e.Key == Windows.System.VirtualKey.Q ? currentIndex - 1 : currentIndex + 1;
+            if (newIndex < 0 || newIndex >= siblingList.Count)
+            {
+                return true;
+            }
+
+            TreeViewControl.SelectedNode = siblingList[newIndex];
+            ChangeConfigPanelIfNecessary(siblingList[newIndex]);
+            return true;
         }
 
         private void ClearAllTreeItemSelections()
