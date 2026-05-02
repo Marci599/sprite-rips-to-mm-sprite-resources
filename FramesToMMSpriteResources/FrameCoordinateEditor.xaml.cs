@@ -721,14 +721,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
 
         _nudgeHoldTick++;
-        if (_nudgeHoldTick < 14)
+        if (_nudgeHoldTick < 10)
         {
             return;
         }
 
-        if ((_nudgeHoldTick - 14) % 2 == 0)
-        {
-            ApplyHeldNudgeKeys();
-        }
+        ApplyHeldNudgeKeys();
     }
 }
