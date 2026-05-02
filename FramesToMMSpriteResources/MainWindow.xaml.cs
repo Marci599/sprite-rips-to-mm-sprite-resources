@@ -1198,6 +1198,22 @@ namespace FramesToMMSpriteResources
             }
         }
 
+        async Task ChangePanelGraphic(bool animate, UIElement panelToShow)
+        {
+            if (animate)
+            {
+                await Task.Delay(_fadeOutMs);
+                DetachAllPanelEvents();
+                FadeInPanel(panelToShow);
+            }
+            else
+            {
+                await Task.Delay(30);
+                DetachAllPanelEvents();
+                panelToShow.Visibility = Visibility.Visible;
+            }
+        }
+
         async void DisplayGameThemeConfigAsync(TreeViewNode node, bool animate = true, bool nowGenerated = false)
         {
             AnimateGeneratePanel(show: false);
@@ -1212,18 +1228,8 @@ namespace FramesToMMSpriteResources
 
             TryCloseInfoBar();
 
-            if (animate)
-            {
-                await Task.Delay(_fadeOutMs);
-                DetachAllPanelEvents();
-                FadeInPanel(GameThemePanel);
-            }
-            else
-            {
-                await Task.Delay(30);
-                DetachAllPanelEvents();
-                GameThemePanel.Visibility = Visibility.Visible;
-            }
+            await ChangePanelGraphic(animate, GameThemePanel);
+   
             _currentConfigs = [];
 
             var gameThemeConfig = ProgramConfig.GameThemeConfigs![gameThemeName];
@@ -1252,18 +1258,7 @@ namespace FramesToMMSpriteResources
 
             GenerateButton.Content = $"Generate {selectedNode.Text}";
 
-            if (animate)
-            {
-                await Task.Delay(_fadeOutMs);
-                DetachAllPanelEvents();
-                FadeInPanel(SubjectPanel);
-            }
-            else
-            {
-                await Task.Delay(30);
-                DetachAllPanelEvents();
-                SubjectPanel.Visibility = Visibility.Visible;
-            }
+            await ChangePanelGraphic(animate, SubjectPanel);
 
             _currentConfigs = [];
             var subjectConfig = ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName];
@@ -1315,18 +1310,8 @@ namespace FramesToMMSpriteResources
 
             GenerateButton.Content = $"Generate {ProgramConfig.SelectedNodePath![1]}";
 
-            if (animate)
-            {
-                await Task.Delay(_fadeOutMs);
-                DetachAllPanelEvents();
-                FadeInPanel(AnimationsPanel);
-            }
-            else
-            {
-                await Task.Delay(30);
-                DetachAllPanelEvents();
-                AnimationsPanel.Visibility = Visibility.Visible;
-            }
+            await ChangePanelGraphic(animate, AnimationsPanel);
+   
             _currentConfigs = [];
             var animationConfig = ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName];
 
@@ -1390,18 +1375,9 @@ namespace FramesToMMSpriteResources
 
             GenerateButton.Content = $"Generate {ProgramConfig.SelectedNodePath![1]}";
 
-            if (animate)
-            {
-                await Task.Delay(_fadeOutMs);
-                DetachAllPanelEvents();
-                FadeInPanel(FramePanel);
-            }
-            else
-            {
-                await Task.Delay(30);
-                DetachAllPanelEvents();
-                FramePanel.Visibility = Visibility.Visible;
-            }
+            await ChangePanelGraphic(animate, FramePanel);
+
+
             _currentConfigs = [];
             var animationConfig = ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName];
             int selectedIndex = int.Parse(frameName);
