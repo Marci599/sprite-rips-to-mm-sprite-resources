@@ -44,6 +44,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private readonly HashSet<Windows.System.VirtualKey> _heldNudgeKeys = [];
     private readonly DispatcherTimer _nudgeHoldTimer = new();
     private int _nudgeHoldTick;
+    private const int NudgeHoldDelayTicks = 10;
     byte lightA, lightB;
 
     public FrameCoordinateEditor()
@@ -448,13 +449,9 @@ public sealed partial class FrameCoordinateEditor : UserControl
             return false;
         }
 
+        bool hadDirection = HasHeldDirectionKey();
         _heldNudgeKeys.Add(key);
-        ApplyHeldNudgeKeys();
-        if (HasHeldDirectionKey())
-        {
-            _nudgeHoldTick = 0;
-            _nudgeHoldTimer.Start();
-        }
+        UpdateNudgeMotionState(hadDirection);
         return true;
     }
 
@@ -465,13 +462,37 @@ public sealed partial class FrameCoordinateEditor : UserControl
             return false;
         }
 
+        bool hadDirection = HasHeldDirectionKey();
         _heldNudgeKeys.Remove(key);
-        if (!HasHeldDirectionKey())
-        {
-            _nudgeHoldTimer.Stop();
-            _nudgeHoldTick = 0;
-        }
+        UpdateNudgeMotionState(hadDirection);
         return true;
+    }
+
+    private void UpdateNudgeMotionState(bool hadDirectionBeforeChange)
+    {
+        bool hasDirectionNow = HasHeldDirectionKey();
+        if (!hasDirectionNow)
+        {
+            _nudgeHoldTick = 0;
+            _nudgeHoldTimer.Stop();
+            return;
+        }
+
+        if (!hadDirectionBeforeChange)
+        {
+            ApplyHeldNudgeKeys();
+            _nudgeHoldTick = 0;
+            if (!_nudgeHoldTimer.IsEnabled)
+            {
+                _nudgeHoldTimer.Start();
+            }
+            return;
+        }
+
+        if (!_nudgeHoldTimer.IsEnabled)
+        {
+            _nudgeHoldTimer.Start();
+        }
     }
 
     private void RootGrid_KeyDown(object sender, KeyRoutedEventArgs e)
@@ -721,7 +742,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
 
         _nudgeHoldTick++;
-        if (_nudgeHoldTick < 10)
+        if (_nudgeHoldTick < NudgeHoldDelayTicks)
         {
             return;
         }
