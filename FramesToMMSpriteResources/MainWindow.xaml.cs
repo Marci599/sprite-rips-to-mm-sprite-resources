@@ -2016,6 +2016,13 @@ namespace FramesToMMSpriteResources
 
         private void MainRootGrid_KeyDown(object sender, KeyRoutedEventArgs e)
         {
+            if (e.Key == Windows.System.VirtualKey.R && FramePanel.Visibility == Visibility.Visible)
+            {
+                FrameCoordinateEditorControl.ToggleShowPreviousFrame();
+                e.Handled = true;
+                return;
+            }
+
             if (HandleTreeViewHotkeys(e))
             {
                 e.Handled = true;

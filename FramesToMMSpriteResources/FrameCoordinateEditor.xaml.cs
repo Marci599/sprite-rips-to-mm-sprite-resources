@@ -42,6 +42,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private Vector2 _previewDragStartPointer;
     private Vector2 _previewDragStartPan;
     private readonly HashSet<Windows.System.VirtualKey> _heldNudgeKeys = [];
+    private readonly DispatcherTimer _nudgeHoldTimer = new();
+    private int _nudgeHoldTick;
     byte lightA, lightB;
 
     public FrameCoordinateEditor()
@@ -51,6 +53,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _previewTimer.Interval = TimeSpan.FromSeconds(1.0 / 60.0);
         _previewTimer.Tick -= PreviewTimer_Tick;
         _previewTimer.Tick += PreviewTimer_Tick;
+        _nudgeHoldTimer.Interval = TimeSpan.FromSeconds(1.0 / 60.0);
+        _nudgeHoldTimer.Tick += NudgeHoldTimer_Tick;
     
         ZoomNumberBox.Value = 100;
 
@@ -446,6 +450,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         _heldNudgeKeys.Add(key);
         ApplyHeldNudgeKeys();
+        if (HasHeldDirectionKey())
+        {
+            _nudgeHoldTick = 0;
+            _nudgeHoldTimer.Start();
+        }
         return true;
     }
 
@@ -457,7 +466,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
 
         _heldNudgeKeys.Remove(key);
-        ApplyHeldNudgeKeys();
+        if (!HasHeldDirectionKey())
+        {
+            _nudgeHoldTimer.Stop();
+            _nudgeHoldTick = 0;
+        }
         return true;
     }
 
@@ -465,7 +478,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     {
         if (e.Key == Windows.System.VirtualKey.R)
         {
-            ShowPreviousToggleSwitch.IsOn = !ShowPreviousToggleSwitch.IsOn;
+            ToggleShowPreviousFrame();
             e.Handled = true;
             return;
         }
@@ -474,6 +487,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
         {
             e.Handled = true;
         }
+    }
+    public void ToggleShowPreviousFrame()
+    {
+        ShowPreviousToggleSwitch.IsOn = !ShowPreviousToggleSwitch.IsOn;
     }
 
     private void RootGrid_KeyUp(object sender, KeyRoutedEventArgs e)
@@ -673,23 +690,45 @@ public sealed partial class FrameCoordinateEditor : UserControl
             return;
         }
 
-        bool ctrlHeld = _heldNudgeKeys.Contains(Windows.System.VirtualKey.Control) ||
-                        _heldNudgeKeys.Contains(Windows.System.VirtualKey.LeftControl) ||
-                        _heldNudgeKeys.Contains(Windows.System.VirtualKey.RightControl);
         bool shiftHeld = _heldNudgeKeys.Contains(Windows.System.VirtualKey.Shift) ||
                          _heldNudgeKeys.Contains(Windows.System.VirtualKey.LeftShift) ||
                          _heldNudgeKeys.Contains(Windows.System.VirtualKey.RightShift);
 
         int multiplier = 1;
-        if (ctrlHeld ^ shiftHeld)
+        if (shiftHeld)
         {
             multiplier = 2;
         }
-        else if (ctrlHeld && shiftHeld)
-        {
-            multiplier = 4;
-        }
 
         NudgeOffset(dx * multiplier, dy * multiplier);
+    }
+
+    private bool HasHeldDirectionKey()
+    {
+        return _heldNudgeKeys.Contains(Windows.System.VirtualKey.W) ||
+               _heldNudgeKeys.Contains(Windows.System.VirtualKey.A) ||
+               _heldNudgeKeys.Contains(Windows.System.VirtualKey.S) ||
+               _heldNudgeKeys.Contains(Windows.System.VirtualKey.D);
+    }
+
+    private void NudgeHoldTimer_Tick(object? sender, object e)
+    {
+        if (!HasHeldDirectionKey())
+        {
+            _nudgeHoldTimer.Stop();
+            _nudgeHoldTick = 0;
+            return;
+        }
+
+        _nudgeHoldTick++;
+        if (_nudgeHoldTick < 14)
+        {
+            return;
+        }
+
+        if ((_nudgeHoldTick - 14) % 2 == 0)
+        {
+            ApplyHeldNudgeKeys();
+        }
     }
 }
