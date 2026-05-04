@@ -2077,9 +2077,13 @@ namespace FramesToMMSpriteResources
             {
                 IList<TreeViewNode> siblings = selectedNode.Parent?.Children ?? TreeViewControl.RootNodes;
                 foreach (TreeViewNode sibling in siblings)
-                {
-                    (sibling.Content as TreeItem)!.IsSelected = true;
+                {             
+                    ChangeConfigPanelIfNecessary(sibling, false);
                 }
+                //TreeViewControl.SelectedNode = siblings.Last();
+                //ChangeConfigPanelIfNecessary(TreeViewControl.SelectedNode, false);
+
+
                 return true;
             }
 
@@ -2109,8 +2113,9 @@ namespace FramesToMMSpriteResources
                 return true;
             }
 
+            
+            ChangeConfigPanelIfNecessary(siblingList[newIndex], false);
             TreeViewControl.SelectedNode = siblingList[newIndex];
-            ChangeConfigPanelIfNecessary(siblingList[newIndex]);
             return true;
         }
 

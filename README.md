@@ -58,7 +58,7 @@ You can download this example that contains a subject with raw frames: [V_Yoshi]
 
 - <b>Move canvas:</b> `RMB`
 - <b>Zoom canvas:</b> Scroll `MMB`
-- <b>Move frame:</b> `W` `A` `S` `D` (+ `CTRL` / `SHIFT` for added speed) / `LMB`
+- <b>Move frame:</b> `W` `A` `S` `D` (+`SHIFT` for added speed) / `LMB`
 - <b>Toggle previous frame:</b> `R`
 
 ### Generating
