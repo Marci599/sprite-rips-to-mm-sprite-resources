@@ -52,7 +52,6 @@
                                 Width="8"
                                 HorizontalAlignment="Left"
                                 Background="Transparent"
-                                Cursor="SizeWestEast"
                                 PointerPressed="PreviewResizeLeftHandle_PointerPressed"
                                 PointerMoved="PreviewResizeHandle_PointerMoved"
                                 PointerReleased="PreviewResizeHandle_PointerReleased"/>
@@ -60,7 +59,6 @@
                                 Height="8"
                                 VerticalAlignment="Bottom"
                                 Background="Transparent"
-                                Cursor="SizeNorthSouth"
                                 PointerPressed="PreviewResizeBottomHandle_PointerPressed"
                                 PointerMoved="PreviewResizeHandle_PointerMoved"
                                 PointerReleased="PreviewResizeHandle_PointerReleased"/>
@@ -70,7 +68,6 @@
                                 HorizontalAlignment="Left"
                                 VerticalAlignment="Bottom"
                                 Background="Transparent"
-                                Cursor="SizeNorthwestSoutheast"
                                 PointerPressed="PreviewResizeCornerHandle_PointerPressed"
                                 PointerMoved="PreviewResizeHandle_PointerMoved"
                                 PointerReleased="PreviewResizeHandle_PointerReleased"/>
