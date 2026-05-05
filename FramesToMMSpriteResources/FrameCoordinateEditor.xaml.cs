@@ -53,8 +53,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private readonly SKPaint _axisPaint = new() { IsAntialias = false, Color = new SKColor(140, 140, 140, 200) };
     private SKShader? _checkerboardShader;
     private readonly SKBitmap _checkerboardUnitBitmap = new(2, 2, SKColorType.Bgra8888, SKAlphaType.Premul);
-    private bool _mainCanvasInvalidateQueued;
-    private bool _previewCanvasInvalidateQueued;
 
     public FrameCoordinateEditor()
     {
@@ -179,7 +177,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void UpdateVisuals()
     {
-        RequestMainCanvasInvalidate();
+        CoordinateCanvas.Invalidate();
         UpdateZoomControls();
     }
 
@@ -549,37 +547,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void UpdateAnimationPreviewFrame()
     {
-        RequestPreviewCanvasInvalidate();
-    }
-
-    private void RequestMainCanvasInvalidate()
-    {
-        if (_mainCanvasInvalidateQueued)
-        {
-            return;
-        }
-
-        _mainCanvasInvalidateQueued = true;
-        _ = DispatcherQueue.TryEnqueue(() =>
-        {
-            _mainCanvasInvalidateQueued = false;
-            CoordinateCanvas.Invalidate();
-        });
-    }
-
-    private void RequestPreviewCanvasInvalidate()
-    {
-        if (_previewCanvasInvalidateQueued)
-        {
-            return;
-        }
-
-        _previewCanvasInvalidateQueued = true;
-        _ = DispatcherQueue.TryEnqueue(() =>
-        {
-            _previewCanvasInvalidateQueued = false;
-            AnimationPreviewCanvas.Invalidate();
-        });
+        AnimationPreviewCanvas.Invalidate();
     }
 
     private WriteableBitmap? GetCurrentFrame() => (_previewFrames.Count == 0 || _selectedFrame >= _previewFrames.Count) ? null : _previewFrames[_selectedFrame];
