@@ -290,7 +290,7 @@ namespace FramesToMMSpriteResources
         {
             if (_waitingForSecondaryActivation)
             {
-                Debug.WriteLine("ACTIVATED WITH SECONDARY SOLUTION");
+
                 ActivateProgram();
                 _ableToRelaod = true;
             }
@@ -323,11 +323,11 @@ namespace FramesToMMSpriteResources
             {
                 if (!_ableToRelaod)
                 {
-                    Debug.WriteLine("TREID TO ACTIVATE");
+
                     _waitingForSecondaryActivation = true;
                     return;
                 }
-                Debug.WriteLine("ACTIVATED AS IT SHOULD");
+
                 ActivateProgram();
             }
             else
@@ -338,7 +338,7 @@ namespace FramesToMMSpriteResources
                 if (!_waitingForSecondaryActivation)
                 {
                     _waitingForSecondaryActivation = false;
-                    Debug.WriteLine("DEACTIVATED");
+           
                     _isWindowActive = false;
                     CheckForAllowProgramEditing();
                     cts?.Cancel();
@@ -353,7 +353,7 @@ namespace FramesToMMSpriteResources
                 else
                 {
                     _waitingForSecondaryActivation = false;
-                    Debug.WriteLine("TRIED TO DEACTIVATE");
+ 
                 }
                 
 
