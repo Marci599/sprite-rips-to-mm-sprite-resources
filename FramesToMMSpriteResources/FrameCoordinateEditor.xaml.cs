@@ -267,6 +267,19 @@ public sealed partial class FrameCoordinateEditor : UserControl
         int maxY = Math.Min(h, (int)Math.Ceiling(worldTop + (bitmap.PixelHeight * _zoom)));
         if (minX >= maxX || minY >= maxY)
         {
+            if (_zoom < 1f)
+            {
+                int centerX = (int)Math.Round(worldLeft + (bitmap.PixelWidth * _zoom * 0.5));
+                int centerY = (int)Math.Round(worldTop + (bitmap.PixelHeight * _zoom * 0.5));
+                if ((uint)centerX < (uint)w && (uint)centerY < (uint)h)
+                {
+                    int srcX = bitmap.PixelWidth / 2;
+                    int srcY = bitmap.PixelHeight / 2;
+                    int si = (srcY * bitmap.PixelWidth + srcX) * 4;
+                    int di = (centerY * w + centerX) * 4;
+                    BlendPixel(target, di, source[si], source[si + 1], source[si + 2], source[si + 3], opacity);
+                }
+            }
             return;
         }
 
@@ -323,13 +336,24 @@ public sealed partial class FrameCoordinateEditor : UserControl
                 byte a = source[si + 3];
                 if (a == 0) continue;
 
+                bool fullyOpaque = opacity >= 0.999f && a == 255;
                 for (int y = y0; y < y1; y++)
                 {
                     int rowBase = (y * targetWidth * 4);
                     for (int x = x0; x < x1; x++)
                     {
                         int di = rowBase + (x * 4);
-                        BlendPixel(target, di, b, g, r, a, opacity);
+                        if (fullyOpaque)
+                        {
+                            target[di] = b;
+                            target[di + 1] = g;
+                            target[di + 2] = r;
+                            target[di + 3] = 255;
+                        }
+                        else
+                        {
+                            BlendPixel(target, di, b, g, r, a, opacity);
+                        }
                     }
                 }
             }
