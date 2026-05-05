@@ -1,3 +1,4 @@
+using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -42,6 +43,15 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private bool _isPreviewDragging;
     private Vector2 _previewDragStartPointer;
     private Vector2 _previewDragStartPan;
+    private ResizeDirection _previewResizeDirection;
+    private double _previewResizeStartWidth;
+    private double _previewResizeStartHeight;
+    private Vector2 _previewResizeStartPointer;
+    private const double MinPreviewPanelWidth = 126;
+    private const double MinPreviewPanelHeight = 126;
+    private readonly InputCursor _resizeLeftCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeWestEast);
+    private readonly InputCursor _resizeBottomCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeNorthSouth);
+    private readonly InputCursor _resizeCornerCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeNortheastSouthwest);
     private readonly HashSet<Windows.System.VirtualKey> _heldNudgeKeys = [];
     private readonly DispatcherTimer _nudgeHoldTimer = new();
     private int _nudgeHoldTick;
@@ -54,6 +64,17 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private readonly SKPaint _axisPaint = new() { IsAntialias = false, Color = new SKColor(140, 140, 140, 200) };
     private SKShader? _checkerboardShader;
     private readonly SKBitmap _checkerboardUnitBitmap = new(2, 2, SKColorType.Bgra8888, SKAlphaType.Premul);
+
+
+    public event Action<float, float>? RemoveMovementButtonClick;
+
+    private enum ResizeDirection
+    {
+        None,
+        Left,
+        Bottom,
+        BottomLeft
+    }
 
     public FrameCoordinateEditor()
     {
@@ -143,6 +164,18 @@ public sealed partial class FrameCoordinateEditor : UserControl
         UpdateVisuals();
     }
 
+    public void RefreshOffsetFieldVisually()
+    {
+        OffsetXTextBox.ValueChanged -= OffsetXTextBox_ValueChanged;
+        OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
+
+        OffsetXTextBox.Value = _animationConfig.frameCongfigs[_selectedFrame].Offset.X;
+        OffsetYTextBox.Value = _animationConfig.frameCongfigs[_selectedFrame].Offset.Y;
+
+        OffsetXTextBox.ValueChanged += OffsetXTextBox_ValueChanged;
+        OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
+    }
+
     public void LoadAnimation(IReadOnlyList<WriteableBitmap> frames, AnimationConfig animationConfig)
     {
         _previewFrames = frames;
@@ -174,6 +207,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     public void UnloadAnimation()
     {
         LoadAnimation([], new());
+        UpdateVisuals();
     }
 
     private void UpdateVisuals()
@@ -460,6 +494,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void AnimationPreviewCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
     {
+        if (_previewResizeDirection != ResizeDirection.None)
+        {
+            return;
+        }
+
         var point = e.GetCurrentPoint(AnimationPreviewCanvas);
         _previewDragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
         _previewDragStartPan = _previewPan;
@@ -486,6 +525,97 @@ public sealed partial class FrameCoordinateEditor : UserControl
     {
         _isPreviewDragging = false;
         AnimationPreviewCanvas.ReleasePointerCapture(e.Pointer);
+    }
+
+    private void PreviewResizeLeftHandle_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        StartPreviewResize(sender, e, ResizeDirection.Left);
+    }
+    private void PreviewResizeLeftHandle_PointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        ProtectedCursor = _resizeLeftCursor;
+    }
+
+    private void PreviewResizeBottomHandle_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        StartPreviewResize(sender, e, ResizeDirection.Bottom);
+    }
+    private void PreviewResizeBottomHandle_PointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        ProtectedCursor = _resizeBottomCursor;
+    }
+
+    private void PreviewResizeCornerHandle_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        StartPreviewResize(sender, e, ResizeDirection.BottomLeft);
+    }
+    private void PreviewResizeCornerHandle_PointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        ProtectedCursor = _resizeCornerCursor;
+    }
+
+    private void PreviewResizeHandle_PointerExited(object sender, PointerRoutedEventArgs e)
+    {
+        if (_previewResizeDirection == ResizeDirection.None)
+        {
+            ProtectedCursor = null;
+        }
+    }
+
+    private void StartPreviewResize(object sender, PointerRoutedEventArgs e, ResizeDirection direction)
+    {
+        if (sender is not UIElement handle)
+        {
+            return;
+        }
+
+        var point = e.GetCurrentPoint(this);
+        _previewResizeDirection = direction;
+        _previewResizeStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
+        _previewResizeStartWidth = AnimationPreviewHostBorder.ActualWidth;
+        _previewResizeStartHeight = AnimationPreviewHostBorder.ActualHeight;
+        handle.CapturePointer(e.Pointer);
+        e.Handled = true;
+    }
+
+    private void PreviewResizeHandle_PointerMoved(object sender, PointerRoutedEventArgs e)
+    {
+        if (_previewResizeDirection == ResizeDirection.None)
+        {
+            return;
+        }
+
+        var point = e.GetCurrentPoint(this);
+        var delta = new Vector2((float)point.Position.X, (float)point.Position.Y) - _previewResizeStartPointer;
+        double width = _previewResizeStartWidth;
+        double height = _previewResizeStartHeight;
+
+        if (_previewResizeDirection is ResizeDirection.Left or ResizeDirection.BottomLeft)
+        {
+            width = Math.Max(MinPreviewPanelWidth, _previewResizeStartWidth - delta.X);
+        }
+
+        if (_previewResizeDirection is ResizeDirection.Bottom or ResizeDirection.BottomLeft)
+        {
+            height = Math.Max(MinPreviewPanelHeight, _previewResizeStartHeight + delta.Y);
+        }
+
+        AnimationPreviewHostBorder.Width = width;
+        AnimationPreviewHostBorder.Height = height;
+        UpdateAnimationPreviewFrame();
+        e.Handled = true;
+    }
+
+    private void PreviewResizeHandle_PointerReleased(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is UIElement handle)
+        {
+            handle.ReleasePointerCapture(e.Pointer);
+        }
+
+        _previewResizeDirection = ResizeDirection.None;
+        ProtectedCursor = null;
+        e.Handled = true;
     }
 
     private void AnimationPreviewCanvas_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
@@ -588,9 +718,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         DrawCheckerboard(canvas, width, height, axisX, axisY, zoom);
 
-        _axisPaint.StrokeWidth = main ? 1.5f : 1f;
-        canvas.DrawLine(0f, axisY, width, axisY, _axisPaint);
-        canvas.DrawLine(axisX, 0f, axisX, height, _axisPaint);
+
+
 
         if (_previewFrames.Count == 0)
         {
@@ -627,6 +756,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
                 DrawFrame(canvas, previewFrame, previewOffset, zoom, axisX, axisY, width, height, 1f);
             }
         }
+
+        _axisPaint.StrokeWidth = main ? 1.5f : 1f;
+        canvas.DrawLine(0f, axisY, width, axisY, _axisPaint);
+        canvas.DrawLine(axisX, 0f, axisX, height, _axisPaint);
     }
 
     private void DrawCheckerboard(SKCanvas canvas, int width, int height, float axisX, float axisY, float zoom)
@@ -733,6 +866,14 @@ public sealed partial class FrameCoordinateEditor : UserControl
                _heldNudgeKeys.Contains(Windows.System.VirtualKey.A) ||
                _heldNudgeKeys.Contains(Windows.System.VirtualKey.S) ||
                _heldNudgeKeys.Contains(Windows.System.VirtualKey.D);
+    }
+
+    private void RemoveMovementButton_Click(object sender, RoutedEventArgs e)
+    {
+        RemoveMovementButtonClick?.Invoke((float)DirectionNumberBox.Value, (float)SpeedNumberBox.Value);
+        
+        UpdateVisuals();
+        
     }
 
     private void NudgeHoldTimer_Tick(object? sender, object e)
