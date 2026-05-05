@@ -285,7 +285,45 @@ namespace FramesToMMSpriteResources
                     new PointerEventHandler(MainWindow_PointerPressed),
                     handledEventsToo: true);
             }
+
+            FrameCoordinateEditorControl.RemoveMovementButtonClick -= RemoveMovementButton_Click;
+            FrameCoordinateEditorControl.RemoveMovementButtonClick += RemoveMovementButton_Click;
         }
+
+        private void RemoveMovementButton_Click(float direaction, float speed)
+        {
+            var node = TreeViewControl.SelectedNode;
+            var gameThemeName = (node.Parent.Parent.Parent.Content as TreeItem)!.Text;
+            var subjectName = (node.Parent.Parent.Content as TreeItem)!.Text;
+            var animationNode = node.Parent;
+            var animationName = (animationNode.Content as TreeItem)!.Text;
+          
+            List<FrameConfig> frameConfigList = ProgramConfig.GameThemeConfigs[gameThemeName].SubjectConfigs[subjectName].AnimationConfigs[animationName].frameCongfigs;
+
+            Vector2? initialPosition = null;
+            for (int i = 0; i < animationNode.Children.Count; i++)
+            {
+                var frameNodeContent = (animationNode.Children[i].Content as TreeItem)!;
+                if (frameNodeContent.IsSelected)
+                {
+                   
+                    if (initialPosition == null)
+                    {
+                        initialPosition = new(frameConfigList[i].Offset.X, frameConfigList[i].Offset.Y);
+                    }
+                    else
+                    {
+                        initialPosition -= new Vector2(speed, 0f);
+                        frameConfigList[i].Offset = new((int)Math.Round(initialPosition.Value.X), (int)Math.Round(initialPosition.Value.Y));
+                    }
+                }
+            }
+            if((node.Content as TreeItem).Text != "000")
+            {
+                FrameCoordinateEditorControl.RefreshOffsetFieldVisually();
+            }
+        }
+
         private void MainWindow_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
             if (_waitingForSecondaryActivation)

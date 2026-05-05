@@ -13,7 +13,7 @@
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
-        <Border Margin="20 20 10 90" Grid.Column="0" CornerRadius="8" Padding="0" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+        <Border Margin="20 20 10 90" Grid.Column="0" Padding="0" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
             <Grid>
                 <skia:SKSwapChainPanel x:Name="CoordinateCanvas"
                         HorizontalAlignment="Stretch"
@@ -25,21 +25,27 @@
                         PointerReleased="CoordinateCanvas_PointerReleased"
                         PointerWheelChanged="CoordinateCanvas_PointerWheelChanged"/>
                 <StackPanel
-                    Margin="10"
+                    Margin="-4 10 10 0"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top">
                 <Border 
                         x:Name="AnimationPreviewHostBorder"
-                        CornerRadius="8 8 0 8"
-                        Background="{ThemeResource AcrylicBackgroundFillColorBaseBrush}"
-                        BorderBrush="{ThemeResource ControlStrokeColorOnAccentTertiaryBrush}"
-                        BorderThickness="1"
-                        Width="220"
-                        Height="220"
-                        MinWidth="150"
-                        MinHeight="175">
+        
+                            
+                        Width="126"
+                        Height="156"
+                        MinWidth="126"
+                        MinHeight="126">
                     <Grid>
-                        <skia:SKSwapChainPanel x:Name="AnimationPreviewCanvas"
+                        <Border 
+                           HorizontalAlignment="Stretch"
+                           VerticalAlignment="Stretch"
+                            Margin="4 0 0 4"
+                            BorderThickness="1"
+               
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                            <skia:SKSwapChainPanel x:Name="AnimationPreviewCanvas"
+                                               
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch"
                                 PaintSurface="AnimationPreviewCanvas_PaintSurface"
@@ -48,8 +54,10 @@
                                 PointerMoved="AnimationPreviewCanvas_PointerMoved"
                                 PointerReleased="AnimationPreviewCanvas_PointerReleased"
                                 PointerWheelChanged="AnimationPreviewCanvas_PointerWheelChanged"/>
+                        </Border>
                         <Border x:Name="PreviewResizeLeftHandle"
                                 Width="8"
+                          
                                 HorizontalAlignment="Left"
                                 Background="Transparent"
                                 PointerEntered="PreviewResizeLeftHandle_PointerEntered"
@@ -85,7 +93,7 @@
                         CornerRadius="0 0 8 8"
                         Background="{ThemeResource AcrylicBackgroundFillColorBaseBrush}"
                         BorderBrush="{ThemeResource ControlStrokeColorOnAccentTertiaryBrush}"
-                        Margin="0 -2 0 0"
+                        Margin="0 -6 0 0"
                         BorderThickness="1"
                         HorizontalAlignment="Right">
                         
@@ -186,6 +194,21 @@
                                 <FontIcon Glyph="&#xEA4F;" FontSize="12"/>
                             </Button>
                         </Grid>
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                
+                            </Grid.ColumnDefinitions>
+                            <NumberBox Grid.Column="0" x:Name="DirectionNumberBox" Header="Direction" PlaceholderText="90" Minimum="-999999" Maximum="999999"/>
+                            <NumberBox Grid.Column="1" x:Name="SpeedNumberBox" Header="Speed (p/f)" PlaceholderText="0" Minimum="-999999" Maximum="999999"/>
+                       
+                        </Grid>
+                        <Button Grid.Column="2" HorizontalAlignment="Stretch" Height="32" Click="RemoveMovementButton_Click">
+                          
+                                <TextBlock Text="Remove movement"/>
+                           
+                        </Button>
                     </StackPanel>
                 </Border>
 

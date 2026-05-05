@@ -47,11 +47,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private double _previewResizeStartWidth;
     private double _previewResizeStartHeight;
     private Vector2 _previewResizeStartPointer;
-    private const double MinPreviewPanelWidth = 150;
-    private const double MinPreviewPanelHeight = 175;
+    private const double MinPreviewPanelWidth = 126;
+    private const double MinPreviewPanelHeight = 126;
     private readonly InputCursor _resizeLeftCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeWestEast);
     private readonly InputCursor _resizeBottomCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeNorthSouth);
-    private readonly InputCursor _resizeCornerCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeNorthwestSoutheast);
+    private readonly InputCursor _resizeCornerCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeNortheastSouthwest);
     private readonly HashSet<Windows.System.VirtualKey> _heldNudgeKeys = [];
     private readonly DispatcherTimer _nudgeHoldTimer = new();
     private int _nudgeHoldTick;
@@ -64,6 +64,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private readonly SKPaint _axisPaint = new() { IsAntialias = false, Color = new SKColor(140, 140, 140, 200) };
     private SKShader? _checkerboardShader;
     private readonly SKBitmap _checkerboardUnitBitmap = new(2, 2, SKColorType.Bgra8888, SKAlphaType.Premul);
+
+
+    public event Action<float, float>? RemoveMovementButtonClick;
+
     private enum ResizeDirection
     {
         None,
@@ -160,6 +164,18 @@ public sealed partial class FrameCoordinateEditor : UserControl
         UpdateVisuals();
     }
 
+    public void RefreshOffsetFieldVisually()
+    {
+        OffsetXTextBox.ValueChanged -= OffsetXTextBox_ValueChanged;
+        OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
+
+        OffsetXTextBox.Value = _animationConfig.frameCongfigs[_selectedFrame].Offset.X;
+        OffsetYTextBox.Value = _animationConfig.frameCongfigs[_selectedFrame].Offset.Y;
+
+        OffsetXTextBox.ValueChanged += OffsetXTextBox_ValueChanged;
+        OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
+    }
+
     public void LoadAnimation(IReadOnlyList<WriteableBitmap> frames, AnimationConfig animationConfig)
     {
         _previewFrames = frames;
@@ -191,6 +207,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     public void UnloadAnimation()
     {
         LoadAnimation([], new());
+        UpdateVisuals();
     }
 
     private void UpdateVisuals()
@@ -701,9 +718,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         DrawCheckerboard(canvas, width, height, axisX, axisY, zoom);
 
-        _axisPaint.StrokeWidth = main ? 1.5f : 1f;
-        canvas.DrawLine(0f, axisY, width, axisY, _axisPaint);
-        canvas.DrawLine(axisX, 0f, axisX, height, _axisPaint);
+
+
 
         if (_previewFrames.Count == 0)
         {
@@ -740,6 +756,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
                 DrawFrame(canvas, previewFrame, previewOffset, zoom, axisX, axisY, width, height, 1f);
             }
         }
+
+        _axisPaint.StrokeWidth = main ? 1.5f : 1f;
+        canvas.DrawLine(0f, axisY, width, axisY, _axisPaint);
+        canvas.DrawLine(axisX, 0f, axisX, height, _axisPaint);
     }
 
     private void DrawCheckerboard(SKCanvas canvas, int width, int height, float axisX, float axisY, float zoom)
@@ -846,6 +866,14 @@ public sealed partial class FrameCoordinateEditor : UserControl
                _heldNudgeKeys.Contains(Windows.System.VirtualKey.A) ||
                _heldNudgeKeys.Contains(Windows.System.VirtualKey.S) ||
                _heldNudgeKeys.Contains(Windows.System.VirtualKey.D);
+    }
+
+    private void RemoveMovementButton_Click(object sender, RoutedEventArgs e)
+    {
+        RemoveMovementButtonClick?.Invoke((float)DirectionNumberBox.Value, (float)SpeedNumberBox.Value);
+        
+        UpdateVisuals();
+        
     }
 
     private void NudgeHoldTimer_Tick(object? sender, object e)
