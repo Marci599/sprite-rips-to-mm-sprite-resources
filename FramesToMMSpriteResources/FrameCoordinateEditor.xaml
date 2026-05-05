@@ -23,12 +23,7 @@
                         PointerMoved="CoordinateCanvas_PointerMoved"
                         PointerReleased="CoordinateCanvas_PointerReleased"
                         PointerWheelChanged="CoordinateCanvas_PointerWheelChanged">
-                    <Image x:Name="CheckerboardImage" IsHitTestVisible="False" Stretch="None"/>
-                    <Image x:Name="SpriteBeforeImage" Width="48" Height="48" IsHitTestVisible="False" Opacity="0.5"/>
-
-                    <Image x:Name="SpriteImage" Width="48" Height="48" IsHitTestVisible="False" Opacity="0.7"/>
-                    <Rectangle x:Name="XAxis" Height="1.5" Fill="{ThemeResource TextFillColorSecondaryBrush}" Opacity="0.8"/>
-                    <Rectangle x:Name="YAxis" Width="1.5" Fill="{ThemeResource TextFillColorSecondaryBrush}" Opacity="0.8"/>
+                    <Image x:Name="EditorCompositeImage" IsHitTestVisible="False" Stretch="None"/>
                 </Canvas>
                 <StackPanel
                     Margin="10"
