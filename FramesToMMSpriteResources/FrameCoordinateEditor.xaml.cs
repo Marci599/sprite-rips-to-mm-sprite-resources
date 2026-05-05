@@ -273,11 +273,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
                 int centerY = (int)Math.Round(worldTop + (bitmap.PixelHeight * _zoom * 0.5));
                 if ((uint)centerX < (uint)w && (uint)centerY < (uint)h)
                 {
-                    int srcX = bitmap.PixelWidth / 2;
-                    int srcY = bitmap.PixelHeight / 2;
-                    int si = (srcY * bitmap.PixelWidth + srcX) * 4;
-                    int di = (centerY * w + centerX) * 4;
-                    BlendPixel(target, di, source[si], source[si + 1], source[si + 2], source[si + 3], opacity);
+                    int si = FindRepresentativeOpaquePixel(source);
+                    if (si >= 0)
+                    {
+                        int di = (centerY * w + centerX) * 4;
+                        BlendPixel(target, di, source[si], source[si + 1], source[si + 2], source[si + 3], opacity);
+                    }
                 }
             }
             return;
@@ -362,13 +363,30 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private static void BlendPixel(Span<byte> target, int di, byte srcB, byte srcG, byte srcR, byte srcA, float opacity)
     {
-        float a = (srcA / 255f) * opacity;
-        if (a <= 0f) return;
-        float invA = 1f - a;
-        target[di] = (byte)((srcB * a) + (target[di] * invA));
-        target[di + 1] = (byte)((srcG * a) + (target[di + 1] * invA));
-        target[di + 2] = (byte)((srcR * a) + (target[di + 2] * invA));
+        int alpha = (int)(srcA * opacity);
+        if (alpha <= 0) return;
+        int inv = 255 - alpha;
+        target[di] = (byte)((srcB * alpha + target[di] * inv) / 255);
+        target[di + 1] = (byte)((srcG * alpha + target[di + 1] * inv) / 255);
+        target[di + 2] = (byte)((srcR * alpha + target[di + 2] * inv) / 255);
         target[di + 3] = 255;
+    }
+
+    private static int FindRepresentativeOpaquePixel(byte[] source)
+    {
+        int best = -1;
+        int bestAlpha = -1;
+        for (int i = 0; i < source.Length; i += 4)
+        {
+            int a = source[i + 3];
+            if (a > bestAlpha)
+            {
+                bestAlpha = a;
+                best = i;
+                if (a == 255) return best;
+            }
+        }
+        return bestAlpha > 0 ? best : -1;
     }
 
     private byte[] GetFramePixels(int frameIndex, WriteableBitmap bitmap, bool grayscale)
