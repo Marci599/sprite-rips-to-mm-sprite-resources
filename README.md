@@ -51,14 +51,13 @@ You can download this example that contains a subject with raw frames: [V_Yoshi]
 - <b>Open in file explorer:</b> `RMB`
 - <b>Multiselect:</b> Hold `CTRL`
 - <b>Select all sibling:</b> `CTRL` + `A`
-- <b>Select range:</b> Hold `SHIFT`
 - <b>Change selected sibling:</b> `Q` `D`
 
 #### Frame offset editor
 
 - <b>Move canvas:</b> `RMB`
 - <b>Zoom canvas:</b> Scroll `MMB`
-- <b>Move frame:</b> `W` `A` `S` `D` (+ `CTRL` / `SHIFT` for added speed) / `LMB`
+- <b>Move frame:</b> `W` `A` `S` `D` (+`SHIFT` for added speed) / `LMB`
 - <b>Toggle previous frame:</b> `R`
 
 ### Generating

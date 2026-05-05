@@ -121,7 +121,6 @@
                 Margin="0 2 0 20">
                 <BreadcrumbBar.Resources>
                     <x:Double x:Key="BreadcrumbBarChevronFontSize">18</x:Double>
-
                 </BreadcrumbBar.Resources>
                 <BreadcrumbBar.ItemTemplate>
                     <DataTemplate x:DataType="x:String">

@@ -20,6 +20,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Windows.ApplicationModel;
 using Windows.Graphics.Imaging;
 using Windows.Storage;
@@ -1031,7 +1032,7 @@ namespace FramesToMMSpriteResources
 
         void ChangeConfigPanelIfNecessary(TreeViewNode node, bool animate = true, bool nowGenerated = false)
         {
-            TreeViewControl.Focus(FocusState.Programmatic);
+            //TreeViewControl.Focus(FocusState.Programmatic);
    
             SettingsToggleButton.IsChecked = false;
 
@@ -1218,27 +1219,21 @@ namespace FramesToMMSpriteResources
         {
             AnimateGeneratePanel(show: false);
             var gameThemeName = (node.Content as TreeItem)!.Text;
-
             var selectedNode = (node.Content as TreeItem)!;
 
             HandleSelection(selectedNode, nowGenerated, []);
-
-            var listOfSelections = ProgramConfig.SelectedNodes!.OrderBy(s => s);
-            UpdateBreadcrumb(string.Join(", ", listOfSelections));
-
+            UpdateBreadcrumb(string.Join(", ", ProgramConfig.SelectedNodes!.OrderBy(s => s)));
             TryCloseInfoBar();
 
             await ChangePanelGraphic(animate, GameThemePanel);
    
             _currentConfigs = [];
-
-            var gameThemeConfig = ProgramConfig.GameThemeConfigs![gameThemeName];
-
             foreach (string selectedNodeName in ProgramConfig.SelectedNodes!)
             {
                 _currentConfigs.Add(ProgramConfig.GameThemeConfigs![selectedNodeName]);
             }
 
+            var gameThemeConfig = ProgramConfig.GameThemeConfigs![gameThemeName];
             IsHdCheckBox.IsChecked = gameThemeConfig.IsHd;
             IsHdCheckBox.Click += ClickIsHdCheckBox;
         }
@@ -1248,12 +1243,11 @@ namespace FramesToMMSpriteResources
             AnimateGeneratePanel(show: true);
             var gameThemeName = (node.Parent.Content as TreeItem)!.Text;
             var subjectName = (node.Content as TreeItem)!.Text;
+
             var selectedNode = (node.Content as TreeItem)!;
 
             HandleSelection(selectedNode, nowGenerated, [gameThemeName]);
-
             UpdateBreadcrumb(gameThemeName, string.Join(", ", ProgramConfig.SelectedNodes!.OrderBy(s => s)));
-
             CheckFrameCountAndDisplayWarning((node.Content as TreeItem)!.Count);
 
             GenerateButton.Content = $"Generate {selectedNode.Text}";
@@ -1261,13 +1255,12 @@ namespace FramesToMMSpriteResources
             await ChangePanelGraphic(animate, SubjectPanel);
 
             _currentConfigs = [];
-            var subjectConfig = ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName];
-
             foreach (string selectedNodeName in ProgramConfig.SelectedNodes!)
             {
                 _currentConfigs.Add(ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![selectedNodeName]);
             }
 
+            var subjectConfig = ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName];
             subjectConfig.Sheet ??= new SheetConfig();
 
             RemoveBackgroundCheckBox.IsChecked = subjectConfig.RemoveBackground;
@@ -1303,9 +1296,7 @@ namespace FramesToMMSpriteResources
             var selectedNode = (node.Content as TreeItem);
 
             HandleSelection(selectedNode!, nowGenerated, [gameThemeName, subjectName]);
-
             UpdateBreadcrumb(gameThemeName, subjectName, string.Join(", ", ProgramConfig.SelectedNodes!.OrderBy(s => s)));
-
             CheckFrameCountAndDisplayWarning((node.Parent.Content as TreeItem)!.Count);
 
             GenerateButton.Content = $"Generate {ProgramConfig.SelectedNodePath![1]}";
@@ -1313,13 +1304,12 @@ namespace FramesToMMSpriteResources
             await ChangePanelGraphic(animate, AnimationsPanel);
    
             _currentConfigs = [];
-            var animationConfig = ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName];
-
             foreach (string selectedNodeName in ProgramConfig.SelectedNodes!)
             {
                 _currentConfigs.Add(ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![selectedNodeName]);
             }
 
+            var animationConfig = ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName];
             animationConfig.RecoverCroppedOffset ??= new RecoverCroppedOffset();
             animationConfig.Offset ??= new Vector2(0, 0);
 
@@ -1379,14 +1369,14 @@ namespace FramesToMMSpriteResources
 
 
             _currentConfigs = [];
-            var animationConfig = ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName];
-            int selectedIndex = int.Parse(frameName);
-            var frameConfig = animationConfig.frameCongfigs[selectedIndex];
-
             foreach (string selectedNodeName in ProgramConfig.SelectedNodes!)
             {
                 _currentConfigs.Add(ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].frameCongfigs[int.Parse(selectedNodeName)]);
             }
+
+            var animationConfig = ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName];
+            int selectedIndex = int.Parse(frameName);
+            var frameConfig = animationConfig.frameCongfigs[selectedIndex];
 
             if (IsLoadingFrames) return;
             cts = new();
@@ -2016,6 +2006,19 @@ namespace FramesToMMSpriteResources
 
         private void MainRootGrid_KeyDown(object sender, KeyRoutedEventArgs e)
         {
+            if (e.Key == Windows.System.VirtualKey.R && FramePanel.Visibility == Visibility.Visible)
+            {
+                FrameCoordinateEditorControl.ToggleShowPreviousFrame();
+                e.Handled = true;
+                return;
+            }
+
+            if (HandleTreeViewHotkeys(e))
+            {
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key == Windows.System.VirtualKey.Control ||
                 e.Key == Windows.System.VirtualKey.LeftControl ||
                 e.Key == Windows.System.VirtualKey.RightControl)
@@ -2045,6 +2048,107 @@ namespace FramesToMMSpriteResources
             }
 
             FrameCoordinateEditorControl.HandleNudgeKeyUp(e.Key);
+        }
+
+        private bool HandleTreeViewHotkeys(KeyRoutedEventArgs e)
+        {
+            TreeViewNode? selectedNode = TreeViewControl.SelectedNode;
+            if (selectedNode == null)
+            {
+                return false;
+            }
+
+            bool ctrlHeld = e.KeyStatus.IsMenuKeyDown || _isCtrlHeld ||
+                            e.Key == Windows.System.VirtualKey.Control ||
+                            e.Key == Windows.System.VirtualKey.LeftControl ||
+                            e.Key == Windows.System.VirtualKey.RightControl;
+
+            if (ctrlHeld && e.Key == Windows.System.VirtualKey.A)
+            {
+                IList<TreeViewNode> siblings = selectedNode.Parent?.Children ?? TreeViewControl.RootNodes;
+                ProgramConfig.SelectedNodes = [];
+     
+
+    
+
+                ItemDepth depth = (selectedNode.Content as TreeItem)!.Depth;
+                switch (depth)
+                {
+                    case ItemDepth.GameTheme:
+                        _currentConfigs = new(ProgramConfig.GameThemeConfigs!.Values);
+                        break;
+
+                    case ItemDepth.Subject:
+                        var gameThemeName = (selectedNode.Parent!.Content as TreeItem)!.Text;
+                        _currentConfigs = new(ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs!.Values);
+                        break;
+
+                    case ItemDepth.Animation:
+                        gameThemeName = (selectedNode.Parent!.Parent.Content as TreeItem)!.Text;
+                        var subjectName = (selectedNode.Parent.Content as TreeItem)!.Text;
+                        _currentConfigs = new(ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs!.Values);
+                        break;
+
+                    case ItemDepth.Frame:
+                        gameThemeName = (selectedNode.Parent!.Parent.Parent.Content as TreeItem)!.Text;
+                        subjectName = (selectedNode.Parent.Parent.Content as TreeItem)!.Text;
+                        string animationName = (selectedNode.Parent.Content as TreeItem)!.Text;
+                        _currentConfigs = new(ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].frameCongfigs!);
+                        break;
+                  
+                    default:
+                        _currentConfigs = [];
+                        break;
+                }
+
+                foreach (TreeViewNode sibling in siblings)
+                {
+                    var node = (sibling.Content as TreeItem)!;
+     
+                    ProgramConfig.SelectedNodes.Add(node.Text);
+                    node.IsSelected = true;
+                }
+
+                if(siblings.Last() != TreeViewControl.SelectedNode)
+                {
+                    ChangeConfigPanel(siblings.Last(), false);
+                    TreeViewControl.SelectedNode = siblings.Last();
+                }
+
+
+                return true;
+            }
+
+            if (e.Key != Windows.System.VirtualKey.Q && e.Key != Windows.System.VirtualKey.E)
+            {
+                return false;
+            }
+
+            IList<TreeViewNode> siblingList = selectedNode.Parent?.Children ?? TreeViewControl.RootNodes;
+            int currentIndex = -1;
+            for (int i = 0; i < siblingList.Count; i++)
+            {
+                if (siblingList[i] == selectedNode)
+                {
+                    currentIndex = i;
+                    break;
+                }
+            }
+            if (currentIndex < 0)
+            {
+                return false;
+            }
+
+            int newIndex = e.Key == Windows.System.VirtualKey.Q ? currentIndex - 1 : currentIndex + 1;
+            if (newIndex < 0 || newIndex >= siblingList.Count)
+            {
+                return true;
+            }
+
+            TreeViewControl.SelectedNode = siblingList[newIndex];
+            ChangeConfigPanel(siblingList[newIndex], false);
+     
+            return true;
         }
 
         private void ClearAllTreeItemSelections()
