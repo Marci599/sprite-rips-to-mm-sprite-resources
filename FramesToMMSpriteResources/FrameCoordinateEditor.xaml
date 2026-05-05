@@ -15,7 +15,7 @@
 
         <Border Margin="20 20 10 90" Grid.Column="0" CornerRadius="8" Padding="0" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
             <Grid>
-                <skia:SKXamlCanvas x:Name="CoordinateCanvas"
+                <skia:SKSwapChainPanel x:Name="CoordinateCanvas"
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Stretch"
                         PaintSurface="CoordinateCanvas_PaintSurface"
@@ -39,7 +39,7 @@
                     MinHeight="175">
                         
 
-                        <skia:SKXamlCanvas x:Name="AnimationPreviewCanvas"
+                        <skia:SKSwapChainPanel x:Name="AnimationPreviewCanvas"
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch"
                                 PaintSurface="AnimationPreviewCanvas_PaintSurface"
