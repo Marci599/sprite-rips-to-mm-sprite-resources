@@ -4,7 +4,7 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
 using SkiaSharp;
-using SkiaSharp.Views.WinUI;
+using SkiaSharp.Views.Windows;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -47,7 +47,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private const int NudgeHoldDelayTicks = 10;
     byte lightA, lightB;
     private readonly Dictionary<WriteableBitmap, SKBitmap> _bitmapCache = [];
-    private readonly SKSamplingOptions _nearestSampling = new(SKFilterMode.Nearest, SKMipmapMode.None);
     private readonly SKPaint _spritePaint = new() { IsAntialias = false };
     private readonly SKPaint _checkerboardPaint = new() { IsAntialias = false };
     private readonly SKPaint _axisPaint = new() { IsAntialias = false, Color = new SKColor(140, 140, 140, 200) };
@@ -610,12 +609,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
     {
         _checkerboardShader ??= _checkerboardUnitBitmap.ToShader(SKShaderTileMode.Repeat, SKShaderTileMode.Repeat);
         float tileSize = Math.Max(1f, 4f * zoom);
-        float patternSpan = tileSize * 2f;
-        float phaseX = (axisX % patternSpan + patternSpan) % patternSpan;
-        float phaseY = (axisY % patternSpan + patternSpan) % patternSpan;
-
         SKMatrix scaleMatrix = SKMatrix.CreateScale(tileSize, tileSize);
-        SKMatrix translationMatrix = SKMatrix.CreateTranslation(phaseX, phaseY);
+        SKMatrix translationMatrix = SKMatrix.CreateTranslation(axisX, axisY);
         SKMatrix shaderMatrix = SKMatrix.Concat(scaleMatrix, translationMatrix);
         _checkerboardPaint.Shader = _checkerboardShader!.WithLocalMatrix(shaderMatrix);
         canvas.DrawRect(new SKRect(0f, 0f, width, height), _checkerboardPaint);
@@ -629,7 +624,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         float y = axisY - (offset.Y * zoom) - (height / 2f);
 
         _spritePaint.Color = new SKColor(255, 255, 255, (byte)(alpha * 255f));
-        canvas.DrawBitmap(bitmap, new SKRect(x, y, x + width, y + height), _nearestSampling, _spritePaint);
+        canvas.DrawBitmap(bitmap, new SKRect(x, y, x + width, y + height), _spritePaint);
     }
 
     private static bool IsNudgeKey(Windows.System.VirtualKey key)
