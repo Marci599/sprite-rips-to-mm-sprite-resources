@@ -270,6 +270,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
             return;
         }
 
+        if (_zoom >= 1f)
+        {
+            DrawSpriteZoomedIn(bitmap, source, worldLeft, worldTop, target, w, h, opacity);
+            return;
+        }
+
         float invZoom = 1f / _zoom;
         float srcYOffset = (float)(minY - worldTop);
         for (int y = minY; y < maxY; y++)
@@ -287,6 +293,46 @@ public sealed partial class FrameCoordinateEditor : UserControl
                 srcXOffset += 1f;
             }
             srcYOffset += 1f;
+        }
+    }
+
+    private void DrawSpriteZoomedIn(WriteableBitmap bitmap, byte[] source, double worldLeft, double worldTop, Span<byte> target, int targetWidth, int targetHeight, float opacity)
+    {
+        for (int srcY = 0; srcY < bitmap.PixelHeight; srcY++)
+        {
+            int y0 = (int)Math.Floor(worldTop + (srcY * _zoom));
+            int y1 = (int)Math.Floor(worldTop + ((srcY + 1) * _zoom));
+            if (y1 <= y0) y1 = y0 + 1;
+            if (y1 <= 0 || y0 >= targetHeight) continue;
+            y0 = Math.Max(0, y0);
+            y1 = Math.Min(targetHeight, y1);
+
+            for (int srcX = 0; srcX < bitmap.PixelWidth; srcX++)
+            {
+                int x0 = (int)Math.Floor(worldLeft + (srcX * _zoom));
+                int x1 = (int)Math.Floor(worldLeft + ((srcX + 1) * _zoom));
+                if (x1 <= x0) x1 = x0 + 1;
+                if (x1 <= 0 || x0 >= targetWidth) continue;
+                x0 = Math.Max(0, x0);
+                x1 = Math.Min(targetWidth, x1);
+
+                int si = (srcY * bitmap.PixelWidth + srcX) * 4;
+                byte b = source[si];
+                byte g = source[si + 1];
+                byte r = source[si + 2];
+                byte a = source[si + 3];
+                if (a == 0) continue;
+
+                for (int y = y0; y < y1; y++)
+                {
+                    int rowBase = (y * targetWidth * 4);
+                    for (int x = x0; x < x1; x++)
+                    {
+                        int di = rowBase + (x * 4);
+                        BlendPixel(target, di, b, g, r, a, opacity);
+                    }
+                }
+            }
         }
     }
 
