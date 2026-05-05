@@ -52,6 +52,8 @@
                                 Width="8"
                                 HorizontalAlignment="Left"
                                 Background="Transparent"
+                                PointerEntered="PreviewResizeLeftHandle_PointerEntered"
+                                PointerExited="PreviewResizeHandle_PointerExited"
                                 PointerPressed="PreviewResizeLeftHandle_PointerPressed"
                                 PointerMoved="PreviewResizeHandle_PointerMoved"
                                 PointerReleased="PreviewResizeHandle_PointerReleased"/>
@@ -59,6 +61,8 @@
                                 Height="8"
                                 VerticalAlignment="Bottom"
                                 Background="Transparent"
+                                PointerEntered="PreviewResizeBottomHandle_PointerEntered"
+                                PointerExited="PreviewResizeHandle_PointerExited"
                                 PointerPressed="PreviewResizeBottomHandle_PointerPressed"
                                 PointerMoved="PreviewResizeHandle_PointerMoved"
                                 PointerReleased="PreviewResizeHandle_PointerReleased"/>
@@ -68,6 +72,8 @@
                                 HorizontalAlignment="Left"
                                 VerticalAlignment="Bottom"
                                 Background="Transparent"
+                                PointerEntered="PreviewResizeCornerHandle_PointerEntered"
+                                PointerExited="PreviewResizeHandle_PointerExited"
                                 PointerPressed="PreviewResizeCornerHandle_PointerPressed"
                                 PointerMoved="PreviewResizeHandle_PointerMoved"
                                 PointerReleased="PreviewResizeHandle_PointerReleased"/>

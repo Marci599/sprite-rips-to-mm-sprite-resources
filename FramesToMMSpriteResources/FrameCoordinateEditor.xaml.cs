@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Windows.UI.Core;
 using SkiaSharp;
 using SkiaSharp.Views.Windows;
 using System;
@@ -48,6 +49,9 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private Vector2 _previewResizeStartPointer;
     private const double MinPreviewPanelWidth = 150;
     private const double MinPreviewPanelHeight = 175;
+    private readonly CoreCursor _resizeLeftCursor = new(CoreCursorType.SizeWestEast, 0);
+    private readonly CoreCursor _resizeBottomCursor = new(CoreCursorType.SizeNorthSouth, 0);
+    private readonly CoreCursor _resizeCornerCursor = new(CoreCursorType.SizeNorthwestSoutheast, 0);
     private readonly HashSet<Windows.System.VirtualKey> _heldNudgeKeys = [];
     private readonly DispatcherTimer _nudgeHoldTimer = new();
     private int _nudgeHoldTick;
@@ -510,15 +514,35 @@ public sealed partial class FrameCoordinateEditor : UserControl
     {
         StartPreviewResize(sender, e, ResizeDirection.Left);
     }
+    private void PreviewResizeLeftHandle_PointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        ProtectedCursor = _resizeLeftCursor;
+    }
 
     private void PreviewResizeBottomHandle_PointerPressed(object sender, PointerRoutedEventArgs e)
     {
         StartPreviewResize(sender, e, ResizeDirection.Bottom);
     }
+    private void PreviewResizeBottomHandle_PointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        ProtectedCursor = _resizeBottomCursor;
+    }
 
     private void PreviewResizeCornerHandle_PointerPressed(object sender, PointerRoutedEventArgs e)
     {
         StartPreviewResize(sender, e, ResizeDirection.BottomLeft);
+    }
+    private void PreviewResizeCornerHandle_PointerEntered(object sender, PointerRoutedEventArgs e)
+    {
+        ProtectedCursor = _resizeCornerCursor;
+    }
+
+    private void PreviewResizeHandle_PointerExited(object sender, PointerRoutedEventArgs e)
+    {
+        if (_previewResizeDirection == ResizeDirection.None)
+        {
+            ProtectedCursor = null;
+        }
     }
 
     private void StartPreviewResize(object sender, PointerRoutedEventArgs e, ResizeDirection direction)
@@ -573,6 +597,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
 
         _previewResizeDirection = ResizeDirection.None;
+        ProtectedCursor = null;
         e.Handled = true;
     }
 
