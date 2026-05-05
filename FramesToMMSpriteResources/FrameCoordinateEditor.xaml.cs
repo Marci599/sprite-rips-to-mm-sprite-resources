@@ -191,26 +191,16 @@ public sealed partial class FrameCoordinateEditor : UserControl
             _editorPixels = new byte[byteCount];
         }
         Span<byte> pixels = _editorPixels!;
-        double tileSize = 4.0 * _zoom;
-        int idx = 0;
-        for (int y = 0; y < pixelHeight; y++)
-        {
-            int tileY = (int)Math.Floor((axisY - y) / tileSize);
-            for (int x = 0; x < pixelWidth; x++)
-            {
-                int tileX = (int)Math.Floor((x - axisX) / tileSize);
-                byte color = ((tileX + tileY) & 1) == 0 ? lightA : lightB;
-                pixels[idx++] = color; pixels[idx++] = color; pixels[idx++] = color; pixels[idx++] = 255;
-            }
-        }
+        FillCheckerboard(pixels, pixelWidth, pixelHeight, axisX, axisY);
         if (_previewFrames.Count > 0 && _selectedFrame < _previewFrames.Count)
         {
-            if (ShowPreviousToggleSwitch.IsOn)
+            bool showPrevious = ShowPreviousToggleSwitch.IsOn;
+            if (showPrevious)
             {
                 int prev = _selectedFrame == 0 ? _previewFrames.Count - 1 : _selectedFrame - 1;
                 DrawSpriteToBuffer(prev, _previewFrames[prev], _animationConfig.frameCongfigs[prev].Offset, axisX, axisY, pixels, pixelWidth, pixelHeight, true, 0.5f);
             }
-            DrawSpriteToBuffer(_selectedFrame, _previewFrames[_selectedFrame], _animationConfig.frameCongfigs[_selectedFrame].Offset, axisX, axisY, pixels, pixelWidth, pixelHeight, false, 0.7f);
+            DrawSpriteToBuffer(_selectedFrame, _previewFrames[_selectedFrame], _animationConfig.frameCongfigs[_selectedFrame].Offset, axisX, axisY, pixels, pixelWidth, pixelHeight, false, showPrevious ? 0.7f : 1f);
         }
 
         int axisXi = (int)Math.Round(axisX);
@@ -237,6 +227,34 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _editorCompositeBitmap.Invalidate();
     }
 
+    private void FillCheckerboard(Span<byte> pixels, int width, int height, double axisX, double axisY)
+    {
+        int cellSize = Math.Max(1, (int)Math.Round(4.0 * _zoom));
+        int originX = (int)Math.Floor(axisX);
+        int originY = (int)Math.Floor(axisY);
+        int index = 0;
+        for (int y = 0; y < height; y++)
+        {
+            int tileY = FloorDiv(originY - y, cellSize);
+            for (int x = 0; x < width; x++)
+            {
+                int tileX = FloorDiv(x - originX, cellSize);
+                byte c = ((tileX + tileY) & 1) == 0 ? lightA : lightB;
+                pixels[index++] = c;
+                pixels[index++] = c;
+                pixels[index++] = c;
+                pixels[index++] = 255;
+            }
+        }
+    }
+
+    private static int FloorDiv(int value, int divisor)
+    {
+        int q = value / divisor;
+        int r = value % divisor;
+        return r < 0 ? q - 1 : q;
+    }
+
     private void DrawSpriteToBuffer(int frameIndex, WriteableBitmap bitmap, IntVector2 offset, double axisX, double axisY, Span<byte> target, int w, int h, bool grayscale, float opacity)
     {
         byte[] source = GetFramePixels(frameIndex, bitmap, grayscale);
@@ -253,18 +271,22 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
 
         float invZoom = 1f / _zoom;
+        float srcYOffset = (float)(minY - worldTop);
         for (int y = minY; y < maxY; y++)
         {
-            int srcY = (int)((y - worldTop) * invZoom);
+            int srcY = (int)(srcYOffset * invZoom);
             if ((uint)srcY >= bitmap.PixelHeight) continue;
+            float srcXOffset = (float)(minX - worldLeft);
             for (int x = minX; x < maxX; x++)
             {
-                int srcX = (int)((x - worldLeft) * invZoom);
+                int srcX = (int)(srcXOffset * invZoom);
                 if ((uint)srcX >= bitmap.PixelWidth) continue;
                 int si = (srcY * bitmap.PixelWidth + srcX) * 4;
                 int di = (y * w + x) * 4;
                 BlendPixel(target, di, source[si], source[si + 1], source[si + 2], source[si + 3], opacity);
+                srcXOffset += 1f;
             }
+            srcYOffset += 1f;
         }
     }
 
