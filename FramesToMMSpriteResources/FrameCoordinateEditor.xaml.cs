@@ -597,12 +597,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
         return bmp;
     }
 
-    private void CoordinateCanvas_PaintSurface(object sender, SKPaintSurfaceEventArgs e)
+    private void CoordinateCanvas_PaintSurface(object sender, SKPaintGLSurfaceEventArgs e)
     {
         DrawCanvas(e.Surface.Canvas, e.Info.Width, e.Info.Height, true);
     }
 
-    private void AnimationPreviewCanvas_PaintSurface(object sender, SKPaintSurfaceEventArgs e)
+    private void AnimationPreviewCanvas_PaintSurface(object sender, SKPaintGLSurfaceEventArgs e)
     {
         DrawCanvas(e.Surface.Canvas, e.Info.Width, e.Info.Height, false);
     }
