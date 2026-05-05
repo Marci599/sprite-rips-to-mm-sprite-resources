@@ -142,6 +142,10 @@ namespace FramesToMMSpriteResources
 
         private bool _isCtrlHeld = false;
         public bool IsCtrlHeld => _isCtrlHeld;
+        private readonly DispatcherTimer _frameScrollHoldTimer = new();
+        private Windows.System.VirtualKey? _heldFrameScrollKey;
+        private int _frameScrollHoldTicks;
+        private const int FrameScrollHoldDelayTicks = 8;
 
         private bool _isGeneratePanelShowed = true;
 
@@ -246,6 +250,8 @@ namespace FramesToMMSpriteResources
         public MainWindow()
         {
             InitializeComponent();
+            _frameScrollHoldTimer.Interval = TimeSpan.FromSeconds(1.0 / 60.0);
+            _frameScrollHoldTimer.Tick += FrameScrollHoldTimer_Tick;
 
             AppWindow.Resize(new Windows.Graphics.SizeInt32(1000, 625));
             AppWindow.SetIcon("Assets/icon.ico");
@@ -2048,6 +2054,15 @@ namespace FramesToMMSpriteResources
             }
 
             FrameCoordinateEditorControl.HandleNudgeKeyUp(e.Key);
+            if (e.Key == Windows.System.VirtualKey.Q || e.Key == Windows.System.VirtualKey.E)
+            {
+                if (_heldFrameScrollKey == e.Key)
+                {
+                    _heldFrameScrollKey = null;
+                    _frameScrollHoldTicks = 0;
+                    _frameScrollHoldTimer.Stop();
+                }
+            }
         }
 
         private bool HandleTreeViewHotkeys(KeyRoutedEventArgs e)
@@ -2123,31 +2138,58 @@ namespace FramesToMMSpriteResources
             {
                 return false;
             }
+            int direction = e.Key == Windows.System.VirtualKey.Q ? -1 : 1;
+            _ = StepSelectedSibling(direction);
+            _heldFrameScrollKey = e.Key;
+            _frameScrollHoldTicks = 0;
+            if (!_frameScrollHoldTimer.IsEnabled)
+            {
+                _frameScrollHoldTimer.Start();
+            }
+            return true;
+        }
+
+        private void FrameScrollHoldTimer_Tick(object? sender, object e)
+        {
+            if (_heldFrameScrollKey is not Windows.System.VirtualKey key)
+            {
+                _frameScrollHoldTimer.Stop();
+                _frameScrollHoldTicks = 0;
+                return;
+            }
+
+            _frameScrollHoldTicks++;
+            if (_frameScrollHoldTicks < FrameScrollHoldDelayTicks)
+            {
+                return;
+            }
+
+            _ = StepSelectedSibling(key == Windows.System.VirtualKey.Q ? -1 : 1);
+        }
+
+        private bool StepSelectedSibling(int direction)
+        {
+            TreeViewNode? selectedNode = TreeViewControl.SelectedNode;
+            if (selectedNode == null)
+            {
+                return false;
+            }
 
             IList<TreeViewNode> siblingList = selectedNode.Parent?.Children ?? TreeViewControl.RootNodes;
-            int currentIndex = -1;
-            for (int i = 0; i < siblingList.Count; i++)
-            {
-                if (siblingList[i] == selectedNode)
-                {
-                    currentIndex = i;
-                    break;
-                }
-            }
+            int currentIndex = siblingList.IndexOf(selectedNode);
             if (currentIndex < 0)
             {
                 return false;
             }
 
-            int newIndex = e.Key == Windows.System.VirtualKey.Q ? currentIndex - 1 : currentIndex + 1;
+            int newIndex = currentIndex + direction;
             if (newIndex < 0 || newIndex >= siblingList.Count)
             {
-                return true;
+                return false;
             }
 
             TreeViewControl.SelectedNode = siblingList[newIndex];
             ChangeConfigPanel(siblingList[newIndex], false);
-     
             return true;
         }
 
