@@ -48,6 +48,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     byte lightA, lightB;
     private readonly Dictionary<WriteableBitmap, SKBitmap> _bitmapCache = [];
     private readonly SKPaint _spritePaint = new() { IsAntialias = false };
+    private readonly SKPaint _previousFramePaint = new() { IsAntialias = false };
     private readonly SKPaint _checkerboardPaint = new() { IsAntialias = false };
     private readonly SKPaint _axisPaint = new() { IsAntialias = false, Color = new SKColor(140, 140, 140, 200) };
     private SKShader? _checkerboardShader;
@@ -56,6 +57,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
     public FrameCoordinateEditor()
     {
         InitializeComponent();
+        _previousFramePaint.ColorFilter = SKColorFilter.CreateColorMatrix([
+            0.2126f, 0.7152f, 0.0722f, 0, 0,
+            0.2126f, 0.7152f, 0.0722f, 0, 0,
+            0.2126f, 0.7152f, 0.0722f, 0, 0,
+            0, 0, 0, 1, 0
+        ]);
         SetCheckeredColors();
         _previewTimer.Interval = TimeSpan.FromSeconds(1.0 / 60.0);
         _previewTimer.Tick -= PreviewTimer_Tick;
@@ -587,7 +594,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
                 SKBitmap? previousFrame = GetSkBitmap(_previewFrames[previousFrameIndex]);
                 if (previousFrame != null)
                 {
-                    DrawFrame(canvas, previousFrame, _animationConfig.frameCongfigs[previousFrameIndex].Offset, zoom, axisX, axisY, 0.5f);
+                DrawFrame(canvas, previousFrame, _animationConfig.frameCongfigs[previousFrameIndex].Offset, zoom, axisX, axisY, 0.5f, _previousFramePaint);
                 }
             }
         }
@@ -607,24 +614,27 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void DrawCheckerboard(SKCanvas canvas, int width, int height, float axisX, float axisY, float zoom)
     {
-        _checkerboardShader ??= _checkerboardUnitBitmap.ToShader(SKShaderTileMode.Repeat, SKShaderTileMode.Repeat);
+        _checkerboardShader?.Dispose();
         float tileSize = Math.Max(1f, 4f * zoom);
-        SKMatrix scaleMatrix = SKMatrix.CreateScale(tileSize, tileSize);
-        SKMatrix translationMatrix = SKMatrix.CreateTranslation(axisX, axisY);
-        SKMatrix shaderMatrix = SKMatrix.Concat(scaleMatrix, translationMatrix);
-        _checkerboardPaint.Shader = _checkerboardShader!.WithLocalMatrix(shaderMatrix);
+        SKMatrix shaderMatrix = SKMatrix.CreateScaleTranslation(tileSize, tileSize, axisX, axisY);
+        _checkerboardShader = _checkerboardUnitBitmap.ToShader(
+            SKShaderTileMode.Repeat,
+            SKShaderTileMode.Repeat,
+            new SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None),
+            shaderMatrix);
+        _checkerboardPaint.Shader = _checkerboardShader;
         canvas.DrawRect(new SKRect(0f, 0f, width, height), _checkerboardPaint);
     }
 
-    private void DrawFrame(SKCanvas canvas, SKBitmap bitmap, IntVector2 offset, float zoom, float axisX, float axisY, float alpha)
+    private void DrawFrame(SKCanvas canvas, SKBitmap bitmap, IntVector2 offset, float zoom, float axisX, float axisY, float alpha, SKPaint? overridePaint = null)
     {
         float width = Math.Max(1f, bitmap.Width * zoom);
         float height = Math.Max(1f, bitmap.Height * zoom);
         float x = axisX + (offset.X * zoom) - (width / 2f);
         float y = axisY - (offset.Y * zoom) - (height / 2f);
-
-        _spritePaint.Color = new SKColor(255, 255, 255, (byte)(alpha * 255f));
-        canvas.DrawBitmap(bitmap, new SKRect(x, y, x + width, y + height), _spritePaint);
+        SKPaint paint = overridePaint ?? _spritePaint;
+        paint.Color = new SKColor(255, 255, 255, (byte)(alpha * 255f));
+        canvas.DrawBitmap(bitmap, new SKRect(x, y, x + width, y + height), paint);
     }
 
     private static bool IsNudgeKey(Windows.System.VirtualKey key)
