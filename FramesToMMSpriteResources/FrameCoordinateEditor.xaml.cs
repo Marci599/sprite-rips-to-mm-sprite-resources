@@ -42,6 +42,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private bool _isPreviewDragging;
     private Vector2 _previewDragStartPointer;
     private Vector2 _previewDragStartPan;
+    private ResizeDirection _previewResizeDirection;
+    private double _previewResizeStartWidth;
+    private double _previewResizeStartHeight;
+    private Vector2 _previewResizeStartPointer;
+    private const double MinPreviewPanelWidth = 150;
+    private const double MinPreviewPanelHeight = 175;
     private readonly HashSet<Windows.System.VirtualKey> _heldNudgeKeys = [];
     private readonly DispatcherTimer _nudgeHoldTimer = new();
     private int _nudgeHoldTick;
@@ -54,6 +60,13 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private readonly SKPaint _axisPaint = new() { IsAntialias = false, Color = new SKColor(140, 140, 140, 200) };
     private SKShader? _checkerboardShader;
     private readonly SKBitmap _checkerboardUnitBitmap = new(2, 2, SKColorType.Bgra8888, SKAlphaType.Premul);
+    private enum ResizeDirection
+    {
+        None,
+        Left,
+        Bottom,
+        BottomLeft
+    }
 
     public FrameCoordinateEditor()
     {
@@ -460,6 +473,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void AnimationPreviewCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
     {
+        if (_previewResizeDirection != ResizeDirection.None)
+        {
+            return;
+        }
+
         var point = e.GetCurrentPoint(AnimationPreviewCanvas);
         _previewDragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
         _previewDragStartPan = _previewPan;
@@ -486,6 +504,76 @@ public sealed partial class FrameCoordinateEditor : UserControl
     {
         _isPreviewDragging = false;
         AnimationPreviewCanvas.ReleasePointerCapture(e.Pointer);
+    }
+
+    private void PreviewResizeLeftHandle_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        StartPreviewResize(sender, e, ResizeDirection.Left);
+    }
+
+    private void PreviewResizeBottomHandle_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        StartPreviewResize(sender, e, ResizeDirection.Bottom);
+    }
+
+    private void PreviewResizeCornerHandle_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        StartPreviewResize(sender, e, ResizeDirection.BottomLeft);
+    }
+
+    private void StartPreviewResize(object sender, PointerRoutedEventArgs e, ResizeDirection direction)
+    {
+        if (sender is not UIElement handle)
+        {
+            return;
+        }
+
+        var point = e.GetCurrentPoint(this);
+        _previewResizeDirection = direction;
+        _previewResizeStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
+        _previewResizeStartWidth = AnimationPreviewHostBorder.ActualWidth;
+        _previewResizeStartHeight = AnimationPreviewHostBorder.ActualHeight;
+        handle.CapturePointer(e.Pointer);
+        e.Handled = true;
+    }
+
+    private void PreviewResizeHandle_PointerMoved(object sender, PointerRoutedEventArgs e)
+    {
+        if (_previewResizeDirection == ResizeDirection.None)
+        {
+            return;
+        }
+
+        var point = e.GetCurrentPoint(this);
+        var delta = new Vector2((float)point.Position.X, (float)point.Position.Y) - _previewResizeStartPointer;
+        double width = _previewResizeStartWidth;
+        double height = _previewResizeStartHeight;
+
+        if (_previewResizeDirection is ResizeDirection.Left or ResizeDirection.BottomLeft)
+        {
+            width = Math.Max(MinPreviewPanelWidth, _previewResizeStartWidth - delta.X);
+        }
+
+        if (_previewResizeDirection is ResizeDirection.Bottom or ResizeDirection.BottomLeft)
+        {
+            height = Math.Max(MinPreviewPanelHeight, _previewResizeStartHeight + delta.Y);
+        }
+
+        AnimationPreviewHostBorder.Width = width;
+        AnimationPreviewHostBorder.Height = height;
+        UpdateAnimationPreviewFrame();
+        e.Handled = true;
+    }
+
+    private void PreviewResizeHandle_PointerReleased(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is UIElement handle)
+        {
+            handle.ReleasePointerCapture(e.Pointer);
+        }
+
+        _previewResizeDirection = ResizeDirection.None;
+        e.Handled = true;
     }
 
     private void AnimationPreviewCanvas_PointerWheelChanged(object sender, PointerRoutedEventArgs e)

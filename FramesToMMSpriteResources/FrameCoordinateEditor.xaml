@@ -29,16 +29,16 @@
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top">
                 <Border 
-                        
-                      
+                        x:Name="AnimationPreviewHostBorder"
                         CornerRadius="8 8 0 8"
                         Background="{ThemeResource AcrylicBackgroundFillColorBaseBrush}"
                         BorderBrush="{ThemeResource ControlStrokeColorOnAccentTertiaryBrush}"
                         BorderThickness="1"
-                    MinWidth="150"
-                    MinHeight="175">
-                        
-
+                        Width="220"
+                        Height="220"
+                        MinWidth="150"
+                        MinHeight="175">
+                    <Grid>
                         <skia:SKSwapChainPanel x:Name="AnimationPreviewCanvas"
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch"
@@ -48,7 +48,33 @@
                                 PointerMoved="AnimationPreviewCanvas_PointerMoved"
                                 PointerReleased="AnimationPreviewCanvas_PointerReleased"
                                 PointerWheelChanged="AnimationPreviewCanvas_PointerWheelChanged"/>
-                 
+                        <Border x:Name="PreviewResizeLeftHandle"
+                                Width="8"
+                                HorizontalAlignment="Left"
+                                Background="Transparent"
+                                Cursor="SizeWestEast"
+                                PointerPressed="PreviewResizeLeftHandle_PointerPressed"
+                                PointerMoved="PreviewResizeHandle_PointerMoved"
+                                PointerReleased="PreviewResizeHandle_PointerReleased"/>
+                        <Border x:Name="PreviewResizeBottomHandle"
+                                Height="8"
+                                VerticalAlignment="Bottom"
+                                Background="Transparent"
+                                Cursor="SizeNorthSouth"
+                                PointerPressed="PreviewResizeBottomHandle_PointerPressed"
+                                PointerMoved="PreviewResizeHandle_PointerMoved"
+                                PointerReleased="PreviewResizeHandle_PointerReleased"/>
+                        <Border x:Name="PreviewResizeCornerHandle"
+                                Width="14"
+                                Height="14"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Bottom"
+                                Background="Transparent"
+                                Cursor="SizeNorthwestSoutheast"
+                                PointerPressed="PreviewResizeCornerHandle_PointerPressed"
+                                PointerMoved="PreviewResizeHandle_PointerMoved"
+                                PointerReleased="PreviewResizeHandle_PointerReleased"/>
+                    </Grid>
                 </Border>
                     <Border
                    
