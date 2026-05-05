@@ -7,6 +7,7 @@ using SkiaSharp;
 using SkiaSharp.Views.Windows;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -130,13 +131,13 @@ public sealed partial class FrameCoordinateEditor : UserControl
     public void SetSpriteIndex(int index)
     {
         _selectedFrame = index;
+        OffsetXTextBox.ValueChanged -= OffsetXTextBox_ValueChanged;
+        OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
 
         OffsetXTextBox.Value = _animationConfig.frameCongfigs[index].Offset.X;
         OffsetYTextBox.Value = _animationConfig.frameCongfigs[index].Offset.Y;
-        OffsetXTextBox.ValueChanged -= OffsetXTextBox_ValueChanged;
+        
         OffsetXTextBox.ValueChanged += OffsetXTextBox_ValueChanged;
-
-        OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
         OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
 
         UpdateVisuals();
@@ -177,6 +178,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void UpdateVisuals()
     {
+    
         CoordinateCanvas.Invalidate();
         UpdateZoomControls();
     }
