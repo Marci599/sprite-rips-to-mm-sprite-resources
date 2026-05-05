@@ -267,6 +267,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
         double newAxisY = point.Position.Y + (worldY * newZoom);
 
         _pan = new Vector2((float)(newAxisX - centerX), (float)(newAxisY - centerY));
+        if (_isDragging)
+        {
+            _dragStartPan = _pan;
+            _dragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
+        }
         UpdateVisuals();
         e.Handled = true;
     }
@@ -506,6 +511,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
         double newAxisX = point.Position.X - (worldX * newZoom);
         double newAxisY = point.Position.Y + (worldY * newZoom);
         _previewPan = new Vector2((float)(newAxisX - centerX), (float)(newAxisY - centerY));
+        if (_isPreviewDragging)
+        {
+            _previewDragStartPan = _previewPan;
+            _previewDragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
+        }
 
         UpdateAnimationPreviewFrame();
         e.Handled = true;
@@ -582,20 +592,20 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         if (main)
         {
-            SKBitmap? currentFrame = GetSkBitmap(GetCurrentFrame());
-            if (currentFrame != null)
-            {
-                DrawFrame(canvas, currentFrame, _animationConfig.frameCongfigs[_selectedFrame].Offset, zoom, axisX, axisY, ShowPreviousToggleSwitch.IsOn ? 0.7f : 1f);
-            }
-
             if (ShowPreviousToggleSwitch.IsOn)
             {
                 int previousFrameIndex = _selectedFrame == 0 ? _previewFrames.Count - 1 : _selectedFrame - 1;
                 SKBitmap? previousFrame = GetSkBitmap(_previewFrames[previousFrameIndex]);
                 if (previousFrame != null)
                 {
-                DrawFrame(canvas, previousFrame, _animationConfig.frameCongfigs[previousFrameIndex].Offset, zoom, axisX, axisY, 0.5f, _previousFramePaint);
+                    DrawFrame(canvas, previousFrame, _animationConfig.frameCongfigs[previousFrameIndex].Offset, zoom, axisX, axisY, 0.5f, _previousFramePaint);
                 }
+            }
+
+            SKBitmap? currentFrame = GetSkBitmap(GetCurrentFrame());
+            if (currentFrame != null)
+            {
+                DrawFrame(canvas, currentFrame, _animationConfig.frameCongfigs[_selectedFrame].Offset, zoom, axisX, axisY, ShowPreviousToggleSwitch.IsOn ? 0.7f : 1f);
             }
         }
         else
@@ -614,16 +624,15 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void DrawCheckerboard(SKCanvas canvas, int width, int height, float axisX, float axisY, float zoom)
     {
-        _checkerboardShader?.Dispose();
         float tileSize = Math.Max(1f, 4f * zoom);
-        SKMatrix shaderMatrix = SKMatrix.CreateScaleTranslation(tileSize, tileSize, axisX, axisY);
-        _checkerboardShader = _checkerboardUnitBitmap.ToShader(
-            SKShaderTileMode.Repeat,
-            SKShaderTileMode.Repeat,
-            new SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None),
-            shaderMatrix);
         _checkerboardPaint.Shader = _checkerboardShader;
-        canvas.DrawRect(new SKRect(0f, 0f, width, height), _checkerboardPaint);
+        canvas.Save();
+        canvas.Translate(axisX, axisY);
+        canvas.Scale(tileSize, tileSize);
+        canvas.DrawRect(
+            new SKRect(-axisX / tileSize, -axisY / tileSize, (width - axisX) / tileSize, (height - axisY) / tileSize),
+            _checkerboardPaint);
+        canvas.Restore();
     }
 
     private void DrawFrame(SKCanvas canvas, SKBitmap bitmap, IntVector2 offset, float zoom, float axisX, float axisY, float alpha, SKPaint? overridePaint = null)
