@@ -3,6 +3,8 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
+using SkiaSharp;
+using SkiaSharp.Views.Windows;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -25,8 +27,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private float _zoom = 1.0f;
     private const float MinZoom = 0.1f;
     private const float MaxZoom = 18.0f;
-    private WriteableBitmap? _checkerBitmap;
-    private byte[]? _checkerPixels;
     private int _selectedFrame;
     private bool _isUpdatingZoomControls;
     private readonly DispatcherTimer _previewTimer = new();
@@ -46,6 +46,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private int _nudgeHoldTick;
     private const int NudgeHoldDelayTicks = 10;
     byte lightA, lightB;
+    private readonly Dictionary<WriteableBitmap, SKBitmap> _bitmapCache = [];
+    private readonly SKPaint _pixelPaint = new() { FilterQuality = SKFilterQuality.None, IsAntialias = false };
 
     public FrameCoordinateEditor()
     {
@@ -69,7 +71,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
     {
         SetCheckeredColors();
 
-        _checkerBitmap = null;
         UpdateVisuals();
     }
 
@@ -105,7 +106,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     public void SetSpriteIndex(int index)
     {
-        SpriteImage.Source = _previewFrames[index];
         _selectedFrame = index;
 
         OffsetXTextBox.Value = _animationConfig.frameCongfigs[index].Offset.X;
@@ -116,11 +116,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
         OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
 
-        if (index == 0)
-        {
-            index = _previewFrames.Count;
-        }
-        SpriteBeforeImage.Source = _previewFrames[index - 1];
         UpdateVisuals();
     }
 
@@ -149,112 +144,13 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     public void UnloadAnimation()
     {
-        SpriteImage.Source = null;
-        SpriteBeforeImage.Source = null;
         LoadAnimation([], new());
     }
 
     private void UpdateVisuals()
     {
-        double canvasWidth = CoordinateCanvas.ActualWidth;
-        double canvasHeight = CoordinateCanvas.ActualHeight;
-        if (canvasWidth <= 0 || canvasHeight <= 0)
-        {
-            return;
-        }
-
-        double centerX = canvasWidth / 2.0;
-        double centerY = canvasHeight / 2.0;
-        double axisX = centerX + _pan.X;
-        double axisY = centerY + _pan.Y;
-
-        UpdateCheckerboard(canvasWidth, canvasHeight, axisX, axisY);
-        CheckerboardImage.Width = _checkerBitmap?.PixelWidth ?? canvasWidth;
-        CheckerboardImage.Height = _checkerBitmap?.PixelHeight ?? canvasHeight;
-        Canvas.SetLeft(CheckerboardImage, 0);
-        Canvas.SetTop(CheckerboardImage, 0);
-
-        XAxis.Width = canvasWidth;
-        Canvas.SetLeft(XAxis, 0);
-        Canvas.SetTop(XAxis, axisY - (XAxis.Height / 2.0));
-
-        YAxis.Height = canvasHeight;
-        Canvas.SetLeft(YAxis, axisX - (YAxis.Width / 2.0));
-        Canvas.SetTop(YAxis, 0);
-
-
-        if (SpriteImage.Source == null) return;
-
-        double spriteWidth = Math.Max(1.0, (SpriteImage.Source as WriteableBitmap)!.PixelWidth * _zoom);
-        double spriteHeight = Math.Max(1.0, (SpriteImage.Source as WriteableBitmap)!.PixelHeight * _zoom);
-
-        double spriteCanvasX = axisX + (_animationConfig.frameCongfigs[_selectedFrame].Offset.X * _zoom);
-        double spriteCanvasY = axisY - (_animationConfig.frameCongfigs[_selectedFrame].Offset.Y * _zoom);
-
-        int index = _selectedFrame;
-        if (index == 0)
-        {
-            index = _previewFrames.Count;
-        }
-
-        double spriteBeforeCanvasX = axisX + (_animationConfig.frameCongfigs[index -1].Offset.X * _zoom);
-        double spriteBeforeCanvasY = axisY - (_animationConfig.frameCongfigs[index -1].Offset.Y * _zoom);
-
-        SpriteImage.Width = spriteWidth;
-        SpriteImage.Height = spriteHeight;
-
-        SpriteBeforeImage.Width = spriteWidth;
-        SpriteBeforeImage.Height = spriteHeight;
-
-        Canvas.SetLeft(SpriteImage, spriteCanvasX - (spriteWidth / 2.0));
-        Canvas.SetTop(SpriteImage, spriteCanvasY - (spriteHeight / 2.0));
-
-        Canvas.SetLeft(SpriteBeforeImage, spriteBeforeCanvasX - (spriteWidth / 2.0));
-        Canvas.SetTop(SpriteBeforeImage, spriteBeforeCanvasY - (spriteHeight / 2.0));
-
+        CoordinateCanvas.Invalidate();
         UpdateZoomControls();
-    }
-
-    private void UpdateCheckerboard(double canvasWidth, double canvasHeight, double axisX, double axisY)
-    {
-        int pixelWidth = Math.Max(1, (int)Math.Ceiling(canvasWidth));
-        int pixelHeight = Math.Max(1, (int)Math.Ceiling(canvasHeight));
-        int byteCount = pixelWidth * pixelHeight * 4;
-
-        if (_checkerBitmap == null || _checkerBitmap.PixelWidth != pixelWidth || _checkerBitmap.PixelHeight != pixelHeight)
-        {
-            _checkerBitmap = new WriteableBitmap(pixelWidth, pixelHeight);
-            _checkerPixels = new byte[byteCount];
-            CheckerboardImage.Source = _checkerBitmap;
-        }
-        else if (_checkerPixels == null || _checkerPixels.Length != byteCount)
-        {
-            _checkerPixels = new byte[byteCount];
-        }
-
-        double tileSize = 4.0 * _zoom;
-        int idx = 0;
-        for (int y = 0; y < pixelHeight; y++)
-        {
-  
-            int tileY = (int)Math.Floor((axisY - y) / tileSize);
-            for (int x = 0; x < pixelWidth; x++)
-            {
-      
-                int tileX = (int)Math.Floor((x - axisX) / tileSize);
-                byte color = ((tileX + tileY) & 1) == 0 ? lightA : lightB;
-
-                _checkerPixels![idx++] = color;
-                _checkerPixels[idx++] = color;
-                _checkerPixels[idx++] = color;
-                _checkerPixels[idx++] = 255;
-            }
-        }
-
-        using Stream stream = _checkerBitmap!.PixelBuffer.AsStream();
-        stream.Position = 0;
-        stream.Write(_checkerPixels!, 0, _checkerPixels!.Length);
-        _checkerBitmap.Invalidate();
     }
 
     private void CoordinateCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -410,13 +306,13 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private void ALignDownButton_Click(object sender, RoutedEventArgs e)
     {
         OffsetXTextBox.Value = 0;
-        OffsetYTextBox.Value = (SpriteImage.Source as WriteableBitmap)!.PixelHeight / 2;
+        OffsetYTextBox.Value = GetCurrentFrame()?.PixelHeight / 2 ?? 0;
     }
 
     private void ALignTopLeftButton_Click(object sender, RoutedEventArgs e)
     {
-        OffsetXTextBox.Value = ((SpriteImage.Source as WriteableBitmap)!.PixelWidth / 2);
-        OffsetYTextBox.Value = -((SpriteImage.Source as WriteableBitmap)!.PixelHeight / 2);
+        OffsetXTextBox.Value = (GetCurrentFrame()?.PixelWidth / 2 ?? 0);
+        OffsetYTextBox.Value = -(GetCurrentFrame()?.PixelHeight / 2 ?? 0);
     }
 
     private void ALignCenterButton_Click(object sender, RoutedEventArgs e)
@@ -613,48 +509,55 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void UpdateAnimationPreviewFrame()
     {
-        if (_previewFrames.Count == 0)
-        {
-            AnimationPreviewImage.Source = null;
-            return;
-        }
-
-        int frameIndex = Math.Clamp(_previewFrameIndex + GetFromValue(), GetFromValue(), GetToValue());
-        WriteableBitmap frame = _previewFrames[frameIndex];
-        IntVector2 offset = frameIndex < _animationConfig.frameCongfigs.Count ? _animationConfig.frameCongfigs[frameIndex].Offset : new IntVector2(0, 0);
-
-        double canvasWidth = AnimationPreviewCanvas.ActualWidth;
-        double canvasHeight = AnimationPreviewCanvas.ActualHeight;
-        if (canvasWidth <= 0 || canvasHeight <= 0)
-        {
-            return;
-        }
-
-        double centerX = canvasWidth / 2.0;
-        double centerY = canvasHeight / 2.0;
-        double axisX = centerX + _previewPan.X;
-        double axisY = centerY + _previewPan.Y;
-
-        PreviewXAxis.Width = canvasWidth;
-        Canvas.SetLeft(PreviewXAxis, 0);
-        Canvas.SetTop(PreviewXAxis, axisY - (PreviewXAxis.Height / 2.0));
-
-        PreviewYAxis.Height = canvasHeight;
-        Canvas.SetLeft(PreviewYAxis, axisX - (PreviewYAxis.Width / 2.0));
-        Canvas.SetTop(PreviewYAxis, 0);
-
-        double spriteWidth = Math.Max(1.0, frame.PixelWidth * _previewZoom);
-        double spriteHeight = Math.Max(1.0, frame.PixelHeight * _previewZoom);
-        double spriteCanvasX = axisX + (offset.X * _previewZoom);
-        double spriteCanvasY = axisY - (offset.Y * _previewZoom);
-
-        AnimationPreviewImage.Source = frame;
-        AnimationPreviewImage.Width = spriteWidth;
-        AnimationPreviewImage.Height = spriteHeight;
-        AnimationPreviewImage.RenderTransform = null;
-        Canvas.SetLeft(AnimationPreviewImage, spriteCanvasX - (spriteWidth / 2.0));
-        Canvas.SetTop(AnimationPreviewImage, spriteCanvasY - (spriteHeight / 2.0));
+        AnimationPreviewCanvas.Invalidate();
     }
+
+    private WriteableBitmap? GetCurrentFrame() => (_previewFrames.Count == 0 || _selectedFrame >= _previewFrames.Count) ? null : _previewFrames[_selectedFrame];
+
+    private SKBitmap? GetSkBitmap(WriteableBitmap? wb)
+    {
+        if (wb == null) return null;
+        if (_bitmapCache.TryGetValue(wb, out var cached)) return cached;
+        var bmp = new SKBitmap(wb.PixelWidth, wb.PixelHeight, SKColorType.Bgra8888, SKAlphaType.Premul);
+        using var stream = wb.PixelBuffer.AsStream();
+        var pixels = bmp.GetPixelSpan();
+        stream.Position = 0;
+        stream.Read(System.Runtime.InteropServices.MemoryMarshal.AsBytes(pixels));
+        _bitmapCache[wb] = bmp;
+        return bmp;
+    }
+
+    private void CoordinateCanvas_PaintSurface(object sender, SKPaintSurfaceEventArgs e)
+    {
+        DrawCanvas(e.Surface.Canvas, e.Info.Width, e.Info.Height, true);
+    }
+
+    private void AnimationPreviewCanvas_PaintSurface(object sender, SKPaintSurfaceEventArgs e)
+    {
+        DrawCanvas(e.Surface.Canvas, e.Info.Width, e.Info.Height, false);
+    }
+
+    private void DrawCanvas(SKCanvas canvas, int width, int height, bool main)
+    {
+        canvas.Clear();
+        float zoom = main ? _zoom : _previewZoom;
+        var pan = main ? _pan : _previewPan;
+        float axisX = width / 2f + pan.X;
+        float axisY = height / 2f + pan.Y;
+        float tile = Math.Max(1f, 4f * zoom);
+        using var p = new SKPaint { IsAntialias = false };
+        for(float y=0;y<height;y+=tile)
+        for(float x=0;x<width;x+=tile){
+            int tx=(int)MathF.Floor((x-axisX)/tile); int ty=(int)MathF.Floor((axisY-y)/tile); byte c=((tx+ty)&1)==0?lightA:lightB; p.Color=new SKColor(c,c,c,255); canvas.DrawRect(x,y,tile,tile,p);}
+        using var axisPaint = new SKPaint{Color=new SKColor(140,140,140,200),StrokeWidth=main?1.5f:1f,IsAntialias=false};
+        canvas.DrawLine(0,axisY,width,axisY,axisPaint); canvas.DrawLine(axisX,0,axisX,height,axisPaint);
+        if(_previewFrames.Count==0) return;
+        if(main){
+            var cur=GetSkBitmap(GetCurrentFrame()); if(cur!=null) DrawFrame(canvas,cur,_animationConfig.frameCongfigs[_selectedFrame].Offset,zoom,axisX,axisY,ShowPreviousToggleSwitch.IsOn?0.7f:1f);
+            if(ShowPreviousToggleSwitch.IsOn){ int i=_selectedFrame==0?_previewFrames.Count-1:_selectedFrame-1; var prev=GetSkBitmap(_previewFrames[i]); if(prev!=null) DrawFrame(canvas,prev,_animationConfig.frameCongfigs[i].Offset,zoom,axisX,axisY,0.5f);}
+        } else { int fi=Math.Clamp(_previewFrameIndex+GetFromValue(),GetFromValue(),GetToValue()); var b=GetSkBitmap(_previewFrames[fi]); if(b!=null){ var off=fi<_animationConfig.frameCongfigs.Count?_animationConfig.frameCongfigs[fi].Offset:new IntVector2(); DrawFrame(canvas,b,off,zoom,axisX,axisY,1f);} }
+    }
+    private void DrawFrame(SKCanvas c, SKBitmap b, IntVector2 off, float z, float ax, float ay, float alpha){ var w=Math.Max(1,b.Width*z); var h=Math.Max(1,b.Height*z); var x=ax+off.X*z-w/2f; var y=ay-off.Y*z-h/2f; _pixelPaint.Color=new SKColor(255,255,255,(byte)(alpha*255)); c.DrawBitmap(b,new SKRect(x,y,x+w,y+h),_pixelPaint);}
 
     private static bool IsNudgeKey(Windows.System.VirtualKey key)
     {
@@ -676,17 +579,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void ShowPreviousToggleSwitch_Toggled(object sender, RoutedEventArgs e)
     {
-        if ((sender as ToggleSwitch)!.IsOn)
-        {
-            SpriteBeforeImage.Visibility = Visibility.Visible;
-            SpriteImage.Opacity = 0.7;
-        }
-        else
-        {
-            SpriteBeforeImage.Visibility = Visibility.Collapsed;
-            SpriteImage.Opacity = 1;
-        }
-     
+        UpdateVisuals();
     }
 
     private void FromNumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
