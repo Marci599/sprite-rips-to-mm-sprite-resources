@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices.WindowsRuntime;
-using System.Runtime.InteropServices;
 using Windows.Globalization;
 using Windows.Globalization.NumberFormatting;
 
@@ -46,6 +45,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private readonly DispatcherTimer _nudgeHoldTimer = new();
     private int _nudgeHoldTick;
     private const int NudgeHoldDelayTicks = 10;
+    private readonly Dictionary<int, byte[]> _framePixelCache = [];
+    private readonly Dictionary<int, byte[]> _frameGrayPixelCache = [];
     byte lightA, lightB;
 
     public FrameCoordinateEditor()
@@ -126,6 +127,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
     public void LoadAnimation(IReadOnlyList<WriteableBitmap> frames, AnimationConfig animationConfig)
     {
         _previewFrames = frames;
+        _framePixelCache.Clear();
+        _frameGrayPixelCache.Clear();
         _previewFrameIndex = 0;
         _previewTickCount = 0;
         _animationConfig = animationConfig;
@@ -200,6 +203,16 @@ public sealed partial class FrameCoordinateEditor : UserControl
                 pixels[idx++] = color; pixels[idx++] = color; pixels[idx++] = color; pixels[idx++] = 255;
             }
         }
+        if (_previewFrames.Count > 0 && _selectedFrame < _previewFrames.Count)
+        {
+            if (ShowPreviousToggleSwitch.IsOn)
+            {
+                int prev = _selectedFrame == 0 ? _previewFrames.Count - 1 : _selectedFrame - 1;
+                DrawSpriteToBuffer(prev, _previewFrames[prev], _animationConfig.frameCongfigs[prev].Offset, axisX, axisY, pixels, pixelWidth, pixelHeight, true, 0.5f);
+            }
+            DrawSpriteToBuffer(_selectedFrame, _previewFrames[_selectedFrame], _animationConfig.frameCongfigs[_selectedFrame].Offset, axisX, axisY, pixels, pixelWidth, pixelHeight, false, 0.7f);
+        }
+
         int axisXi = (int)Math.Round(axisX);
         int axisYi = (int)Math.Round(axisY);
         if (axisXi >= 0 && axisXi < pixelWidth)
@@ -218,51 +231,86 @@ public sealed partial class FrameCoordinateEditor : UserControl
                 pixels[i] = 180; pixels[i + 1] = 180; pixels[i + 2] = 180; pixels[i + 3] = 255;
             }
         }
-
-        if (_previewFrames.Count > 0 && _selectedFrame < _previewFrames.Count)
-        {
-            DrawSpriteToBuffer(_previewFrames[_selectedFrame], _animationConfig.frameCongfigs[_selectedFrame].Offset, axisX, axisY, pixels, pixelWidth, pixelHeight, false, 255);
-            if (ShowPreviousToggleSwitch.IsOn)
-            {
-                int prev = _selectedFrame == 0 ? _previewFrames.Count - 1 : _selectedFrame - 1;
-                DrawSpriteToBuffer(_previewFrames[prev], _animationConfig.frameCongfigs[prev].Offset, axisX, axisY, pixels, pixelWidth, pixelHeight, true, 140);
-            }
-        }
         using Stream stream = _editorCompositeBitmap!.PixelBuffer.AsStream();
         stream.Position = 0;
         stream.Write(_editorPixels!, 0, _editorPixels!.Length);
         _editorCompositeBitmap.Invalidate();
     }
 
-    private void DrawSpriteToBuffer(WriteableBitmap bitmap, IntVector2 offset, double axisX, double axisY, Span<byte> target, int w, int h, bool grayscale, byte alpha)
+    private void DrawSpriteToBuffer(int frameIndex, WriteableBitmap bitmap, IntVector2 offset, double axisX, double axisY, Span<byte> target, int w, int h, bool grayscale, float opacity)
     {
-        byte[] source = new byte[bitmap.PixelWidth * bitmap.PixelHeight * 4];
-        using (Stream sourceStream = bitmap.PixelBuffer.AsStream())
+        byte[] source = GetFramePixels(frameIndex, bitmap, grayscale);
+
+        double worldLeft = axisX + (offset.X * _zoom) - ((bitmap.PixelWidth * _zoom) / 2.0);
+        double worldTop = axisY - (offset.Y * _zoom) - ((bitmap.PixelHeight * _zoom) / 2.0);
+        int minX = Math.Max(0, (int)Math.Floor(worldLeft));
+        int minY = Math.Max(0, (int)Math.Floor(worldTop));
+        int maxX = Math.Min(w, (int)Math.Ceiling(worldLeft + (bitmap.PixelWidth * _zoom)));
+        int maxY = Math.Min(h, (int)Math.Ceiling(worldTop + (bitmap.PixelHeight * _zoom)));
+        if (minX >= maxX || minY >= maxY)
         {
-            sourceStream.Position = 0;
-            _ = sourceStream.Read(source, 0, source.Length);
+            return;
         }
-        int scale = Math.Max(1, (int)Math.Round(_zoom));
-        int left = (int)Math.Round(axisX + (offset.X * _zoom) - ((bitmap.PixelWidth * _zoom) / 2.0));
-        int top = (int)Math.Round(axisY - (offset.Y * _zoom) - ((bitmap.PixelHeight * _zoom) / 2.0));
-        for (int y = 0; y < bitmap.PixelHeight; y++)
-        for (int x = 0; x < bitmap.PixelWidth; x++)
+
+        float invZoom = 1f / _zoom;
+        for (int y = minY; y < maxY; y++)
         {
-            int si = (y * bitmap.PixelWidth + x) * 4;
-            byte b = source[si], g = source[si + 1], r = source[si + 2], a = source[si + 3];
-            if (a == 0) continue;
-            if (grayscale) { byte gv = (byte)((r * 77 + g * 150 + b * 29) >> 8); r = g = b = gv; }
-            int dstX = left + (int)Math.Round(x * _zoom);
-            int dstY = top + (int)Math.Round(y * _zoom);
-            for (int yy = 0; yy < scale; yy++)
-            for (int xx = 0; xx < scale; xx++)
+            int srcY = (int)((y - worldTop) * invZoom);
+            if ((uint)srcY >= bitmap.PixelHeight) continue;
+            for (int x = minX; x < maxX; x++)
             {
-                int tx = dstX + xx, ty = dstY + yy;
-                if ((uint)tx >= w || (uint)ty >= h) continue;
-                int di = (ty * w + tx) * 4;
-                target[di] = b; target[di + 1] = g; target[di + 2] = r; target[di + 3] = Math.Min(alpha, a);
+                int srcX = (int)((x - worldLeft) * invZoom);
+                if ((uint)srcX >= bitmap.PixelWidth) continue;
+                int si = (srcY * bitmap.PixelWidth + srcX) * 4;
+                int di = (y * w + x) * 4;
+                BlendPixel(target, di, source[si], source[si + 1], source[si + 2], source[si + 3], opacity);
             }
         }
+    }
+
+    private static void BlendPixel(Span<byte> target, int di, byte srcB, byte srcG, byte srcR, byte srcA, float opacity)
+    {
+        float a = (srcA / 255f) * opacity;
+        if (a <= 0f) return;
+        float invA = 1f - a;
+        target[di] = (byte)((srcB * a) + (target[di] * invA));
+        target[di + 1] = (byte)((srcG * a) + (target[di + 1] * invA));
+        target[di + 2] = (byte)((srcR * a) + (target[di + 2] * invA));
+        target[di + 3] = 255;
+    }
+
+    private byte[] GetFramePixels(int frameIndex, WriteableBitmap bitmap, bool grayscale)
+    {
+        var cache = grayscale ? _frameGrayPixelCache : _framePixelCache;
+        if (cache.TryGetValue(frameIndex, out byte[]? pixels))
+        {
+            return pixels;
+        }
+
+        byte[] source = new byte[bitmap.PixelWidth * bitmap.PixelHeight * 4];
+        using Stream sourceStream = bitmap.PixelBuffer.AsStream();
+        sourceStream.Position = 0;
+        _ = sourceStream.Read(source, 0, source.Length);
+
+        if (grayscale)
+        {
+            byte[] gray = new byte[source.Length];
+            for (int i = 0; i < source.Length; i += 4)
+            {
+                byte b = source[i];
+                byte g = source[i + 1];
+                byte r = source[i + 2];
+                byte a = source[i + 3];
+                byte l = (byte)((r * 77 + g * 150 + b * 29) >> 8);
+                gray[i] = l; gray[i + 1] = l; gray[i + 2] = l; gray[i + 3] = a;
+            }
+            _frameGrayPixelCache[frameIndex] = gray;
+            _framePixelCache.TryAdd(frameIndex, source);
+            return gray;
+        }
+
+        _framePixelCache[frameIndex] = source;
+        return source;
     }
 
     private void CoordinateCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
