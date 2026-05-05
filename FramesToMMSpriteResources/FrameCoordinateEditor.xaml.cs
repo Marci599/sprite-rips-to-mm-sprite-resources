@@ -145,6 +145,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
     public void LoadAnimation(IReadOnlyList<WriteableBitmap> frames, AnimationConfig animationConfig)
     {
         _previewFrames = frames;
+        _bitmapCache.Clear();
+        foreach (WriteableBitmap frame in frames)
+        {
+            _ = GetSkBitmap(frame);
+        }
         _previewFrameIndex = 0;
         _previewTickCount = 0;
         _animationConfig = animationConfig;
@@ -598,14 +603,14 @@ public sealed partial class FrameCoordinateEditor : UserControl
                 SKBitmap? previousFrame = GetSkBitmap(_previewFrames[previousFrameIndex]);
                 if (previousFrame != null)
                 {
-                    DrawFrame(canvas, previousFrame, _animationConfig.frameCongfigs[previousFrameIndex].Offset, zoom, axisX, axisY, 0.5f, _previousFramePaint);
+                DrawFrame(canvas, previousFrame, _animationConfig.frameCongfigs[previousFrameIndex].Offset, zoom, axisX, axisY, width, height, 0.5f, _previousFramePaint);
                 }
             }
 
             SKBitmap? currentFrame = GetSkBitmap(GetCurrentFrame());
             if (currentFrame != null)
             {
-                DrawFrame(canvas, currentFrame, _animationConfig.frameCongfigs[_selectedFrame].Offset, zoom, axisX, axisY, ShowPreviousToggleSwitch.IsOn ? 0.7f : 1f);
+                DrawFrame(canvas, currentFrame, _animationConfig.frameCongfigs[_selectedFrame].Offset, zoom, axisX, axisY, width, height, ShowPreviousToggleSwitch.IsOn ? 0.7f : 1f);
             }
         }
         else
@@ -617,7 +622,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
                 IntVector2 previewOffset = previewFrameIndex < _animationConfig.frameCongfigs.Count
                     ? _animationConfig.frameCongfigs[previewFrameIndex].Offset
                     : new IntVector2();
-                DrawFrame(canvas, previewFrame, previewOffset, zoom, axisX, axisY, 1f);
+                DrawFrame(canvas, previewFrame, previewOffset, zoom, axisX, axisY, width, height, 1f);
             }
         }
     }
@@ -635,15 +640,31 @@ public sealed partial class FrameCoordinateEditor : UserControl
         canvas.Restore();
     }
 
-    private void DrawFrame(SKCanvas canvas, SKBitmap bitmap, IntVector2 offset, float zoom, float axisX, float axisY, float alpha, SKPaint? overridePaint = null)
+    private void DrawFrame(SKCanvas canvas, SKBitmap bitmap, IntVector2 offset, float zoom, float axisX, float axisY, int viewportWidth, int viewportHeight, float alpha, SKPaint? overridePaint = null)
     {
         float width = Math.Max(1f, bitmap.Width * zoom);
         float height = Math.Max(1f, bitmap.Height * zoom);
         float x = axisX + (offset.X * zoom) - (width / 2f);
         float y = axisY - (offset.Y * zoom) - (height / 2f);
+        SKRect destRect = new(x, y, x + width, y + height);
+        SKRect viewportRect = new(0, 0, viewportWidth, viewportHeight);
+        if (!destRect.IntersectsWith(viewportRect))
+        {
+            return;
+        }
+
+        SKRect clippedDest = SKRect.Intersect(destRect, viewportRect);
+        float invScaleX = bitmap.Width / width;
+        float invScaleY = bitmap.Height / height;
+        SKRect sourceRect = new(
+            (clippedDest.Left - destRect.Left) * invScaleX,
+            (clippedDest.Top - destRect.Top) * invScaleY,
+            (clippedDest.Right - destRect.Left) * invScaleX,
+            (clippedDest.Bottom - destRect.Top) * invScaleY);
+
         SKPaint paint = overridePaint ?? _spritePaint;
         paint.Color = new SKColor(255, 255, 255, (byte)(alpha * 255f));
-        canvas.DrawBitmap(bitmap, new SKRect(x, y, x + width, y + height), paint);
+        canvas.DrawBitmap(bitmap, sourceRect, clippedDest, paint);
     }
 
     private static bool IsNudgeKey(Windows.System.VirtualKey key)
