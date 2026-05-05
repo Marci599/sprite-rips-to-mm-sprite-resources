@@ -51,7 +51,6 @@ You can download this example that contains a subject with raw frames: [V_Yoshi]
 - <b>Open in file explorer:</b> `RMB`
 - <b>Multiselect:</b> Hold `CTRL`
 - <b>Select all sibling:</b> `CTRL` + `A`
-- <b>Select range:</b> Hold `SHIFT`
 - <b>Change selected sibling:</b> `Q` `D`
 
 #### Frame offset editor
