@@ -131,11 +131,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
     {
         _selectedFrame = index;
 
-        OffsetXTextBox.ValueChanged -= OffsetXTextBox_ValueChanged;
-        OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
         OffsetXTextBox.Value = _animationConfig.frameCongfigs[index].Offset.X;
         OffsetYTextBox.Value = _animationConfig.frameCongfigs[index].Offset.Y;
+        OffsetXTextBox.ValueChanged -= OffsetXTextBox_ValueChanged;
         OffsetXTextBox.ValueChanged += OffsetXTextBox_ValueChanged;
+
+        OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
         OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
 
         UpdateVisuals();
@@ -596,22 +597,20 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         if (main)
         {
-            bool isInteracting = _isDragging || _isFrameDragging;
-            bool showPrevious = ShowPreviousToggleSwitch.IsOn && !isInteracting;
-            if (showPrevious)
+            if (ShowPreviousToggleSwitch.IsOn)
             {
                 int previousFrameIndex = _selectedFrame == 0 ? _previewFrames.Count - 1 : _selectedFrame - 1;
                 SKBitmap? previousFrame = GetSkBitmap(_previewFrames[previousFrameIndex]);
                 if (previousFrame != null)
                 {
-                    DrawFrame(canvas, previousFrame, _animationConfig.frameCongfigs[previousFrameIndex].Offset, zoom, axisX, axisY, width, height, 0.5f, _previousFramePaint);
+                DrawFrame(canvas, previousFrame, _animationConfig.frameCongfigs[previousFrameIndex].Offset, zoom, axisX, axisY, width, height, 0.5f, _previousFramePaint);
                 }
             }
 
             SKBitmap? currentFrame = GetSkBitmap(GetCurrentFrame());
             if (currentFrame != null)
             {
-                DrawFrame(canvas, currentFrame, _animationConfig.frameCongfigs[_selectedFrame].Offset, zoom, axisX, axisY, width, height, showPrevious ? 0.7f : 1f);
+                DrawFrame(canvas, currentFrame, _animationConfig.frameCongfigs[_selectedFrame].Offset, zoom, axisX, axisY, width, height, ShowPreviousToggleSwitch.IsOn ? 0.7f : 1f);
             }
         }
         else
