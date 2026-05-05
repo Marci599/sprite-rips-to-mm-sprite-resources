@@ -1,9 +1,9 @@
+using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
-using Windows.UI.Core;
 using SkiaSharp;
 using SkiaSharp.Views.Windows;
 using System;
@@ -49,9 +49,9 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private Vector2 _previewResizeStartPointer;
     private const double MinPreviewPanelWidth = 150;
     private const double MinPreviewPanelHeight = 175;
-    private readonly CoreCursor _resizeLeftCursor = new(CoreCursorType.SizeWestEast, 0);
-    private readonly CoreCursor _resizeBottomCursor = new(CoreCursorType.SizeNorthSouth, 0);
-    private readonly CoreCursor _resizeCornerCursor = new(CoreCursorType.SizeNorthwestSoutheast, 0);
+    private readonly InputCursor _resizeLeftCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeWestEast);
+    private readonly InputCursor _resizeBottomCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeNorthSouth);
+    private readonly InputCursor _resizeCornerCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeNorthwestSoutheast);
     private readonly HashSet<Windows.System.VirtualKey> _heldNudgeKeys = [];
     private readonly DispatcherTimer _nudgeHoldTimer = new();
     private int _nudgeHoldTick;
