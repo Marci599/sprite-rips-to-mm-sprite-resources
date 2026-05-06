@@ -1205,7 +1205,9 @@ namespace FramesToMMSpriteResources
             ProgramConfig.SelectedNodePath = newSelectedNodePath;
 
             ProgramConfig.SelectedNodes!.Remove(selectedNode.Text);
-            ProgramConfig.SelectedNodes.Add(selectedNode.Text);  
+            ProgramConfig.SelectedNodes.Add(selectedNode.Text);
+
+            FrameCoordinateEditorControl.EnableMovementControls(ProgramConfig.SelectedNodes.Count > 1);
 
             selectedNode.IsSelected = true;
         }

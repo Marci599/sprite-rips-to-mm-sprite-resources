@@ -90,11 +90,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _previewTimer.Tick -= PreviewTimer_Tick;
         _previewTimer.Tick += PreviewTimer_Tick;
         _nudgeHoldTimer.Interval = TimeSpan.FromSeconds(1.0 / 60.0);
+        _nudgeHoldTimer.Tick -= NudgeHoldTimer_Tick;
         _nudgeHoldTimer.Tick += NudgeHoldTimer_Tick;
     
         ZoomNumberBox.Value = 100;
 
-        UpdateVisuals();
+        //UpdateVisuals();
 
         ActualThemeChanged -= ThemeChanged;
         ActualThemeChanged += ThemeChanged;
@@ -176,8 +177,28 @@ public sealed partial class FrameCoordinateEditor : UserControl
         OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
     }
 
+    void UnscubscribeCanvases()
+    {
+        CoordinateCanvas.PaintSurface -= CoordinateCanvas_PaintSurface;
+        CoordinateCanvas.SizeChanged -= CoordinateCanvas_SizeChanged;
+        CoordinateCanvas.PointerPressed -= CoordinateCanvas_PointerPressed;
+        CoordinateCanvas.PointerMoved -= CoordinateCanvas_PointerMoved;
+        CoordinateCanvas.PointerReleased -= CoordinateCanvas_PointerReleased;
+        CoordinateCanvas.PointerWheelChanged -= CoordinateCanvas_PointerWheelChanged;
+
+        AnimationPreviewCanvas.PaintSurface -= AnimationPreviewCanvas_PaintSurface;
+        AnimationPreviewCanvas.SizeChanged -= AnimationPreviewCanvas_SizeChanged;
+        AnimationPreviewCanvas.PointerPressed -= AnimationPreviewCanvas_PointerPressed;
+        AnimationPreviewCanvas.PointerMoved -= AnimationPreviewCanvas_PointerMoved;
+        AnimationPreviewCanvas.PointerReleased -= AnimationPreviewCanvas_PointerReleased;
+        AnimationPreviewCanvas.PointerWheelChanged -= AnimationPreviewCanvas_PointerWheelChanged;
+    }
+
     public void LoadAnimation(IReadOnlyList<WriteableBitmap> frames, AnimationConfig animationConfig)
     {
+        UnscubscribeCanvases();
+
+
         _previewFrames = frames;
         _bitmapCache.Clear();
         foreach (WriteableBitmap frame in frames)
@@ -202,10 +223,25 @@ public sealed partial class FrameCoordinateEditor : UserControl
         {
             _previewTimer.Stop();
         }
+
+        CoordinateCanvas.PaintSurface += CoordinateCanvas_PaintSurface;
+        CoordinateCanvas.SizeChanged += CoordinateCanvas_SizeChanged;
+        CoordinateCanvas.PointerPressed += CoordinateCanvas_PointerPressed;
+        CoordinateCanvas.PointerMoved += CoordinateCanvas_PointerMoved;
+        CoordinateCanvas.PointerReleased += CoordinateCanvas_PointerReleased;
+        CoordinateCanvas.PointerWheelChanged += CoordinateCanvas_PointerWheelChanged;
+
+        AnimationPreviewCanvas.PaintSurface += AnimationPreviewCanvas_PaintSurface;
+        AnimationPreviewCanvas.SizeChanged += AnimationPreviewCanvas_SizeChanged;
+        AnimationPreviewCanvas.PointerPressed += AnimationPreviewCanvas_PointerPressed;
+        AnimationPreviewCanvas.PointerMoved += AnimationPreviewCanvas_PointerMoved;
+        AnimationPreviewCanvas.PointerReleased += AnimationPreviewCanvas_PointerReleased;
+        AnimationPreviewCanvas.PointerWheelChanged += AnimationPreviewCanvas_PointerWheelChanged;
     }
 
     public void UnloadAnimation()
     {
+        UnscubscribeCanvases();
         LoadAnimation([], new());
         UpdateVisuals();
     }
@@ -392,7 +428,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     public void NudgeOffset(int dx, int dy)
     {
-        if (dx == 0 && dy == 0)
+        if ((dx == 0 && dy == 0) || _animationConfig.frameCongfigs == null)
         {
             return;
         }
@@ -868,8 +904,17 @@ public sealed partial class FrameCoordinateEditor : UserControl
                _heldNudgeKeys.Contains(Windows.System.VirtualKey.D);
     }
 
+    public void EnableMovementControls(bool isEnabled)
+    {
+        DirectionNumberBox.IsEnabled = isEnabled;
+        SpeedNumberBox.IsEnabled = isEnabled;
+        RemoveMovementButton.IsEnabled = isEnabled;
+    }
+
     private void RemoveMovementButton_Click(object sender, RoutedEventArgs e)
     {
+
+
         RemoveMovementButtonClick?.Invoke((float)DirectionNumberBox.Value, (float)SpeedNumberBox.Value);
         
         UpdateVisuals();

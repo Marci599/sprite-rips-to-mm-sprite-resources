@@ -17,21 +17,13 @@
             <Grid>
                 <skia:SKSwapChainPanel x:Name="CoordinateCanvas"
                         HorizontalAlignment="Stretch"
-                        VerticalAlignment="Stretch"
-                        PaintSurface="CoordinateCanvas_PaintSurface"
-                        SizeChanged="CoordinateCanvas_SizeChanged"
-                        PointerPressed="CoordinateCanvas_PointerPressed"
-                        PointerMoved="CoordinateCanvas_PointerMoved"
-                        PointerReleased="CoordinateCanvas_PointerReleased"
-                        PointerWheelChanged="CoordinateCanvas_PointerWheelChanged"/>
+                        VerticalAlignment="Stretch"/>
                 <StackPanel
                     Margin="-4 10 10 0"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top">
                 <Border 
-                        x:Name="AnimationPreviewHostBorder"
-        
-                            
+                        x:Name="AnimationPreviewHostBorder"        
                         Width="126"
                         Height="156"
                         MinWidth="126"
@@ -47,13 +39,7 @@
                             <skia:SKSwapChainPanel x:Name="AnimationPreviewCanvas"
                                                
                                 HorizontalAlignment="Stretch"
-                                VerticalAlignment="Stretch"
-                                PaintSurface="AnimationPreviewCanvas_PaintSurface"
-                                SizeChanged="AnimationPreviewCanvas_SizeChanged"
-                                PointerPressed="AnimationPreviewCanvas_PointerPressed"
-                                PointerMoved="AnimationPreviewCanvas_PointerMoved"
-                                PointerReleased="AnimationPreviewCanvas_PointerReleased"
-                                PointerWheelChanged="AnimationPreviewCanvas_PointerWheelChanged"/>
+                                VerticalAlignment="Stretch"/>
                         </Border>
                         <Border x:Name="PreviewResizeLeftHandle"
                                 Width="8"
@@ -204,7 +190,7 @@
                             <NumberBox Grid.Column="1" x:Name="SpeedNumberBox" Header="Speed (p/f)" PlaceholderText="0" Minimum="-999999" Maximum="999999"/>
                        
                         </Grid>
-                        <Button Grid.Column="2" HorizontalAlignment="Stretch" Height="32" Click="RemoveMovementButton_Click">
+                        <Button Grid.Column="2" x:Name="RemoveMovementButton" HorizontalAlignment="Stretch" Height="32" Click="RemoveMovementButton_Click">
                           
                                 <TextBlock Text="Remove movement"/>
                            
