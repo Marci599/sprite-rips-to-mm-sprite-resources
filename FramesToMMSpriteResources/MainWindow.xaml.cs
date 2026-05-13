@@ -1375,7 +1375,7 @@ namespace FramesToMMSpriteResources
 
         async void DisplayFrameCongifAsync(TreeViewNode node, bool animate = true, bool nowGenerated = false)
         {
-            AnimateGeneratePanel(show: true);
+            
             var gameThemeName = (node.Parent.Parent.Parent.Content as TreeItem)!.Text;
             var subjectName = (node.Parent.Parent.Content as TreeItem)!.Text;
             var animationName = (node.Parent.Content as TreeItem)!.Text;
@@ -1395,7 +1395,7 @@ namespace FramesToMMSpriteResources
                 _animationSpriteFrame.Path = newPath;
                 cts?.Cancel();
             }
-
+            AnimateGeneratePanel(show: true);
             var selectedNode = (node.Content as TreeItem)!;
 
             HandleSelection(selectedNode, nowGenerated, [gameThemeName, subjectName, animationName]);
