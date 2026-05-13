@@ -633,44 +633,7 @@ namespace FramesToMMSpriteResources
                 return;
 
             var (r, g, b, a) = parsedBackgroundColor.Value;
-            var pixels = src.GetPixelSpan();
-
-            int length = pixels.Length;
-            int i = 0;
-
-            // Process 4 pixels at once (16 bytes)
-            int simdWidth = Vector<byte>.Count;
-
-            for (; i <= length - simdWidth; i += simdWidth)
-            {
-                // SIMD doesn't map perfectly to RGBA logic,
-                for (int j = 0; j < simdWidth; j += 4)
-                {
-                    int idx = i + j;
-
-                    byte pb = pixels[idx + 0];
-                    byte pg = pixels[idx + 1];
-                    byte pr = pixels[idx + 2];
-                    byte pa = pixels[idx + 3];
-
-                    if (ColorHelper.IsWithinThreshold(pr, pg, pb, pa, r, g, b, a, subjectConfig.ColorTreshold))
-                        pixels[idx + 3] = 0;
-                }
-            }
-
-            // tail
-            for (; i < length; i += 4)
-            {
-                byte pb = pixels[i + 0];
-                byte pg = pixels[i + 1];
-                byte pr = pixels[i + 2];
-                byte pa = pixels[i + 3];
-
-                if (ColorHelper.IsWithinThreshold(pr, pg, pb, pa, r, g, b, a, subjectConfig.ColorTreshold))
-                    pixels[i + 3] = 0;
-            }
-
-            src.NotifyPixelsChanged();
+            ColorHelper.RemoveColorWithThresholdInPlace(src, r, g, b, a, subjectConfig.ColorTreshold);
         }
 
         private static SKBitmap ResizeBitmapNearest(SKBitmap source, int newW, int newH)

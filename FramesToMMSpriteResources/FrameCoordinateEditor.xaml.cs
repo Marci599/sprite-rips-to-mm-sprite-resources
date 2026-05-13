@@ -763,20 +763,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
 
         SKColor bg = _backgroundColor.Value;
-        byte[] pixels = masked.Bytes;
-        for (int i = 0; i < pixels.Length; i += 4)
-        {
-            byte pb = pixels[i + 0];
-            byte pg = pixels[i + 1];
-            byte pr = pixels[i + 2];
-            byte pa = pixels[i + 3];
-
-            if (ColorHelper.IsWithinThreshold(pr, pg, pb, pa, bg.Red, bg.Green, bg.Blue, bg.Alpha, _colorThreshold))
-            {
-                pixels[i + 3] = 0;
-            }
-        }
-        masked.NotifyPixelsChanged();
+        ColorHelper.RemoveColorWithThresholdInPlace(masked, bg.Red, bg.Green, bg.Blue, bg.Alpha, _colorThreshold);
 
         if (wb != null)
         {
