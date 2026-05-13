@@ -756,21 +756,27 @@ public sealed partial class FrameCoordinateEditor : UserControl
             return cached;
         }
 
-        SKBitmap masked = new(source.Width, source.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
-        double thresholdSquared = _colorThreshold * _colorThreshold;
-        SKColor bg = _backgroundColor.Value;
-        SKColor[] srcPixels = source.Pixels;
-        SKColor[] dstPixels = masked.Pixels;
-        for (int i = 0; i < srcPixels.Length; i++)
+        SKBitmap masked = source.Copy();
+        if (masked == null)
         {
-            SKColor px = srcPixels[i];
-            int dr = px.Red - bg.Red;
-            int dg = px.Green - bg.Green;
-            int db = px.Blue - bg.Blue;
-            int da = px.Alpha - bg.Alpha;
-            double dist2 = (dr * dr) + (dg * dg) + (db * db) + (da * da);
-            dstPixels[i] = dist2 <= thresholdSquared ? new SKColor(0, 0, 0, 0) : px;
+            return source;
         }
+
+        SKColor bg = _backgroundColor.Value;
+        byte[] pixels = masked.Bytes;
+        for (int i = 0; i < pixels.Length; i += 4)
+        {
+            byte pb = pixels[i + 0];
+            byte pg = pixels[i + 1];
+            byte pr = pixels[i + 2];
+            byte pa = pixels[i + 3];
+
+            if (ColorHelper.IsWithinThreshold(pr, pg, pb, pa, bg.Red, bg.Green, bg.Blue, bg.Alpha, _colorThreshold))
+            {
+                pixels[i + 3] = 0;
+            }
+        }
+        masked.NotifyPixelsChanged();
 
         if (wb != null)
         {

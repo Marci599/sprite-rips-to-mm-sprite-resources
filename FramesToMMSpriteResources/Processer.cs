@@ -633,8 +633,6 @@ namespace FramesToMMSpriteResources
                 return;
 
             var (r, g, b, a) = parsedBackgroundColor.Value;
-            double thresholdSquared = subjectConfig.ColorTreshold * subjectConfig.ColorTreshold;
-
             var pixels = src.GetPixelSpan();
 
             int length = pixels.Length;
@@ -655,14 +653,7 @@ namespace FramesToMMSpriteResources
                     byte pr = pixels[idx + 2];
                     byte pa = pixels[idx + 3];
 
-                    int dr = pr - r;
-                    int dg = pg - g;
-                    int db = pb - b;
-                    int da = pa - a;
-
-                    int dist2 = dr * dr + dg * dg + db * db + da * da;
-
-                    if (dist2 <= thresholdSquared)
+                    if (ColorHelper.IsWithinThreshold(pr, pg, pb, pa, r, g, b, a, subjectConfig.ColorTreshold))
                         pixels[idx + 3] = 0;
                 }
             }
@@ -675,14 +666,7 @@ namespace FramesToMMSpriteResources
                 byte pr = pixels[i + 2];
                 byte pa = pixels[i + 3];
 
-                int dr = pr - r;
-                int dg = pg - g;
-                int db = pb - b;
-                int da = pa - a;
-
-                int dist2 = dr * dr + dg * dg + db * db + da * da;
-
-                if (dist2 <= thresholdSquared)
+                if (ColorHelper.IsWithinThreshold(pr, pg, pb, pa, r, g, b, a, subjectConfig.ColorTreshold))
                     pixels[i + 3] = 0;
             }
 

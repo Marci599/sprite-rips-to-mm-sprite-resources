@@ -8,6 +8,17 @@ namespace FramesToMMSpriteResources
 {
     internal class ColorHelper
     {
+        public static bool IsWithinThreshold(byte pr, byte pg, byte pb, byte pa, byte r, byte g, byte b, byte a, int colorThreshold)
+        {
+            int dr = pr - r;
+            int dg = pg - g;
+            int db = pb - b;
+            int da = pa - a;
+            int dist2 = (dr * dr) + (dg * dg) + (db * db) + (da * da);
+            int thresholdSquared = colorThreshold * colorThreshold;
+            return dist2 <= thresholdSquared;
+        }
+
         public static bool TryParse(string? input, out byte a, out byte r, out byte g, out byte b)
         {
             a = r = g = b = 0;
