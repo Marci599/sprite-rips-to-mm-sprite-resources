@@ -58,12 +58,16 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private const int NudgeHoldDelayTicks = 10;
     byte lightA, lightB;
     private readonly Dictionary<WriteableBitmap, SKBitmap> _bitmapCache = [];
+    private readonly Dictionary<WriteableBitmap, SKBitmap> _backgroundRemovedCache = [];
     private readonly SKPaint _spritePaint = new() { IsAntialias = false };
     private readonly SKPaint _previousFramePaint = new() { IsAntialias = false };
     private readonly SKPaint _checkerboardPaint = new() { IsAntialias = false };
     private readonly SKPaint _axisPaint = new() { IsAntialias = false, Color = new SKColor(140, 140, 140, 200) };
     private SKShader? _checkerboardShader;
     private readonly SKBitmap _checkerboardUnitBitmap = new(2, 2, SKColorType.Bgra8888, SKAlphaType.Premul);
+    private bool _removeBackground;
+    private SKColor? _backgroundColor;
+    private int _colorThreshold = 100;
 
 
     public event Action<float, float>? RemoveMovementButtonClick;
@@ -201,6 +205,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         _previewFrames = frames;
         _bitmapCache.Clear();
+        _backgroundRemovedCache.Clear();
         foreach (WriteableBitmap frame in frames)
         {
             _ = GetSkBitmap(frame);
@@ -733,6 +738,81 @@ public sealed partial class FrameCoordinateEditor : UserControl
         return bmp;
     }
 
+    private SKBitmap? GetDisplayBitmap(WriteableBitmap? wb)
+    {
+        SKBitmap? source = GetSkBitmap(wb);
+        if (source == null)
+        {
+            return null;
+        }
+
+        if (!_removeBackground || _backgroundColor == null)
+        {
+            return source;
+        }
+
+        if (wb != null && _backgroundRemovedCache.TryGetValue(wb, out SKBitmap? cached))
+        {
+            return cached;
+        }
+
+        SKBitmap masked = new(source.Width, source.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
+        double thresholdSquared = _colorThreshold * _colorThreshold;
+        SKColor bg = _backgroundColor.Value;
+        var srcPixels = source.GetPixelSpan();
+        var dstPixels = masked.GetPixelSpan();
+        for (int i = 0; i < srcPixels.Length; i++)
+        {
+            SKColor px = srcPixels[i];
+            int dr = px.Red - bg.Red;
+            int dg = px.Green - bg.Green;
+            int db = px.Blue - bg.Blue;
+            double dist2 = (dr * dr) + (dg * dg) + (db * db);
+            dstPixels[i] = dist2 <= thresholdSquared ? new SKColor(0, 0, 0, 0) : px;
+        }
+
+        if (wb != null)
+        {
+            _backgroundRemovedCache[wb] = masked;
+        }
+
+        return masked;
+    }
+
+    public void SetBackgroundRemovalOptions(bool removeBackground, string? backgroundColorHex, int colorThreshold)
+    {
+        _removeBackground = removeBackground;
+        _colorThreshold = Math.Max(0, colorThreshold);
+        _backgroundColor = TryParseHexColor(backgroundColorHex, out SKColor parsedColor) ? parsedColor : null;
+        RemoveBackgroundToggleSwitch.IsOn = removeBackground;
+        _backgroundRemovedCache.Clear();
+        UpdateVisuals();
+        UpdateAnimationPreviewFrame();
+    }
+
+    private static bool TryParseHexColor(string? hex, out SKColor color)
+    {
+        color = default;
+        if (string.IsNullOrWhiteSpace(hex))
+        {
+            return false;
+        }
+
+        string normalized = hex.Trim().TrimStart('#');
+        if (normalized.Length != 6)
+        {
+            return false;
+        }
+
+        if (!uint.TryParse(normalized, System.Globalization.NumberStyles.HexNumber, null, out uint rgb))
+        {
+            return false;
+        }
+
+        color = new SKColor((byte)((rgb >> 16) & 0xFF), (byte)((rgb >> 8) & 0xFF), (byte)(rgb & 0xFF), 255);
+        return true;
+    }
+
     private void CoordinateCanvas_PaintSurface(object sender, SKPaintGLSurfaceEventArgs e)
     {
         DrawCanvas(e.Surface.Canvas, e.Info.Width, e.Info.Height, true);
@@ -767,14 +847,14 @@ public sealed partial class FrameCoordinateEditor : UserControl
             if (ShowPreviousToggleSwitch.IsOn)
             {
                 int previousFrameIndex = _selectedFrame == 0 ? _previewFrames.Count - 1 : _selectedFrame - 1;
-                SKBitmap? previousFrame = GetSkBitmap(_previewFrames[previousFrameIndex]);
+                SKBitmap? previousFrame = GetDisplayBitmap(_previewFrames[previousFrameIndex]);
                 if (previousFrame != null)
                 {
                 DrawFrame(canvas, previousFrame, _animationConfig.frameCongfigs[previousFrameIndex].Offset, zoom, axisX, axisY, width, height, 0.5f, _previousFramePaint);
                 }
             }
 
-            SKBitmap? currentFrame = GetSkBitmap(GetCurrentFrame());
+            SKBitmap? currentFrame = GetDisplayBitmap(GetCurrentFrame());
             if (currentFrame != null)
             {
                 DrawFrame(canvas, currentFrame, _animationConfig.frameCongfigs[_selectedFrame].Offset, zoom, axisX, axisY, width, height, ShowPreviousToggleSwitch.IsOn ? 0.7f : 1f);
@@ -783,7 +863,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         else
         {
             int previewFrameIndex = Math.Clamp(_previewFrameIndex + GetFromValue(), GetFromValue(), GetToValue());
-            SKBitmap? previewFrame = GetSkBitmap(_previewFrames[previewFrameIndex]);
+            SKBitmap? previewFrame = GetDisplayBitmap(_previewFrames[previewFrameIndex]);
             if (previewFrame != null)
             {
                 IntVector2 previewOffset = previewFrameIndex < _animationConfig.frameCongfigs.Count
@@ -859,6 +939,14 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private void ShowPreviousToggleSwitch_Toggled(object sender, RoutedEventArgs e)
     {
         UpdateVisuals();
+    }
+
+    private void RemoveBackgroundToggleSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        _removeBackground = RemoveBackgroundToggleSwitch.IsOn;
+        _backgroundRemovedCache.Clear();
+        UpdateVisuals();
+        UpdateAnimationPreviewFrame();
     }
 
     private void FromNumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)

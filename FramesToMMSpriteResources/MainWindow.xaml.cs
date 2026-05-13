@@ -1302,6 +1302,7 @@ namespace FramesToMMSpriteResources
 
             var subjectConfig = ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName];
             subjectConfig.Sheet ??= new SheetConfig();
+            FrameCoordinateEditorControl.SetBackgroundRemovalOptions(subjectConfig.RemoveBackground, subjectConfig.BackgroundColor, subjectConfig.ColorTreshold);
 
             RemoveBackgroundCheckBox.IsChecked = subjectConfig.RemoveBackground;
             CropSpritesCheckBox.IsChecked = subjectConfig.CropSprites;
@@ -1602,10 +1603,12 @@ namespace FramesToMMSpriteResources
 
         private void ThresholdTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
         {
+            int threshold = double.IsNaN(sender.Value) ? 100 : (int)sender.Value;
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
-                currentConfig.ColorTreshold = double.IsNaN(sender.Value) ? 100 : (int)sender.Value;
+                currentConfig.ColorTreshold = threshold;
             }
+            UpdateFrameEditorBackgroundOptionsFromSelection();
         }
 
         private void ResizeTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
@@ -1650,10 +1653,12 @@ namespace FramesToMMSpriteResources
 
         private void ClickRemoveBackground(object sender, RoutedEventArgs e)
         {
+            bool removeBackground = (sender as CheckBox)!.IsChecked!.Value;
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
-                currentConfig.RemoveBackground = (sender as CheckBox)!.IsChecked!.Value;
+                currentConfig.RemoveBackground = removeBackground;
             }
+            UpdateFrameEditorBackgroundOptionsFromSelection();
         }
 
         private void ClickIsHdCheckBox(object sender, RoutedEventArgs e)
@@ -1667,11 +1672,39 @@ namespace FramesToMMSpriteResources
         private void ColorTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             UpdateColorPreview();
+            string backgroundColor = (sender as TextBox)!.Text;
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
-                currentConfig.BackgroundColor = (sender as TextBox)!.Text;
+                currentConfig.BackgroundColor = backgroundColor;
             }
-           
+            UpdateFrameEditorBackgroundOptionsFromSelection();
+        }
+
+        private void UpdateFrameEditorBackgroundOptionsFromSelection()
+        {
+            TreeViewNode? node = TreeViewControl.SelectedNode;
+            if (node == null)
+            {
+                return;
+            }
+
+            var depth = ((TreeItem)node.Content).Depth;
+            if (depth != ItemDepth.Frame && depth != ItemDepth.Animation && depth != ItemDepth.Subject)
+            {
+                return;
+            }
+
+            TreeViewNode subjectNode = depth switch
+            {
+                ItemDepth.Subject => node,
+                ItemDepth.Animation => node.Parent!,
+                _ => node.Parent!.Parent!
+            };
+
+            string gameThemeName = ((TreeItem)subjectNode.Parent!.Content).Text;
+            string subjectName = ((TreeItem)subjectNode.Content).Text;
+            SubjectConfig subjectConfig = ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName];
+            FrameCoordinateEditorControl.SetBackgroundRemovalOptions(subjectConfig.RemoveBackground, subjectConfig.BackgroundColor, subjectConfig.ColorTreshold);
         }
 
         private void UpdateColorPreview()
