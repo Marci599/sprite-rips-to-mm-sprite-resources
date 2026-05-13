@@ -845,7 +845,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
             SKBitmap? currentFrame = GetDisplayBitmap(GetCurrentFrame());
             if (currentFrame != null)
             {
-                DrawFrame(canvas, currentFrame, _animationConfig.frameCongfigs[_selectedFrame].Offset, zoom, axisX, axisY, width, height, ShowPreviousToggleSwitch.IsOn ? 0.7f : 1f);
+                DrawFrame(canvas, currentFrame, _animationConfig.frameCongfigs[_selectedFrame].Offset, zoom, axisX, axisY, width, height, 1f);
             }
         }
         else
