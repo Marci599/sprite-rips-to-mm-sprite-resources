@@ -767,7 +767,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
             int dr = px.Red - bg.Red;
             int dg = px.Green - bg.Green;
             int db = px.Blue - bg.Blue;
-            double dist2 = (dr * dr) + (dg * dg) + (db * db);
+            int da = px.Alpha - bg.Alpha;
+            double dist2 = (dr * dr) + (dg * dg) + (db * db) + (da * da);
             dstPixels[i] = dist2 <= thresholdSquared ? new SKColor(0, 0, 0, 0) : px;
         }
 
@@ -798,18 +799,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
             return false;
         }
 
-        string normalized = hex.Trim().TrimStart('#');
-        if (normalized.Length != 6)
+        if (!ColorHelper.TryParse(hex, out byte a, out byte r, out byte g, out byte b))
         {
             return false;
         }
 
-        if (!uint.TryParse(normalized, System.Globalization.NumberStyles.HexNumber, null, out uint rgb))
-        {
-            return false;
-        }
-
-        color = new SKColor((byte)((rgb >> 16) & 0xFF), (byte)((rgb >> 8) & 0xFF), (byte)(rgb & 0xFF), 255);
+        color = new SKColor(r, g, b, a);
         return true;
     }
 
