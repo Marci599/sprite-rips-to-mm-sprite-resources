@@ -759,8 +759,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
         SKBitmap masked = new(source.Width, source.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
         double thresholdSquared = _colorThreshold * _colorThreshold;
         SKColor bg = _backgroundColor.Value;
-        var srcPixels = source.GetPixelSpan();
-        var dstPixels = masked.GetPixelSpan();
+        SKColor[] srcPixels = source.Pixels;
+        SKColor[] dstPixels = masked.Pixels;
         for (int i = 0; i < srcPixels.Length; i++)
         {
             SKColor px = srcPixels[i];
