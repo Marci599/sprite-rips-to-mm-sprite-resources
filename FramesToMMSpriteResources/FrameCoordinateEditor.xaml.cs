@@ -132,10 +132,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void RebuildCheckerboardShader()
     {
-        _checkerboardUnitBitmap.SetPixel(0, 0, new SKColor(lightA, lightA, lightA, 255));
-        _checkerboardUnitBitmap.SetPixel(1, 1, new SKColor(lightA, lightA, lightA, 255));
-        _checkerboardUnitBitmap.SetPixel(1, 0, new SKColor(lightB, lightB, lightB, 255));
-        _checkerboardUnitBitmap.SetPixel(0, 1, new SKColor(lightB, lightB, lightB, 255));
+        _checkerboardUnitBitmap.SetPixel(0, 0, new SKColor((byte)lightA, (byte)lightA, (byte)lightA, (byte)255));
+        _checkerboardUnitBitmap.SetPixel(1, 1, new SKColor((byte)lightA, (byte)lightA, (byte)lightA, (byte)255));
+        _checkerboardUnitBitmap.SetPixel(1, 0, new SKColor((byte)lightB, (byte)lightB, (byte)lightB, (byte)255));
+        _checkerboardUnitBitmap.SetPixel(0, 1, new SKColor((byte)lightB, (byte)lightB, (byte)lightB, (byte)255));
         _checkerboardShader?.Dispose();
         _checkerboardShader = _checkerboardUnitBitmap.ToShader(SKShaderTileMode.Repeat, SKShaderTileMode.Repeat);
     }
