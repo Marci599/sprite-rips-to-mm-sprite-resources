@@ -633,60 +633,7 @@ namespace FramesToMMSpriteResources
                 return;
 
             var (r, g, b, a) = parsedBackgroundColor.Value;
-            double thresholdSquared = subjectConfig.ColorTreshold * subjectConfig.ColorTreshold;
-
-            var pixels = src.GetPixelSpan();
-
-            int length = pixels.Length;
-            int i = 0;
-
-            // Process 4 pixels at once (16 bytes)
-            int simdWidth = Vector<byte>.Count;
-
-            for (; i <= length - simdWidth; i += simdWidth)
-            {
-                // SIMD doesn't map perfectly to RGBA logic,
-                for (int j = 0; j < simdWidth; j += 4)
-                {
-                    int idx = i + j;
-
-                    byte pb = pixels[idx + 0];
-                    byte pg = pixels[idx + 1];
-                    byte pr = pixels[idx + 2];
-                    byte pa = pixels[idx + 3];
-
-                    int dr = pr - r;
-                    int dg = pg - g;
-                    int db = pb - b;
-                    int da = pa - a;
-
-                    int dist2 = dr * dr + dg * dg + db * db + da * da;
-
-                    if (dist2 <= thresholdSquared)
-                        pixels[idx + 3] = 0;
-                }
-            }
-
-            // tail
-            for (; i < length; i += 4)
-            {
-                byte pb = pixels[i + 0];
-                byte pg = pixels[i + 1];
-                byte pr = pixels[i + 2];
-                byte pa = pixels[i + 3];
-
-                int dr = pr - r;
-                int dg = pg - g;
-                int db = pb - b;
-                int da = pa - a;
-
-                int dist2 = dr * dr + dg * dg + db * db + da * da;
-
-                if (dist2 <= thresholdSquared)
-                    pixels[i + 3] = 0;
-            }
-
-            src.NotifyPixelsChanged();
+            ColorHelper.RemoveColorWithThresholdInPlace(src, r, g, b, a, subjectConfig.ColorTreshold);
         }
 
         private static SKBitmap ResizeBitmapNearest(SKBitmap source, int newW, int newH)

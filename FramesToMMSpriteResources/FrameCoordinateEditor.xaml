@@ -203,7 +203,7 @@
                     <StackPanel Spacing="12">
                         <TextBlock Text="Options" Style="{StaticResource SectionHeaderStyle}"/>
                         <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                        <ToggleSwitch Header="Remove background" Margin="0 0 0 -8"/>
+                        <ToggleSwitch x:Name="RemoveBackgroundToggleSwitch" Header="Remove background" Toggled="RemoveBackgroundToggleSwitch_Toggled" Margin="0 0 0 -8"/>
                         <ToggleSwitch Header="Crop" Margin="0 0 0 -8"/>
                         <ToggleSwitch x:Name="ShowPreviousToggleSwitch" Header="Show previous frame behind" Toggled="ShowPreviousToggleSwitch_Toggled" IsOn="True" Margin="0 0 0 -8"/>
                     </StackPanel>

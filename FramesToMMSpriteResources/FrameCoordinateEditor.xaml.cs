@@ -35,7 +35,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private IReadOnlyList<WriteableBitmap> _previewFrames = [];
     private int _previewFrameIndex;
     private int _previewTickCount;
-    private AnimationConfig _animationConfig = new();
+    private SubjectConfig _subjectConfig = new();
+    private string? _animationConfigName = null;
     private Vector2 _previewPan = Vector2.Zero;
     private float _previewZoom = 1.0f;
     private const float MinPreviewZoom = 0.05f;
@@ -58,6 +59,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private const int NudgeHoldDelayTicks = 10;
     byte lightA, lightB;
     private readonly Dictionary<WriteableBitmap, SKBitmap> _bitmapCache = [];
+    private readonly Dictionary<WriteableBitmap, SKBitmap> _backgroundRemovedCache = [];
     private readonly SKPaint _spritePaint = new() { IsAntialias = false };
     private readonly SKPaint _previousFramePaint = new() { IsAntialias = false };
     private readonly SKPaint _checkerboardPaint = new() { IsAntialias = false };
@@ -101,6 +103,16 @@ public sealed partial class FrameCoordinateEditor : UserControl
         ActualThemeChanged += ThemeChanged;
     }
 
+    AnimationConfig getCurrentAnimationConfig()
+    {
+        return _subjectConfig.AnimationConfigs![_animationConfigName!];
+    }
+
+    FrameConfig getCurrentFrameConfig()
+    {
+        return getCurrentAnimationConfig().frameCongfigs[_selectedFrame];
+    }
+
     void ThemeChanged(FrameworkElement fe, object o)
     {
         SetCheckeredColors();
@@ -128,10 +140,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void RebuildCheckerboardShader()
     {
-        _checkerboardUnitBitmap.SetPixel(0, 0, new SKColor(lightA, lightA, lightA, 255));
-        _checkerboardUnitBitmap.SetPixel(1, 1, new SKColor(lightA, lightA, lightA, 255));
-        _checkerboardUnitBitmap.SetPixel(1, 0, new SKColor(lightB, lightB, lightB, 255));
-        _checkerboardUnitBitmap.SetPixel(0, 1, new SKColor(lightB, lightB, lightB, 255));
+        _checkerboardUnitBitmap.SetPixel(0, 0, new SKColor((byte)lightA, (byte)lightA, (byte)lightA, (byte)255));
+        _checkerboardUnitBitmap.SetPixel(1, 1, new SKColor((byte)lightA, (byte)lightA, (byte)lightA, (byte)255));
+        _checkerboardUnitBitmap.SetPixel(1, 0, new SKColor((byte)lightB, (byte)lightB, (byte)lightB, (byte)255));
+        _checkerboardUnitBitmap.SetPixel(0, 1, new SKColor((byte)lightB, (byte)lightB, (byte)lightB, (byte)255));
         _checkerboardShader?.Dispose();
         _checkerboardShader = _checkerboardUnitBitmap.ToShader(SKShaderTileMode.Repeat, SKShaderTileMode.Repeat);
     }
@@ -156,8 +168,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
         OffsetXTextBox.ValueChanged -= OffsetXTextBox_ValueChanged;
         OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
 
-        OffsetXTextBox.Value = _animationConfig.frameCongfigs[index].Offset.X;
-        OffsetYTextBox.Value = _animationConfig.frameCongfigs[index].Offset.Y;
+        OffsetXTextBox.Value = getCurrentFrameConfig().Offset.X;
+        OffsetYTextBox.Value = getCurrentFrameConfig().Offset.Y;
         
         OffsetXTextBox.ValueChanged += OffsetXTextBox_ValueChanged;
         OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
@@ -170,8 +182,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
         OffsetXTextBox.ValueChanged -= OffsetXTextBox_ValueChanged;
         OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
 
-        OffsetXTextBox.Value = _animationConfig.frameCongfigs[_selectedFrame].Offset.X;
-        OffsetYTextBox.Value = _animationConfig.frameCongfigs[_selectedFrame].Offset.Y;
+        OffsetXTextBox.Value = getCurrentFrameConfig().Offset.X;
+        OffsetYTextBox.Value = getCurrentFrameConfig().Offset.Y;
 
         OffsetXTextBox.ValueChanged += OffsetXTextBox_ValueChanged;
         OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
@@ -194,20 +206,22 @@ public sealed partial class FrameCoordinateEditor : UserControl
         AnimationPreviewCanvas.PointerWheelChanged -= AnimationPreviewCanvas_PointerWheelChanged;
     }
 
-    public void LoadAnimation(IReadOnlyList<WriteableBitmap> frames, AnimationConfig animationConfig)
+    public void LoadAnimation(IReadOnlyList<WriteableBitmap> frames, SubjectConfig subjectConfig, string animationConfigName)
     {
         UnscubscribeCanvases();
 
 
         _previewFrames = frames;
         _bitmapCache.Clear();
+        _backgroundRemovedCache.Clear();
         foreach (WriteableBitmap frame in frames)
         {
             _ = GetSkBitmap(frame);
         }
         _previewFrameIndex = 0;
         _previewTickCount = 0;
-        _animationConfig = animationConfig;
+        _subjectConfig = subjectConfig;
+        _animationConfigName = animationConfigName;
         int maxFrames = Math.Max(_previewFrames.Count - 1, 0);
         ToNumberBox.PlaceholderText = maxFrames.ToString();
         ToNumberBox.Maximum = maxFrames;
@@ -242,7 +256,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     public void UnloadAnimation()
     {
         UnscubscribeCanvases();
-        LoadAnimation([], new());
+        LoadAnimation([], new(), null);
         UpdateVisuals();
     }
 
@@ -265,7 +279,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         if (point.Properties.IsLeftButtonPressed)
         {
             _frameDragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
-            _frameDragStartOffset = _animationConfig.frameCongfigs[_selectedFrame].Offset;
+            _frameDragStartOffset = getCurrentFrameConfig().Offset;
             _isFrameDragging = true;
             CoordinateCanvas.CapturePointer(e.Pointer);
         }
@@ -298,7 +312,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
             int dx = (int)MathF.Round(delta.X / _zoom);
             int dy = (int)MathF.Round(-delta.Y / _zoom);
             IntVector2 newOffset = new(_frameDragStartOffset.X + dx, _frameDragStartOffset.Y + dy);
-            IntVector2 currentOffset = _animationConfig.frameCongfigs[_selectedFrame].Offset;
+            IntVector2 currentOffset = getCurrentFrameConfig().Offset;
             if (newOffset != currentOffset)
             {
                 NudgeOffset(newOffset.X - currentOffset.X, newOffset.Y - currentOffset.Y);
@@ -396,14 +410,14 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private void OffsetXTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
 
-        SpritePositionChanged?.Invoke(new(double.IsNaN(sender.Value) ? 0 : (int)sender.Value, _animationConfig.frameCongfigs[_selectedFrame].Offset.Y));
+        SpritePositionChanged?.Invoke(new(double.IsNaN(sender.Value) ? 0 : (int)sender.Value, getCurrentFrameConfig().Offset.Y));
         UpdateVisuals();
 
     }
 
     private void OffsetYTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
-        SpritePositionChanged?.Invoke(new IntVector2(_animationConfig.frameCongfigs[_selectedFrame].Offset.X, double.IsNaN(sender.Value) ? 0 : (int)sender.Value));
+        SpritePositionChanged?.Invoke(new IntVector2(getCurrentFrameConfig().Offset.X, double.IsNaN(sender.Value) ? 0 : (int)sender.Value));
         UpdateVisuals();
 
     }
@@ -428,15 +442,15 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     public void NudgeOffset(int dx, int dy)
     {
-        if ((dx == 0 && dy == 0) || _animationConfig.frameCongfigs == null)
+        if ((dx == 0 && dy == 0) || getCurrentAnimationConfig().frameCongfigs == null)
         {
             return;
         }
 
         OffsetXTextBox.ValueChanged -= OffsetXTextBox_ValueChanged;
         OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
-        OffsetXTextBox.Value = _animationConfig.frameCongfigs[_selectedFrame].Offset.X + dx;
-        OffsetYTextBox.Value = _animationConfig.frameCongfigs[_selectedFrame].Offset.Y + dy;
+        OffsetXTextBox.Value = getCurrentFrameConfig().Offset.X + dx;
+        OffsetYTextBox.Value = getCurrentFrameConfig().Offset.Y + dy;
         SpritePositionMoved?.Invoke(new(dx, dy));
         UpdateVisuals();
         OffsetXTextBox.ValueChanged += OffsetXTextBox_ValueChanged;
@@ -703,7 +717,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
 
         _previewTickCount++;
-        if (_previewTickCount < _animationConfig.Delay)
+        if (_previewTickCount < getCurrentAnimationConfig().Delay)
         {
             return;
         }
@@ -731,6 +745,42 @@ public sealed partial class FrameCoordinateEditor : UserControl
         stream.Read(System.Runtime.InteropServices.MemoryMarshal.AsBytes(pixels));
         _bitmapCache[wb] = bmp;
         return bmp;
+    }
+
+    private SKBitmap? GetDisplayBitmap(WriteableBitmap? wb)
+    {
+        SKBitmap? source = GetSkBitmap(wb);
+        if (source == null)
+        {
+            return null;
+        }
+
+        if (!RemoveBackgroundToggleSwitch.IsOn || _subjectConfig.BackgroundColor == null)
+        {
+            return source;
+        }
+
+        if (wb != null && _backgroundRemovedCache.TryGetValue(wb, out SKBitmap? cached))
+        {
+            return cached;
+        }
+
+        SKBitmap masked = source.Copy();
+        if (masked == null)
+        {
+            return source;
+        }
+
+        ColorHelper.TryParse(_subjectConfig.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
+        SKColor bg = new(r, g, b, a);
+        ColorHelper.RemoveColorWithThresholdInPlace(masked, bg.Red, bg.Green, bg.Blue, bg.Alpha, _subjectConfig.ColorTreshold);
+
+        if (wb != null)
+        {
+            _backgroundRemovedCache[wb] = masked;
+        }
+
+        return masked;
     }
 
     private void CoordinateCanvas_PaintSurface(object sender, SKPaintGLSurfaceEventArgs e)
@@ -767,27 +817,27 @@ public sealed partial class FrameCoordinateEditor : UserControl
             if (ShowPreviousToggleSwitch.IsOn)
             {
                 int previousFrameIndex = _selectedFrame == 0 ? _previewFrames.Count - 1 : _selectedFrame - 1;
-                SKBitmap? previousFrame = GetSkBitmap(_previewFrames[previousFrameIndex]);
+                SKBitmap? previousFrame = GetDisplayBitmap(_previewFrames[previousFrameIndex]);
                 if (previousFrame != null)
                 {
-                DrawFrame(canvas, previousFrame, _animationConfig.frameCongfigs[previousFrameIndex].Offset, zoom, axisX, axisY, width, height, 0.5f, _previousFramePaint);
+                DrawFrame(canvas, previousFrame, getCurrentAnimationConfig().frameCongfigs[previousFrameIndex].Offset, zoom, axisX, axisY, width, height, 0.5f, _previousFramePaint);
                 }
             }
 
-            SKBitmap? currentFrame = GetSkBitmap(GetCurrentFrame());
+            SKBitmap? currentFrame = GetDisplayBitmap(GetCurrentFrame());
             if (currentFrame != null)
             {
-                DrawFrame(canvas, currentFrame, _animationConfig.frameCongfigs[_selectedFrame].Offset, zoom, axisX, axisY, width, height, ShowPreviousToggleSwitch.IsOn ? 0.7f : 1f);
+                DrawFrame(canvas, currentFrame, getCurrentFrameConfig().Offset, zoom, axisX, axisY, width, height, ShowPreviousToggleSwitch.IsOn ? 0.7f : 1f);
             }
         }
         else
         {
             int previewFrameIndex = Math.Clamp(_previewFrameIndex + GetFromValue(), GetFromValue(), GetToValue());
-            SKBitmap? previewFrame = GetSkBitmap(_previewFrames[previewFrameIndex]);
+            SKBitmap? previewFrame = GetDisplayBitmap(_previewFrames[previewFrameIndex]);
             if (previewFrame != null)
             {
-                IntVector2 previewOffset = previewFrameIndex < _animationConfig.frameCongfigs.Count
-                    ? _animationConfig.frameCongfigs[previewFrameIndex].Offset
+                IntVector2 previewOffset = previewFrameIndex < getCurrentAnimationConfig().frameCongfigs.Count
+                    ? getCurrentAnimationConfig().frameCongfigs[previewFrameIndex].Offset
                     : new IntVector2();
                 DrawFrame(canvas, previewFrame, previewOffset, zoom, axisX, axisY, width, height, 1f);
             }
@@ -859,6 +909,13 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private void ShowPreviousToggleSwitch_Toggled(object sender, RoutedEventArgs e)
     {
         UpdateVisuals();
+    }
+
+    private void RemoveBackgroundToggleSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        _backgroundRemovedCache.Clear();
+        UpdateVisuals();
+        UpdateAnimationPreviewFrame();
     }
 
     private void FromNumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)

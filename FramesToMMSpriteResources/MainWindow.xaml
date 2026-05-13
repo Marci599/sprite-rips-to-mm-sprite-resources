@@ -301,7 +301,7 @@
                                 <local:FrameCoordinateEditor x:Name="FrameCoordinateEditorControl"
                                                              HorizontalAlignment="Stretch"
                                                              VerticalAlignment="Stretch"/>
-                            <Border x:Name="FramesLoadingBorder" Background="{ThemeResource SmokeFillColorDefaultBrush}">
+                            <Border x:Name="FramesLoadingBorder" Background="{ThemeResource SmokeFillColorDefaultBrush}" AllowFocusOnInteraction="True">
                                 <ProgressRing/>
                             </Border>
                             
