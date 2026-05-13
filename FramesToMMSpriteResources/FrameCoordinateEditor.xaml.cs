@@ -901,12 +901,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
             (clippedDest.Right - destRect.Left) * invScaleX,
             (clippedDest.Bottom - destRect.Top) * invScaleY);
 
-        if (overridePaint == null && Math.Abs(alpha - 1f) < 0.0001f)
-        {
-            canvas.DrawBitmap(bitmap, sourceRect, clippedDest);
-            return;
-        }
-
         SKPaint paint = overridePaint ?? _spritePaint;
         paint.Color = new SKColor(255, 255, 255, (byte)(alpha * 255f));
         canvas.DrawBitmap(bitmap, sourceRect, clippedDest, paint);
