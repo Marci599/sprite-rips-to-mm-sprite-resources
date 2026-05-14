@@ -13,7 +13,7 @@
     <EnableMsixTooling>true</EnableMsixTooling>
     <Nullable>enable</Nullable>
 	<SelfContained>true</SelfContained>
-
+    <LangVersion>13.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <Page Remove="Controls\CardGroup.xaml" />

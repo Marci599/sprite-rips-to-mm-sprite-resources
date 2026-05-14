@@ -22,12 +22,13 @@
                     Margin="-4 10 10 0"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top">
-                <Border 
-                        x:Name="AnimationPreviewHostBorder"        
-                        Width="126"
-                        Height="156"
-                        MinWidth="126"
-                        MinHeight="126">
+                    <Border 
+                            x:Name="AnimationPreviewHostBorder"        
+                            Width="126"
+                            Height="156"
+                            MinWidth="126"
+                            MinHeight="126"
+                    >
                     <Grid>
                         <Border 
                            HorizontalAlignment="Stretch"
@@ -72,8 +73,8 @@
                                 PointerMoved="PreviewResizeHandle_PointerMoved"
                                 PointerReleased="PreviewResizeHandle_PointerReleased"/>
                     </Grid>
-                </Border>
-                    <Border
+                </Border >
+                    <Border x:Name="FrameRangeBorder"
                    
                         Padding="10"
                         CornerRadius="0 0 8 8"
@@ -114,34 +115,57 @@
               
                     </Border>
                 </StackPanel>
+                
+                     
+
+                    <Border
+       Margin="10"
+        Padding="10"
+        CornerRadius="8"
+        Background="{ThemeResource AcrylicBackgroundFillColorBaseBrush}"
+        BorderBrush="{ThemeResource ControlStrokeColorOnAccentTertiaryBrush}"
+        BorderThickness="1"
+     HorizontalAlignment="Right"
+        VerticalAlignment="Bottom">
+                        <StackPanel Spacing="12" Orientation="Horizontal">
+                            <Button Click="CenterOriginButton_Click" HorizontalAlignment="Stretch">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <FontIcon Glyph="&#xE777;" FontSize="12"/>
+                                    <TextBlock Text="Recenter"/>
+                                </StackPanel>
+                            </Button>
+
+                            <NumberBox x:Name="ZoomNumberBox"
+               
+               
+               Minimum="10"
+               Maximum="1800"
+               SpinButtonPlacementMode="Compact"
+               ValueChanged="ZoomNumberBox_ValueChanged"/>
+
+
+                        </StackPanel>
+                    </Border>
+
                 <Border
-                        Margin="10"
-                        Padding="10"
-                        CornerRadius="8"
-                        Background="{ThemeResource AcrylicBackgroundFillColorBaseBrush}"
-                        BorderBrush="{ThemeResource ControlStrokeColorOnAccentTertiaryBrush}"
-                        BorderThickness="1"
-                     HorizontalAlignment="Left"
-                        VerticalAlignment="Top">
-                    <StackPanel Spacing="12" Orientation="Horizontal">
-                        <Button Click="CenterOriginButton_Click" HorizontalAlignment="Stretch">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon Glyph="&#xE777;" FontSize="12"/>
-                                <TextBlock Text="Recenter"/>
-                            </StackPanel>
-                        </Button>
+    Margin="10"
+        Padding="14 14 14 14"
+        CornerRadius="8"
+        Background="{ThemeResource AcrylicBackgroundFillColorBaseBrush}"
+        BorderBrush="{ThemeResource ControlStrokeColorOnAccentTertiaryBrush}"
+        BorderThickness="1"
+     HorizontalAlignment="Left"
+        VerticalAlignment="Bottom">
                     
-                        <NumberBox x:Name="ZoomNumberBox"
-                               
-                               
-                               Minimum="10"
-                               Maximum="1800"
-                               SpinButtonPlacementMode="Compact"
-                               ValueChanged="ZoomNumberBox_ValueChanged"/>
-             
-             
+                    <StackPanel Spacing="12" Orientation="Horizontal">
+                        <TextBlock Text="Previous frame behind" VerticalAlignment="Center"/>
+                        <ToggleSwitch x:Name="ShowPreviousToggleSwitch" Toggled="ShowPreviousToggleSwitch_Toggled" Margin="0 -8 0 -8" IsOn="True" MinWidth="0"/>
+
+
                     </StackPanel>
                 </Border>
+
+
 
             </Grid>
         </Border>
@@ -163,8 +187,24 @@
                             <NumberBox Grid.Column="0" x:Name="OffsetXTextBox" Header="X" PlaceholderText="0" Minimum="-999999" Maximum="999999"/>
                             <NumberBox Grid.Column="1" x:Name="OffsetYTextBox" Header="Y" PlaceholderText="0" Minimum="-999999" Maximum="999999"/>
                         </Grid>
-                        <TextBlock Text="Align"/>
-                        <Grid ColumnSpacing="10" Margin="0 -2 0 0">
+                   
+                        
+  
+                    </StackPanel>
+                </Border>
+
+
+                <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Align" Style="{StaticResource SectionHeaderStyle}"/>
+                        <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+                        <RadioButtons Header="Based on" MaxColumns="2" SelectedIndex="0">
+                            <RadioButton Content="Raw sprite size"/>
+                            <RadioButton Content="Cropped sprite size"/>
+
+                        </RadioButtons>
+
+                        <Grid ColumnSpacing="10" Margin="0 0 0 0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
@@ -179,37 +219,36 @@
                             <Button Grid.Column="2" Click="ALignTopLeftButton_Click" HorizontalAlignment="Stretch" Height="32">
                                 <FontIcon Glyph="&#xEA4F;" FontSize="12"/>
                             </Button>
+
                         </Grid>
+   
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 8">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Remove movement" Style="{StaticResource SectionHeaderStyle}"/>
+                        <Rectangle Style="{StaticResource GroupDividerStyle}"/>
                         <Grid ColumnSpacing="10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
-                
+                                <ColumnDefinition Width="32"/>
+
                             </Grid.ColumnDefinitions>
                             <NumberBox Grid.Column="0" x:Name="DirectionNumberBox" Header="Direction" PlaceholderText="90" Minimum="-999999" Maximum="999999"/>
-                            <NumberBox Grid.Column="1" x:Name="SpeedNumberBox" Header="Speed (p/f)" PlaceholderText="0" Minimum="-999999" Maximum="999999"/>
-                       
+                            <NumberBox Grid.Column="1" x:Name="SpeedNumberBox" Header="Speed" PlaceholderText="0" Minimum="-999999" Maximum="999999"/>
+                            <Button Grid.Column="2" x:Name="RemoveMovementButton" VerticalAlignment="Bottom" Padding="9" Height="32" Click="RemoveMovementButton_Click">
+
+                                <FontIcon Glyph="&#xE768;" FontSize="12"/>
+
+                            </Button>
                         </Grid>
-                        <Button Grid.Column="2" x:Name="RemoveMovementButton" HorizontalAlignment="Stretch" Height="32" Click="RemoveMovementButton_Click">
-                          
-                                <TextBlock Text="Remove movement"/>
-                           
-                        </Button>
+                        <TextBlock Text="Select frames you want to remove movement between" Style="{StaticResource HelperTextStyle}" Margin="0 -8 0 0"/>
                     </StackPanel>
                 </Border>
 
 
-                <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
-                    <StackPanel Spacing="12">
-                        <TextBlock Text="Options" Style="{StaticResource SectionHeaderStyle}"/>
-                        <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                        <ToggleSwitch x:Name="RemoveBackgroundToggleSwitch" Header="Remove background" Toggled="RemoveBackgroundToggleSwitch_Toggled" Margin="0 0 0 -8"/>
-                        <ToggleSwitch Header="Crop" Margin="0 0 0 -8"/>
-                        <ToggleSwitch x:Name="ShowPreviousToggleSwitch" Header="Show previous frame behind" Toggled="ShowPreviousToggleSwitch_Toggled" IsOn="True" Margin="0 0 0 -8"/>
-                    </StackPanel>
-                </Border>
-
-                
 
             </StackPanel>
         </ScrollView>

@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Media.Imaging;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -109,10 +110,10 @@ namespace FramesToMMSpriteResources
     public class AnimationSpriteFrame
     {
         public string[] Path = new string[3];
-        public List<WriteableBitmap> WriteableBitmaps = [];
+        public List<SKBitmap> WriteableBitmaps = [];
         
         public AnimationSpriteFrame() { }
-        public AnimationSpriteFrame(string[] path, List<WriteableBitmap> writeableBitmaps)
+        public AnimationSpriteFrame(string[] path, List<SKBitmap> writeableBitmaps)
         {
             Path = path;
             WriteableBitmaps = writeableBitmaps;
@@ -1424,7 +1425,7 @@ namespace FramesToMMSpriteResources
             cts = new();
             try
             {
-                await LoadCoordinateEditorAsync(cts.Token, gameThemeName, subjectName, animationName, subjectConfig, frameName, selectedIndex, frameConfig);
+                await LoadCoordinateEditorAsync(gameThemeName, subjectName, animationName, subjectConfig, frameName, selectedIndex, frameConfig, cts.Token);
             }
             catch
             {
@@ -1436,7 +1437,7 @@ namespace FramesToMMSpriteResources
             }
         }
 
-        async Task LoadCoordinateEditorAsync(CancellationToken ct, string gameThemeName, string subjectName, string animationName, SubjectConfig subjectConfig, string frameName, int selectedIndex, FrameConfig frameConfig)
+        async Task LoadCoordinateEditorAsync(string gameThemeName, string subjectName, string animationName, SubjectConfig subjectConfig, string frameName, int selectedIndex, FrameConfig frameConfig, CancellationToken ct)
         {
             string gameThemePath;
             if (IsUsingGameThemes)
@@ -1456,37 +1457,41 @@ namespace FramesToMMSpriteResources
 
                 var tempAnimationSpriteFrame = new AnimationSpriteFrame(_animationSpriteFrame.Path, []);
 
+                ColorHelper.TryParse(subjectConfig.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
+                SKColor backgroundSKColor = new(r, g, b, a);
+
                 foreach (FrameConfig frameConfigInLoop in subjectConfig.AnimationConfigs![animationName].frameCongfigs)
                 {
                     ct.ThrowIfCancellationRequested();
 
-                    string framePath = Path.Combine(animationPath, frameConfigInLoop.Name) + ".png";
-                    StorageFile file;
+                    string framePath = Path.Combine(animationPath, $"{frameConfigInLoop.Name}.png");
 
-                    file = await StorageFile.GetFileFromPathAsync(framePath);
+                    var bmp = await Task.Run(() =>
+                    {
+                        ct.ThrowIfCancellationRequested();
 
-                    using IRandomAccessStream stream = await file.OpenReadAsync();
-                    BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
-                    PixelDataProvider pixelData = await decoder.GetPixelDataAsync(
-                        BitmapPixelFormat.Bgra8,
-                        BitmapAlphaMode.Premultiplied,
-                        new BitmapTransform(),
-                        ExifOrientationMode.IgnoreExifOrientation,
-                        ColorManagementMode.DoNotColorManage);
+                        using var stream = File.OpenRead(framePath);
+                        using var codec = SKCodec.Create(stream);
 
-                    var spriteSourcePixels = pixelData.DetachPixelData();
-                    var spriteSourceWidth = (int)decoder.PixelWidth;
-                    var spriteSourceHeight = (int)decoder.PixelHeight;
+                
+                        var desiredInfo = new SKImageInfo(
+                            width: codec.Info.Width,
+                            height: codec.Info.Height,
+                            colorType: codec.Info.ColorType,
+                            alphaType: SKAlphaType.Unpremul
+                        );
 
-                    var sourceBitmap = new WriteableBitmap(spriteSourceWidth, spriteSourceHeight);
-                    using Stream streamWritible = sourceBitmap.PixelBuffer.AsStream();
-                    streamWritible.Position = 0;
-                    streamWritible.Write(spriteSourcePixels, 0, spriteSourcePixels.Length);
-                    sourceBitmap.Invalidate();
+                
+                        var skb = SKBitmap.Decode(codec, desiredInfo);
+                        ColorHelper.RemoveColorWithThresholdInPlace(skb, backgroundSKColor.Red, backgroundSKColor.Green, backgroundSKColor.Blue, backgroundSKColor.Alpha, subjectConfig.ColorTreshold);
+                        return skb;
+                    }, ct);
 
-                    tempAnimationSpriteFrame.WriteableBitmaps.Add(sourceBitmap);
+                    if (bmp == null)
+                        throw new Exception($"Failed to decode image: {framePath}");
+
+                    tempAnimationSpriteFrame.WriteableBitmaps.Add(bmp);
                 }
-
                 ct.ThrowIfCancellationRequested();
 
                 _animationSpriteFrame = tempAnimationSpriteFrame;
@@ -1505,7 +1510,7 @@ namespace FramesToMMSpriteResources
                 }
 
                 IsLoadingFrames = false;
-                FrameCoordinateEditorControl.LoadAnimation(_animationSpriteFrame.WriteableBitmaps, subjectConfig, animationName);
+                FrameCoordinateEditorControl.LoadAnimation(_animationSpriteFrame.WriteableBitmaps, subjectConfig, animationName, backgroundSKColor);
             }
 
             if (TreeViewControl.SelectedNode != null)
@@ -1609,7 +1614,7 @@ namespace FramesToMMSpriteResources
             {
                 currentConfig.ColorTreshold = threshold;
             }
-            UpdateFrameEditorBackgroundOptionsFromSelection();
+            _animationSpriteFrame.Path = new string[3];
         }
 
         private void ResizeTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
@@ -1659,7 +1664,7 @@ namespace FramesToMMSpriteResources
             {
                 currentConfig.RemoveBackground = removeBackground;
             }
-            UpdateFrameEditorBackgroundOptionsFromSelection();
+            _animationSpriteFrame.Path = new string[3];
         }
 
         private void ClickIsHdCheckBox(object sender, RoutedEventArgs e)
@@ -1678,34 +1683,9 @@ namespace FramesToMMSpriteResources
             {
                 currentConfig.BackgroundColor = backgroundColor;
             }
-            UpdateFrameEditorBackgroundOptionsFromSelection();
+            _animationSpriteFrame.Path = new string[3];
         }
 
-        private void UpdateFrameEditorBackgroundOptionsFromSelection()
-        {
-            TreeViewNode? node = TreeViewControl.SelectedNode;
-            if (node == null)
-            {
-                return;
-            }
-
-            var depth = ((TreeItem)node.Content).Depth;
-            if (depth != ItemDepth.Frame && depth != ItemDepth.Animation && depth != ItemDepth.Subject)
-            {
-                return;
-            }
-
-            TreeViewNode subjectNode = depth switch
-            {
-                ItemDepth.Subject => node,
-                ItemDepth.Animation => node.Parent!,
-                _ => node.Parent!.Parent!
-            };
-
-            string gameThemeName = ((TreeItem)subjectNode.Parent!.Content).Text;
-            string subjectName = ((TreeItem)subjectNode.Content).Text;
-            SubjectConfig subjectConfig = ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName];
-        }
 
         private void UpdateColorPreview()
         {
@@ -2182,11 +2162,10 @@ namespace FramesToMMSpriteResources
                     node.IsSelected = true;
                 }
 
-                if(siblings.Last() != TreeViewControl.SelectedNode)
-                {
-                    ChangeConfigPanel(siblings.Last(), false);
-                    TreeViewControl.SelectedNode = siblings.Last();
-                }
+                
+                    ChangeConfigPanel(siblings.First(), false);
+                    TreeViewControl.SelectedNode = siblings.First();
+                
 
 
                 return true;
@@ -2207,15 +2186,16 @@ namespace FramesToMMSpriteResources
                     break;
                 }
             }
-            if (currentIndex < 0)
-            {
-                return false;
-            }
+        
 
             int newIndex = e.Key == Windows.System.VirtualKey.Q ? currentIndex - 1 : currentIndex + 1;
-            if (newIndex < 0 || newIndex >= siblingList.Count)
+            if (newIndex < 0)
             {
-                return true;
+                newIndex = siblingList.Count - 1;
+            }
+            else if (newIndex >= siblingList.Count)
+            {
+                newIndex = 0;
             }
 
             TreeViewControl.SelectedNode = siblingList[newIndex];

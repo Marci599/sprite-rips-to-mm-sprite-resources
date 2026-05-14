@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
+using Microsoft.WindowsAppSDK.Runtime.Packages;
 using SkiaSharp;
 using SkiaSharp.Views.Windows;
 using System;
@@ -17,6 +18,7 @@ using Windows.Globalization.NumberFormatting;
 
 namespace FramesToMMSpriteResources;
 //TODO: DRAG ON SCLAED SCREENS GETS MESSED UP
+
 public sealed partial class FrameCoordinateEditor : UserControl
 {
     private Vector2 _pan = Vector2.Zero;
@@ -32,7 +34,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private int _selectedFrame;
     private bool _isUpdatingZoomControls;
     private readonly DispatcherTimer _previewTimer = new();
-    private IReadOnlyList<WriteableBitmap> _previewFrames = [];
+    private IReadOnlyList<SKBitmap> _previewFrames = [];
     private int _previewFrameIndex;
     private int _previewTickCount;
     private SubjectConfig _subjectConfig = new();
@@ -48,8 +50,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private double _previewResizeStartWidth;
     private double _previewResizeStartHeight;
     private Vector2 _previewResizeStartPointer;
-    private const double MinPreviewPanelWidth = 126;
-    private const double MinPreviewPanelHeight = 126;
     private readonly InputCursor _resizeLeftCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeWestEast);
     private readonly InputCursor _resizeBottomCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeNorthSouth);
     private readonly InputCursor _resizeCornerCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeNortheastSouthwest);
@@ -58,16 +58,21 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private int _nudgeHoldTick;
     private const int NudgeHoldDelayTicks = 10;
     byte lightA, lightB;
-    private readonly Dictionary<WriteableBitmap, SKBitmap> _bitmapCache = [];
-    private readonly Dictionary<WriteableBitmap, SKBitmap> _backgroundRemovedCache = [];
-    private readonly SKPaint _spritePaint = new() { IsAntialias = false };
+
+    private readonly SKPaint _spritePaint = new() {
+        IsAntialias = false,
+
+
+    };
     private readonly SKPaint _previousFramePaint = new() { IsAntialias = false };
     private readonly SKPaint _checkerboardPaint = new() { IsAntialias = false };
-    private readonly SKPaint _axisPaint = new() { IsAntialias = false };
     private SKShader? _checkerboardShader;
     private readonly SKBitmap _checkerboardUnitBitmap = new(2, 2, SKColorType.Bgra8888, SKAlphaType.Premul);
-    private SKColor _backgroundSKColor;
-    private SKColor _rotatedBackgroundSKColor;
+
+    SKPaint _xAxisPaint = new() { IsAntialias = false, StrokeWidth = 1f };
+    SKPaint _yAxisPaint = new() { IsAntialias = false, StrokeWidth = 1f };
+    SKPaint _borderPaint = new() { IsAntialias = false, Style = SKPaintStyle.Stroke, StrokeWidth = 1f};
+    SKPaint _secondaryBorderPaint = new() { IsAntialias = false, Style = SKPaintStyle.Stroke, StrokeWidth = 1f, Color = SKColors.Gray.WithAlpha(170) };
 
 
     public event Action<float, float>? RemoveMovementButtonClick;
@@ -90,6 +95,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
             0, 0, 0, 1, 0
         ]);
         SetCheckeredColors();
+  
         _previewTimer.Interval = TimeSpan.FromSeconds(1.0 / 60.0);
         _previewTimer.Tick -= PreviewTimer_Tick;
         _previewTimer.Tick += PreviewTimer_Tick;
@@ -184,7 +190,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
     }
 
-    void UnscubscribeCanvases()
+    void UnsubscribeCanvases()
     {
         CoordinateCanvas.PaintSurface -= CoordinateCanvas_PaintSurface;
         CoordinateCanvas.SizeChanged -= CoordinateCanvas_SizeChanged;
@@ -201,18 +207,14 @@ public sealed partial class FrameCoordinateEditor : UserControl
         AnimationPreviewCanvas.PointerWheelChanged -= AnimationPreviewCanvas_PointerWheelChanged;
     }
 
-    public void LoadAnimation(IReadOnlyList<WriteableBitmap> frames, SubjectConfig subjectConfig, string? animationConfigName)
+    public void LoadAnimation(IReadOnlyList<SKBitmap> frames, SubjectConfig subjectConfig, string? animationConfigName, SKColor? backgroundSKColor)
     {
-        UnscubscribeCanvases();
-
+        UnsubscribeCanvases();
+      
 
         _previewFrames = frames;
-        _bitmapCache.Clear();
-        _backgroundRemovedCache.Clear();
-        foreach (WriteableBitmap frame in frames)
-        {
-            _ = GetSkBitmap(frame);
-        }
+  
+ 
         _previewFrameIndex = 0;
         _previewTickCount = 0;
         _subjectConfig = subjectConfig;
@@ -220,8 +222,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
 
 
+        CoordinateCanvas.PaintSurface += CoordinateCanvas_PaintSurface;
+        AnimationPreviewCanvas.PaintSurface += AnimationPreviewCanvas_PaintSurface;
 
-        UpdateAnimationPreviewFrame();
+        CoordinateCanvas.SizeChanged += CoordinateCanvas_SizeChanged;
+        AnimationPreviewCanvas.SizeChanged += AnimationPreviewCanvas_SizeChanged;
 
         if (_previewFrames.Count > 0)
         {
@@ -230,30 +235,49 @@ public sealed partial class FrameCoordinateEditor : UserControl
             ToNumberBox.Maximum = maxFrames;
             FromNumberBox.Maximum = maxFrames;
             _previewTimer.Start();
-            CoordinateCanvas.PaintSurface += CoordinateCanvas_PaintSurface;
-            CoordinateCanvas.SizeChanged += CoordinateCanvas_SizeChanged;
+            
+       
             CoordinateCanvas.PointerPressed += CoordinateCanvas_PointerPressed;
             CoordinateCanvas.PointerMoved += CoordinateCanvas_PointerMoved;
             CoordinateCanvas.PointerReleased += CoordinateCanvas_PointerReleased;
             CoordinateCanvas.PointerWheelChanged += CoordinateCanvas_PointerWheelChanged;
 
-            AnimationPreviewCanvas.PaintSurface += AnimationPreviewCanvas_PaintSurface;
-            AnimationPreviewCanvas.SizeChanged += AnimationPreviewCanvas_SizeChanged;
+
             AnimationPreviewCanvas.PointerPressed += AnimationPreviewCanvas_PointerPressed;
             AnimationPreviewCanvas.PointerMoved += AnimationPreviewCanvas_PointerMoved;
             AnimationPreviewCanvas.PointerReleased += AnimationPreviewCanvas_PointerReleased;
             AnimationPreviewCanvas.PointerWheelChanged += AnimationPreviewCanvas_PointerWheelChanged;
+            SKColor backgroundSKColorNotNull = (SKColor)backgroundSKColor!;
+
+
+            if (backgroundSKColorNotNull.Alpha != 0)
+            {
+                
+                _xAxisPaint.Color = ColorHelper.RotateSkColor(backgroundSKColorNotNull, -90).WithAlpha(170);
+                _yAxisPaint.Color = ColorHelper.RotateSkColor(backgroundSKColorNotNull, 90).WithAlpha(170);
+                _borderPaint.Color = ColorHelper.RotateSkColor(backgroundSKColorNotNull, 180).WithAlpha(170);
+
+            }
+            else
+            {
+                SKColor gray = new(127, 127, 127, 170);
+                _xAxisPaint.Color = gray;
+                _yAxisPaint.Color = gray;
+                _borderPaint.Color = gray;
+            }
         }
         else
         {
             ToNumberBox.PlaceholderText = "n";
             _previewTimer.Stop();
-        }   
+        }
+
+        UpdateAnimationPreviewFrame();
     }
 
     public void UnloadAnimation()
     {     
-        LoadAnimation([], new(), null);
+        LoadAnimation([], new(), null, null);
         UpdateVisuals();
     }
 
@@ -435,14 +459,14 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void ALignDownButton_Click(object sender, RoutedEventArgs e)
     {
-        SpritePositionChanged?.Invoke(new(0, GetCurrentFrame()?.PixelHeight / 2 ?? 0));
+        SpritePositionChanged?.Invoke(new(0, GetCurrentFrame()?.Height / 2 ?? 0));
         RefreshOffsetFieldVisually();
         UpdateVisuals();
     }
 
     private void ALignTopLeftButton_Click(object sender, RoutedEventArgs e)
     {
-        SpritePositionChanged?.Invoke(new(GetCurrentFrame()?.PixelWidth / 2 ?? 0, (GetCurrentFrame()?.PixelHeight / 2 ?? 0)));
+        SpritePositionChanged?.Invoke(new(GetCurrentFrame()?.Width / 2 ?? 0, (GetCurrentFrame()?.Height / 2 ?? 0)));
         RefreshOffsetFieldVisually();
         UpdateVisuals();
     }
@@ -550,6 +574,14 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private void AnimationPreviewCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         UpdateAnimationPreviewFrame();
+        //SetMaxPreviewSize();
+    }
+
+    void SetMaxPreviewSize()
+    {
+        var padding = (AnimationPreviewHostBorder.Parent as StackPanel)!.Margin.Right * 2;
+        AnimationPreviewHostBorder.MaxHeight = CoordinateCanvas.ActualHeight - padding - FrameRangeBorder.ActualHeight;
+        AnimationPreviewHostBorder.MaxWidth = CoordinateCanvas.ActualWidth - padding;
     }
 
     private void AnimationPreviewCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
@@ -658,12 +690,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         if (_previewResizeDirection is ResizeDirection.Left or ResizeDirection.BottomLeft)
         {
-            width = Math.Max(MinPreviewPanelWidth, _previewResizeStartWidth - delta.X);
+            width = Math.Max(0, _previewResizeStartWidth - delta.X);          
         }
 
         if (_previewResizeDirection is ResizeDirection.Bottom or ResizeDirection.BottomLeft)
         {
-            height = Math.Max(MinPreviewPanelHeight, _previewResizeStartHeight + delta.Y);
+            height = Math.Max(0, _previewResizeStartHeight + delta.Y);        
         }
 
         AnimationPreviewHostBorder.Width = width;
@@ -748,136 +780,99 @@ public sealed partial class FrameCoordinateEditor : UserControl
         AnimationPreviewCanvas.Invalidate();
     }
 
-    //TODO: CONTINUE CHECKING
-    private WriteableBitmap? GetCurrentFrame() => (_previewFrames.Count == 0 || _selectedFrame >= _previewFrames.Count) ? null : _previewFrames[_selectedFrame];
+    private SKBitmap? GetCurrentFrame() => (_previewFrames.Count == 0 || _selectedFrame >= _previewFrames.Count) ? null : _previewFrames[_selectedFrame];
 
-    private SKBitmap? GetSkBitmap(WriteableBitmap? wb)
+
+
+
+    private void CoordinateCanvas_PaintSurface(object? sender, SKPaintGLSurfaceEventArgs e)
     {
-        if (wb == null) return null;
-        if (_bitmapCache.TryGetValue(wb, out var cached)) return cached;
-        var bmp = new SKBitmap(wb.PixelWidth, wb.PixelHeight, SKColorType.Bgra8888, SKAlphaType.Premul);
-        using var stream = wb.PixelBuffer.AsStream();
-        var pixels = bmp.GetPixelSpan();
-        stream.Position = 0;
-        stream.Read(System.Runtime.InteropServices.MemoryMarshal.AsBytes(pixels));
-        _bitmapCache[wb] = bmp;
-        return bmp;
-    }
+        SKCanvas canvas = e.Surface.Canvas;
+        int width = e.Info.Width;
+        int height = e.Info.Height;
 
-    private SKBitmap? GetDisplayBitmap(WriteableBitmap? wb)
-    {
-        SKBitmap? source = GetSkBitmap(wb);
-        if (source == null)
-        {
-            return null;
-        }
-
-        ColorHelper.TryParse(_subjectConfig.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
-        _backgroundSKColor = new(r, g, b, a);
-        if (a != 0)
-        {
-            _rotatedBackgroundSKColor = new(_backgroundSKColor.Red, _backgroundSKColor.Green, _backgroundSKColor.Blue, 170);
-            _rotatedBackgroundSKColor = ColorHelper.RotateSkColor(_rotatedBackgroundSKColor, 90);
-        }
-        else
-        {
-            _rotatedBackgroundSKColor = new(127, 127, 127, 170);
-        }
-
-
-        if (!RemoveBackgroundToggleSwitch.IsOn || _subjectConfig.BackgroundColor == null)
-        {
-            return source;
-        }
-
-        if (wb != null && _backgroundRemovedCache.TryGetValue(wb, out SKBitmap? cached))
-        {
-            return cached;
-        }
-
-        SKBitmap masked = source.Copy();
-        if (masked == null)
-        {
-            return source;
-        }
-
-
-        ColorHelper.RemoveColorWithThresholdInPlace(masked, _backgroundSKColor.Red, _backgroundSKColor.Green, _backgroundSKColor.Blue, _backgroundSKColor.Alpha, _subjectConfig.ColorTreshold);
-
-        if (wb != null)
-        {
-            _backgroundRemovedCache[wb] = masked;
-        }
-
-        return masked;
-    }
-
-    private void CoordinateCanvas_PaintSurface(object sender, SKPaintGLSurfaceEventArgs e)
-    {
-        DrawCanvas(e.Surface.Canvas, e.Info.Width, e.Info.Height, true);
-    }
-
-    private void AnimationPreviewCanvas_PaintSurface(object sender, SKPaintGLSurfaceEventArgs e)
-    {
-        DrawCanvas(e.Surface.Canvas, e.Info.Width, e.Info.Height, false);
-    }
-
-    private void DrawCanvas(SKCanvas canvas, int width, int height, bool main)
-    {
         canvas.Clear();
 
-        float zoom = main ? _zoom : _previewZoom;
-        var pan = main ? _pan : _previewPan;
+        float zoom = _zoom;
+        var pan = _pan;
         float axisX = width / 2f + pan.X;
         float axisY = height / 2f + pan.Y;
 
         DrawCheckerboard(canvas, width, height, axisX, axisY, zoom);
-
-
-
 
         if (_previewFrames.Count == 0)
         {
             return;
         }
 
-        if (main)
+        if (ShowPreviousToggleSwitch.IsOn)
         {
-            if (ShowPreviousToggleSwitch.IsOn)
+            int previousFrameIndex = _selectedFrame == 0 ? _previewFrames.Count - 1 : _selectedFrame - 1;
+            SKBitmap? previousFrame = _previewFrames[previousFrameIndex];
+            if (previousFrame != null)
             {
-                int previousFrameIndex = _selectedFrame == 0 ? _previewFrames.Count - 1 : _selectedFrame - 1;
-                SKBitmap? previousFrame = GetDisplayBitmap(_previewFrames[previousFrameIndex]);
-                if (previousFrame != null)
-                {
-                DrawFrame(canvas, previousFrame, getCurrentAnimationConfig().frameCongfigs[previousFrameIndex].Offset, zoom, axisX, axisY, width, height, 0.5f, _previousFramePaint);
-                }
-            }
+                var destRect = DrawFrame(canvas, previousFrame, getCurrentAnimationConfig().frameCongfigs[previousFrameIndex].Offset, zoom, axisX, axisY, width, height, 0.5f, _previousFramePaint);
 
-            SKBitmap? currentFrame = GetDisplayBitmap(GetCurrentFrame());
-            if (currentFrame != null)
-            {
-                DrawFrame(canvas, currentFrame, getCurrentFrameConfig().Offset, zoom, axisX, axisY, width, height, ShowPreviousToggleSwitch.IsOn ? 0.7f : 1f);
-            }
-        }
-        else
-        {
-            int previewFrameIndex = Math.Clamp(_previewFrameIndex + GetFromValue(), GetFromValue(), GetToValue());
-            SKBitmap? previewFrame = GetDisplayBitmap(_previewFrames[previewFrameIndex]);
-            if (previewFrame != null)
-            {
-                IntVector2 previewOffset = previewFrameIndex < getCurrentAnimationConfig().frameCongfigs.Count
-                    ? getCurrentAnimationConfig().frameCongfigs[previewFrameIndex].Offset
-                    : new IntVector2();
-                DrawFrame(canvas, previewFrame, previewOffset, zoom, axisX, axisY, width, height, 1f);
+                canvas.DrawRect(destRect, _secondaryBorderPaint);
             }
         }
 
-        _axisPaint.StrokeWidth = 1;
-      
-        _axisPaint.Color = _rotatedBackgroundSKColor;
-        canvas.DrawLine(0f, axisY, width, axisY, _axisPaint);
-        canvas.DrawLine(axisX, 0f, axisX, height, _axisPaint);
+        SKBitmap? currentFrame = GetCurrentFrame();
+        if (currentFrame != null)
+        {
+            var destRect = DrawFrame(canvas, currentFrame, getCurrentFrameConfig().Offset, zoom, axisX, axisY, width, height, ShowPreviousToggleSwitch.IsOn ? 0.7f : 1f);
+            
+            canvas.DrawRect(destRect, _borderPaint);
+       
+
+        }
+
+  
+
+        canvas.DrawLine(0f, axisY, width, axisY, _xAxisPaint);
+
+        canvas.DrawLine(axisX, 0f, axisX, height, _yAxisPaint);    
     }
+
+    private void AnimationPreviewCanvas_PaintSurface(object? sender, SKPaintGLSurfaceEventArgs e)
+    {
+        SKCanvas canvas = e.Surface.Canvas;
+        int width = e.Info.Width;
+        int height = e.Info.Height;
+
+        canvas.Clear();
+
+        float zoom = _previewZoom;
+        var pan = _previewPan;
+        float axisX = width / 2f + pan.X;
+        float axisY = height / 2f + pan.Y;
+
+        DrawCheckerboard(canvas, width, height, axisX, axisY, zoom);
+
+        if (_previewFrames.Count == 0)
+        {
+            return;
+        }
+
+        int previewFrameIndex = Math.Clamp(_previewFrameIndex + GetFromValue(), GetFromValue(), GetToValue());
+        SKBitmap? previewFrame = _previewFrames[previewFrameIndex];
+        if (previewFrame != null)
+        {
+            IntVector2 previewOffset = previewFrameIndex < getCurrentAnimationConfig().frameCongfigs.Count
+                ? getCurrentAnimationConfig().frameCongfigs[previewFrameIndex].Offset
+                : new IntVector2();
+            DrawFrame(canvas, previewFrame, previewOffset, zoom, axisX, axisY, width, height, 1f);
+        }
+
+
+
+
+        canvas.DrawLine(0f, axisY, width, axisY, _xAxisPaint);
+
+        canvas.DrawLine(axisX, 0f, axisX, height, _yAxisPaint);
+    }
+
+
 
     private void DrawCheckerboard(SKCanvas canvas, int width, int height, float axisX, float axisY, float zoom)
     {
@@ -892,7 +887,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         canvas.Restore();
     }
 
-    private void DrawFrame(SKCanvas canvas, SKBitmap bitmap, IntVector2 offset, float zoom, float axisX, float axisY, int viewportWidth, int viewportHeight, float alpha, SKPaint? overridePaint = null)
+    private SKRect DrawFrame(SKCanvas canvas, SKBitmap bitmap, IntVector2 offset, float zoom, float axisX, float axisY, int viewportWidth, int viewportHeight, float alpha, SKPaint? overridePaint = null)
     {
         float width = Math.Max(1f, bitmap.Width * zoom);
         float height = Math.Max(1f, bitmap.Height * zoom);
@@ -902,7 +897,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         SKRect viewportRect = new(0, 0, viewportWidth, viewportHeight);
         if (!destRect.IntersectsWith(viewportRect))
         {
-            return;
+            return destRect;
         }
 
         SKRect clippedDest = SKRect.Intersect(destRect, viewportRect);
@@ -915,8 +910,13 @@ public sealed partial class FrameCoordinateEditor : UserControl
             (clippedDest.Bottom - destRect.Top) * invScaleY);
 
         SKPaint paint = overridePaint ?? _spritePaint;
+
         paint.Color = new SKColor(255, 255, 255, (byte)(alpha * 255f));
+ 
         canvas.DrawBitmap(bitmap, sourceRect, clippedDest, paint);
+
+        return destRect;
+        
     }
 
     private static bool IsNudgeKey(Windows.System.VirtualKey key)
@@ -942,12 +942,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         UpdateVisuals();
     }
 
-    private void RemoveBackgroundToggleSwitch_Toggled(object sender, RoutedEventArgs e)
-    {
-        _backgroundRemovedCache.Clear();
-        UpdateVisuals();
-        UpdateAnimationPreviewFrame();
-    }
 
     private void FromNumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
@@ -1001,12 +995,9 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void RemoveMovementButton_Click(object sender, RoutedEventArgs e)
     {
-
-
-        RemoveMovementButtonClick?.Invoke((float)DirectionNumberBox.Value, (float)SpeedNumberBox.Value);
+        RemoveMovementButtonClick?.Invoke(double.IsNaN(DirectionNumberBox.Value) ? 90 : (float)DirectionNumberBox.Value, double.IsNaN(SpeedNumberBox.Value) ? 0 : (float)SpeedNumberBox.Value);
         
-        UpdateVisuals();
-        
+        UpdateVisuals();      
     }
 
     private void NudgeHoldTimer_Tick(object? sender, object e)

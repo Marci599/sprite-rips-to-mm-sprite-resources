@@ -129,7 +129,9 @@
                             Text="{x:Bind}"
                             FontSize="26"
                             FontWeight="SemiBold"
-                            VerticalAlignment="Center"/>
+                            VerticalAlignment="Center"
+                          
+                            />
                     </DataTemplate>
                 </BreadcrumbBar.ItemTemplate>
             </BreadcrumbBar>
