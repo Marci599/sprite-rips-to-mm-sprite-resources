@@ -9,6 +9,25 @@ namespace FramesToMMSpriteResources
 {
     internal class ColorHelper
     {
+
+        public static SKColor RotateSkColor(SKColor color, float degrees)
+        {
+
+            color.ToHsl(out float h, out float s, out float l);
+
+ 
+            float newHue = (h + degrees) % 360f;
+            if (newHue < 0) newHue += 360f;
+
+            float flippedValue = 100f - l;
+
+         
+            return SKColor.FromHsl(newHue, s, flippedValue, color.Alpha);
+        }
+
+
+
+
         public static void RemoveColorWithThresholdInPlace(SKBitmap bitmap, byte r, byte g, byte b, byte a, int colorThreshold)
         {
             var pixels = bitmap.GetPixelSpan();
