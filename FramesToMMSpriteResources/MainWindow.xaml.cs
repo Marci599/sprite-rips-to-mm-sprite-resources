@@ -299,7 +299,7 @@ namespace FramesToMMSpriteResources
             var animationNode = node.Parent;
             var animationName = (animationNode.Content as TreeItem)!.Text;
           
-            List<FrameConfig> frameConfigList = ProgramConfig.GameThemeConfigs[gameThemeName].SubjectConfigs[subjectName].AnimationConfigs[animationName].frameCongfigs;
+            List<FrameConfig> frameConfigList = ProgramConfig.GameThemeConfigs[gameThemeName].SubjectConfigs[subjectName].AnimationConfigs[animationName].FrameCongfigs;
 
             Vector2? initialPosition = null;
             for (int i = 0; i < animationNode.Children.Count; i++)
@@ -314,7 +314,7 @@ namespace FramesToMMSpriteResources
                     }
                     else
                     {
-                        initialPosition -= new Vector2(speed, 0f);
+                        initialPosition -= ConvertToVector2(direaction, speed);
                         frameConfigList[i].Offset = new((int)Math.Round(initialPosition.Value.X), (int)Math.Round(initialPosition.Value.Y));
                     }
                 }
@@ -323,6 +323,17 @@ namespace FramesToMMSpriteResources
             {
                 FrameCoordinateEditorControl.RefreshOffsetFieldVisually();
             }
+        }
+
+        public Vector2 ConvertToVector2(double angleInDegrees, float distance)
+        { 
+            double radians = (angleInDegrees * Math.PI) / 180.0;
+
+          
+            float x = (float)(Math.Sin(radians) * distance);
+            float y = (float)(Math.Cos(radians) * distance);
+
+            return new Vector2(x, y);
         }
 
         private void MainWindow_PointerPressed(object sender, PointerRoutedEventArgs e)
@@ -730,20 +741,20 @@ namespace FramesToMMSpriteResources
                     
                     int frameIndex = 0;
 
-                    animationConfig.frameCongfigs ??= [];
+                    animationConfig.FrameCongfigs ??= [];
 
                     foreach (var frameFile in frameFiles)
                     {
                         if(Path.GetExtension(frameFile) != ".json")
                         {
                             string fileName = Path.GetFileNameWithoutExtension(frameFile);
-                            if (animationConfig.frameCongfigs.Count < fileCount)
+                            if (frameIndex < animationConfig.FrameCongfigs.Count)
                             {
-                                animationConfig.frameCongfigs.Add(new FrameConfig(fileName));                                
+                                animationConfig.FrameCongfigs[frameIndex].Name = fileName;                                                
                             }
                             else
                             {
-                                animationConfig.frameCongfigs[frameIndex].Name = fileName;                                             
+                                animationConfig.FrameCongfigs.Add(new FrameConfig(fileName));
                             }
 
                             string frameName = frameIndex.ToString("D3");
@@ -1382,6 +1393,19 @@ namespace FramesToMMSpriteResources
             var animationName = (node.Parent.Content as TreeItem)!.Text;
             string frameName = (node.Content as TreeItem)!.Text;
 
+
+            AnimateGeneratePanel(show: true);
+            var selectedNode = (node.Content as TreeItem)!;
+
+            HandleSelection(selectedNode, nowGenerated, [gameThemeName, subjectName, animationName]);
+
+            UpdateBreadcrumb(gameThemeName, subjectName, animationName, string.Join(", ", ProgramConfig.SelectedNodes!.OrderBy(s => s)));
+
+            CheckFrameCountAndDisplayWarning((node.Parent.Parent.Content as TreeItem)!.Count);
+
+            GenerateButton.Content = $"Generate {ProgramConfig.SelectedNodePath![1]}";
+
+            await ChangePanelGraphic(animate, FramePanel);
             string[] newPath = [gameThemeName, subjectName, animationName];
 
             bool subjectEquals = (_animationSpriteFrame.Path[0] == newPath[0] && _animationSpriteFrame.Path[1] == newPath[1]);
@@ -1396,30 +1420,17 @@ namespace FramesToMMSpriteResources
                 _animationSpriteFrame.Path = newPath;
                 cts?.Cancel();
             }
-            AnimateGeneratePanel(show: true);
-            var selectedNode = (node.Content as TreeItem)!;
-
-            HandleSelection(selectedNode, nowGenerated, [gameThemeName, subjectName, animationName]);
-
-            UpdateBreadcrumb(gameThemeName, subjectName, animationName, string.Join(", ", ProgramConfig.SelectedNodes!.OrderBy(s => s)));
-
-            CheckFrameCountAndDisplayWarning((node.Parent.Parent.Content as TreeItem)!.Count);
-
-            GenerateButton.Content = $"Generate {ProgramConfig.SelectedNodePath![1]}";
-
-            await ChangePanelGraphic(animate, FramePanel);
-
 
             _currentConfigs = [];
             foreach (string selectedNodeName in ProgramConfig.SelectedNodes!)
             {
-                _currentConfigs.Add(ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].frameCongfigs[int.Parse(selectedNodeName)]);
+                _currentConfigs.Add(ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].FrameCongfigs[int.Parse(selectedNodeName)]);
             }
 
             var subjectConfig = ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName];
             var animationConfig = subjectConfig.AnimationConfigs![animationName];
             int selectedIndex = int.Parse(frameName);
-            var frameConfig = animationConfig.frameCongfigs[selectedIndex];
+            var frameConfig = animationConfig.FrameCongfigs[selectedIndex];
 
             if (IsLoadingFrames) return;
             cts = new();
@@ -1460,8 +1471,10 @@ namespace FramesToMMSpriteResources
                 ColorHelper.TryParse(subjectConfig.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
                 SKColor backgroundSKColor = new(r, g, b, a);
 
-                foreach (FrameConfig frameConfigInLoop in subjectConfig.AnimationConfigs![animationName].frameCongfigs)
+
+                for (int i = 0; i < TreeViewControl.SelectedNode.Parent.Children.Count; i++)         
                 {
+                    FrameConfig frameConfigInLoop = subjectConfig.AnimationConfigs![animationName].FrameCongfigs[i];
                     ct.ThrowIfCancellationRequested();
 
                     string framePath = Path.Combine(animationPath, $"{frameConfigInLoop.Name}.png");
@@ -1483,7 +1496,8 @@ namespace FramesToMMSpriteResources
 
                 
                         var skb = SKBitmap.Decode(codec, desiredInfo);
-                        ColorHelper.RemoveColorWithThresholdInPlace(skb, backgroundSKColor.Red, backgroundSKColor.Green, backgroundSKColor.Blue, backgroundSKColor.Alpha, subjectConfig.ColorTreshold);
+                        if(backgroundSKColor.Alpha != 0 && subjectConfig.RemoveBackground)
+                            ColorHelper.RemoveColorWithThresholdInPlace(skb, backgroundSKColor.Red, backgroundSKColor.Green, backgroundSKColor.Blue, backgroundSKColor.Alpha, subjectConfig.ColorTreshold);
                         return skb;
                     }, ct);
 
@@ -1505,7 +1519,7 @@ namespace FramesToMMSpriteResources
                     {
                         frameName = selectedNodeAfterContent.Text;
                         selectedIndex = int.Parse(frameName);
-                        frameConfig = subjectConfig.AnimationConfigs![animationName].frameCongfigs[selectedIndex];
+                        frameConfig = subjectConfig.AnimationConfigs![animationName].FrameCongfigs[selectedIndex];
                     }
                 }
 
@@ -1995,7 +2009,7 @@ namespace FramesToMMSpriteResources
                                 var subjectName = (node.Parent.Parent.Content as TreeItem)!.Text;
                                 var animationName = (node.Parent.Content as TreeItem)!.Text;
                                 var frameIndex = int.Parse((node.Content as TreeItem)!.Text);
-                                configPath = Path.Combine(WorkingPath, gameThemeName, subjectName, "raw", animationName, ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].frameCongfigs[frameIndex].Name + ".png");
+                                configPath = Path.Combine(WorkingPath, gameThemeName, subjectName, "raw", animationName, ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].FrameCongfigs[frameIndex].Name + ".png");
                                 break;
                         }
                         if (configPath != null)
@@ -2146,7 +2160,7 @@ namespace FramesToMMSpriteResources
                         gameThemeName = (selectedNode.Parent!.Parent.Parent.Content as TreeItem)!.Text;
                         subjectName = (selectedNode.Parent.Parent.Content as TreeItem)!.Text;
                         string animationName = (selectedNode.Parent.Content as TreeItem)!.Text;
-                        _currentConfigs = new(ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].frameCongfigs!);
+                        _currentConfigs = new(ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].FrameCongfigs!);
                         break;
                   
                     default:

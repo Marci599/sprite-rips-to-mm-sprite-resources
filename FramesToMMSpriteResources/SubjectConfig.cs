@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -27,6 +28,19 @@ namespace FramesToMMSpriteResources
         [JsonPropertyName("sheet")]
         public SheetConfig Sheet = new();
 
+        [JsonPropertyName("editor_canvas")]
+        public CanvasConfig EditorCanvas = new();
+
+        [JsonPropertyName("preview_canvas")]
+        public CanvasConfig PreviewCanvas = new();
+
+
+
+        [JsonPropertyName("preview_size")]
+        public Vector2? PreviewSize = null;
+
+
+
 
         [JsonIgnore]
         public Dictionary<string, AnimationConfig>? AnimationConfigs = [];
@@ -45,6 +59,22 @@ namespace FramesToMMSpriteResources
         }
     }
 
+    public class CanvasConfig
+    {
+        [JsonPropertyName("pan")]
+        public Vector2 Pan { get; set; } = Vector2.Zero;
+
+        [JsonPropertyName("zoom")]
+        public float Zoom { get; set; } = 1;
+
+        public CanvasConfig() { }
+
+        public CanvasConfig(Vector2 pan, float zoom)
+        {
+            Pan = pan;
+            Zoom = zoom;
+        }
+    }
     public class SheetConfig
     {
         [JsonPropertyName("width")]
@@ -61,4 +91,6 @@ namespace FramesToMMSpriteResources
             Height = height;
         }
     }
+
+
 }

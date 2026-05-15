@@ -27,6 +27,9 @@ namespace FramesToMMSpriteResources
         [JsonPropertyName("last_update_check")]
         public DateTime? LastUpdateCheck { get; set; }
 
+        [JsonPropertyName("show_previous_frame_behind")]
+        public bool ShowPreviousFrameBehind = true;
+
         [JsonIgnore]
         public Dictionary<string, GameThemeConfig>? GameThemeConfigs = [];
 
