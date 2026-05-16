@@ -354,7 +354,7 @@ namespace FramesToMMSpriteResources
    
             _ = DispatcherQueue.TryEnqueue(async () =>
             {
-                TreeViewControl.Focus(FocusState.Programmatic);
+                MainRootGrid.Focus(FocusState.Programmatic);
                 SetInfoBar(InfoBarSeverity.Informational, "Saving", "The program will close soon");
                 await Task.Delay(30);
                 SaveAllConfigs();
@@ -368,7 +368,7 @@ namespace FramesToMMSpriteResources
 
         private async void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
         {
-        
+            MainRootGrid.Focus(FocusState.Programmatic);
             if (args.WindowActivationState != WindowActivationState.Deactivated)
             {
                 if (!_ableToRelaod)
@@ -395,7 +395,7 @@ namespace FramesToMMSpriteResources
                     ReduceFileSizeCheckBox.Click -= ReduceFileSizeCheckBox_Click;
                     WorkingPathTextBox.TextChanged -= WorkingPathTextBox_LostFocus;
                     UnloadFrameResources();
-                    TreeViewControl.Focus(FocusState.Programmatic);
+                
                     await Task.Delay(30);
                     cts?.Cancel();
                     SaveAllConfigs();
@@ -910,7 +910,7 @@ namespace FramesToMMSpriteResources
                 }
             }
 
-            TreeViewControl.Focus(FocusState.Programmatic);
+            MainRootGrid.Focus(FocusState.Programmatic);
 
             FadeOutAllPanels(false, true);
 
