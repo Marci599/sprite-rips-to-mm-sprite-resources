@@ -26,7 +26,62 @@ namespace FramesToMMSpriteResources
         }
 
 
+        public static (int left, int top, int right, int bottom) TrimColor(SKBitmap src, SubjectConfig subjectConfig, (byte r, byte g, byte b, byte a)? parsedBackgroundColor)
+        {
+            IntVector2 size = new(src.Width, src.Height);
+            var pixels = src.GetPixelSpan();
 
+            bool trimByAlpha = subjectConfig.BackgroundColor == null || parsedBackgroundColor!.Value.a == 0 || subjectConfig.RemoveBackground;
+            int left = size.X;
+            int top = size.Y;
+            int right = -1;
+            int bottom = -1;
+            
+
+            double thr2 = subjectConfig.ColorTreshold * subjectConfig.ColorTreshold;
+            byte tr = parsedBackgroundColor?.r ?? 0;
+            byte tg = parsedBackgroundColor?.g ?? 0;
+            byte tb = parsedBackgroundColor?.b ?? 0;
+            byte ta = parsedBackgroundColor?.a ?? 0;
+
+            for (int y = 0; y < size.Y; y++)
+            {
+                for (int x = 0; x < size.X; x++)
+                {
+                    int idx = (y * size.X + x) * 4;
+                    byte b = pixels[idx + 0];
+                    byte g = pixels[idx + 1];
+                    byte r = pixels[idx + 2];
+                    byte a = pixels[idx + 3];
+
+                    bool keep;
+                    if (trimByAlpha)
+                    {
+                        keep = a != 0;
+                    }
+                    else
+                    {
+                        int dr = r - tr;
+                        int dg = g - tg;
+                        int db = b - tb;
+                        int da = a - ta;
+                        long dist2 = (long)dr * dr + (long)dg * dg + (long)db * db + (long)da * da;
+                        keep = dist2 > thr2;
+                    }
+
+                    if (!keep) continue;
+
+             
+                    if (x < left) left = x;
+                    if (y < top) top = y;
+                    if (x > right) right = x;
+                    if (y > bottom) bottom = y;
+                }
+            }
+            right++;
+            bottom++;
+            return (left, top, right, bottom);
+        }
 
         public static void RemoveColorWithThresholdInPlace(SKBitmap bitmap, byte r, byte g, byte b, byte a, int colorThreshold)
         {

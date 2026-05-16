@@ -1,13 +1,15 @@
-﻿using SkiaSharp;
+﻿using Microsoft.UI.Input;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using System.Numerics;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace FramesToMMSpriteResources
 {
@@ -657,67 +659,16 @@ namespace FramesToMMSpriteResources
 
         private static (SKBitmap cropped, IntVector2 offset) TrimColor(SKBitmap src)
         {
-            IntVector2 size = new(src.Width, src.Height);
-            var pixels = src.GetPixelSpan();
+            var (left, top, right, bottom) = ColorHelper.TrimColor(src, subjectConfig, parsedBackgroundColor);
 
-            bool trimByAlpha = subjectConfig.BackgroundColor == null || subjectConfig.RemoveBackground;
-            int left = size.X;
-            int top = size.Y;
-            int right = -1;
-            int bottom = -1;
-            bool any = false;
 
-            double thr2 = subjectConfig.ColorTreshold * subjectConfig.ColorTreshold;
-            byte tr = parsedBackgroundColor?.r ?? 0;
-            byte tg = parsedBackgroundColor?.g ?? 0;
-            byte tb = parsedBackgroundColor?.b ?? 0;
-            byte ta = parsedBackgroundColor?.a ?? 0;
 
-            for (int y = 0; y < size.Y; y++)
-            {
-                for (int x = 0; x < size.X; x++)
-                {
-                    int idx = (y * size.X + x) * 4;
-                    byte b = pixels[idx + 0];
-                    byte g = pixels[idx + 1];
-                    byte r = pixels[idx + 2];
-                    byte a = pixels[idx + 3];
-
-                    bool keep;
-                    if (trimByAlpha)
-                    {
-                        keep = a != 0;
-                    }
-                    else
-                    {
-                        int dr = r - tr;
-                        int dg = g - tg;
-                        int db = b - tb;
-                        int da = a - ta;
-                        long dist2 = (long)dr * dr + (long)dg * dg + (long)db * db + (long)da * da;
-                        keep = dist2 > thr2;
-                    }
-
-                    if (!keep) continue;
-
-                    any = true;
-                    if (x < left) left = x;
-                    if (y < top) top = y;
-                    if (x > right) right = x;
-                    if (y > bottom) bottom = y;
-                }
-            }
-
-            if (!any)
-                return (src, new IntVector2(0, 0));
-
-            right++;
-            bottom++;
+         
 
             if (gameThemeConfig.IsHd)
-                (left, top, right, bottom) = AlignEvenBox(left, top, right, bottom, size);
+                (left, top, right, bottom) = AlignEvenBox(left, top, right, bottom, new(src.Width, src.Height));
 
-            if (left == 0 && top == 0 && right == size.X && bottom == size.Y)
+            if (left == 0 && top == 0 && right == src.Width && bottom == src.Height)
                 return (src, new IntVector2(0, 0));
 
             var cropped = CropBitmap(src, left, top, right - left, bottom - top);

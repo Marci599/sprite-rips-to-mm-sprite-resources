@@ -511,14 +511,14 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void ALignDownButton_Click(object sender, RoutedEventArgs e)
     {
-        SpritePositionChanged?.Invoke(new(0, GetCurrentFrame()?.Height / 2 ?? 0));
+        SpritePositionChanged?.Invoke(new(0, _previewFrames[_selectedFrame].Height / 2));
         RefreshOffsetFieldVisually();
         UpdateVisuals();
     }
 
     private void ALignTopLeftButton_Click(object sender, RoutedEventArgs e)
     {
-        SpritePositionChanged?.Invoke(new(GetCurrentFrame()?.Width / 2 ?? 0, (GetCurrentFrame()?.Height / 2 ?? 0)*-1));
+        SpritePositionChanged?.Invoke(new(_previewFrames[_selectedFrame].Width / 2, (_previewFrames[_selectedFrame].Height / 2)*-1));
         RefreshOffsetFieldVisually();
         UpdateVisuals();
     }
@@ -843,7 +843,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         AnimationPreviewCanvas.Invalidate();
     }
 
-    private SKBitmap? GetCurrentFrame() => (_previewFrames.Count == 0 || _selectedFrame >= _previewFrames.Count) ? null : _previewFrames[_selectedFrame];
+ 
 
 
 
@@ -868,6 +868,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
             return;
         }
 
+        ColorHelper.TryParse(_subjectConfig.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
+
         if (MainWindow.ProgramConfig.ShowPreviousFrameBehind)
         {
             int previousFrameIndex = _selectedFrame == 0 ? _previewFrames.Count - 1 : _selectedFrame - 1;
@@ -877,17 +879,39 @@ public sealed partial class FrameCoordinateEditor : UserControl
                 var destRect = DrawFrame(canvas, previousFrame, getCurrentAnimationConfig().FrameCongfigs[previousFrameIndex].Offset, zoom, axisX, axisY, width, height, 0.5f, _previousFramePaint);
 
                 canvas.DrawRect(destRect, _secondaryBorderPaint);
+
+
+                var (left, top, right, bottom) = ColorHelper.TrimColor(previousFrame, _subjectConfig, (r, g, b, a));
+
+                float l = destRect.Left + left * zoom;
+                float t = destRect.Top + top * zoom;
+                float r2 = destRect.Left + right * zoom;
+                float b2 = destRect.Top + bottom * zoom;
+
+                SKRect transformedRect = new(l, t, r2, b2);
+
+                canvas.DrawRect(transformedRect, _secondaryBorderPaint);
             }
         }
 
-        SKBitmap? currentFrame = GetCurrentFrame();
+        SKBitmap? currentFrame = _previewFrames[_selectedFrame];
         if (currentFrame != null)
         {
             var destRect = DrawFrame(canvas, currentFrame, getCurrentFrameConfig().Offset, zoom, axisX, axisY, width, height, MainWindow.ProgramConfig.ShowPreviousFrameBehind ? 0.5f : 1f);
             
-            canvas.DrawRect(destRect, _borderPaint);
-       
+            canvas.DrawRect(destRect, _borderPaint);            
+           
 
+            var (left, top, right, bottom) = ColorHelper.TrimColor(currentFrame, _subjectConfig, (r,g,b,a));
+
+            float l = destRect.Left + left * zoom;
+            float t = destRect.Top + top * zoom;
+            float r2 = destRect.Left + right * zoom;
+            float b2 = destRect.Top + bottom * zoom;
+
+            SKRect transformedRect = new SKRect(l, t, r2, b2);
+
+            canvas.DrawRect(transformedRect, _borderPaint);
         }
 
   
@@ -952,6 +976,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private SKRect DrawFrame(SKCanvas canvas, SKBitmap bitmap, IntVector2 offset, float zoom, float axisX, float axisY, int viewportWidth, int viewportHeight, float alpha, SKPaint? overridePaint = null)
     {
+
         float width = Math.Max(1f, bitmap.Width * zoom);
         float height = Math.Max(1f, bitmap.Height * zoom);
         float x = axisX + (offset.X * zoom) - (width / 2f);

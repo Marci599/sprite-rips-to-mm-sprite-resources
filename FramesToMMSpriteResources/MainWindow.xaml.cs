@@ -127,6 +127,7 @@ namespace FramesToMMSpriteResources
         public static string WorkingPath = AppContext.BaseDirectory;
 
         public static ProgramConfig ProgramConfig;
+
         private HashSet<object> _currentConfigs;
 
         AnimationSpriteFrame _animationSpriteFrame = new AnimationSpriteFrame();
