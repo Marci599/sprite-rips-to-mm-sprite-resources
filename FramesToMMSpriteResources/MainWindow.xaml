@@ -45,20 +45,22 @@
                     <DataTemplate>
                         <Grid>
                             <Border Background="{ThemeResource AccentFillColorDefaultBrush}" Margin="{Binding Content.Depth, Converter={StaticResource DepthToMarginConverter}}" Height="16" CornerRadius="1.5" Width="3" Visibility="{Binding Content.IsSelected, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                            <Grid ColumnSpacing="12" Padding="0 0 12 0">
+                            <Grid ColumnSpacing="0" Padding="0 0 12 0">
 
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <FontIcon Grid.Column="0" Glyph="{Binding Content.Depth, Converter={StaticResource DepthToIconGlyphConverter}}" Width="20" Height="32" Margin="-4 0 0 0" Opacity="0.67" FontSize="18"/>
+                                <FontIcon Grid.Column="0" Glyph="{Binding Content.Depth, Converter={StaticResource DepthToIconGlyphConverter}}" Width="20" Height="32" Margin="-4 0 12 0" Opacity="0.67" FontSize="18"/>
                                 <TextBlock Grid.Column="1"
  
                                            VerticalAlignment="Center"
-                                           Margin="0 0 0 0"
+                                           Margin="0 -20 0 -20"
                                             Text="{Binding Content.Text}"
-                                           TextTrimming="Clip"/>
+                                           TextTrimming="Clip"
+                                           TextWrapping="Wrap"
+                                           MaxLines="2"/>
                                 <Border Grid.Column="2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="10" MinWidth="20" Height="20" Padding="6 0 6 2" Visibility="{Binding Content.CountText, Converter={StaticResource CountToVisibilityConverter}}">
                                     <TextBlock Text="{Binding Content.CountText}" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorTertiaryBrush}" FontWeight="SemiBold"/>
                                 </Border>
@@ -73,7 +75,7 @@
 
                 <Rectangle Style="{StaticResource GroupDividerStyle}" Margin="8 -4 8 4"/>
                 <ToggleButton x:Name="SettingsToggleButton" Style="{StaticResource TreeLikeNavToggleButtonStyle}" Padding="16 10 14 10" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Click="ClickSettings">
-                    <Grid ColumnSpacing="14">
+                    <Grid ColumnSpacing="12">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>

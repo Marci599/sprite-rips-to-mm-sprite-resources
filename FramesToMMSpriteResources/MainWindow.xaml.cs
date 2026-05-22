@@ -107,19 +107,6 @@ namespace FramesToMMSpriteResources
             => $"({X}, {Y})";
     }
 
-    public class AnimationSpriteFrame
-    {
-        public string[] Path = new string[3];
-        public SpriteFrames LoadedSpriteFrames = new();
-        
-        public AnimationSpriteFrame() { }
-        public AnimationSpriteFrame(string[] path, SpriteFrames loadedSpriteFrames)
-        {
-            Path = path;
-            LoadedSpriteFrames = loadedSpriteFrames;
-        }
-    }
-
     public class SpriteFrames
     {
    
@@ -157,7 +144,7 @@ namespace FramesToMMSpriteResources
 
         public static HashSet<object> _currentConfigs;
 
-        AnimationSpriteFrame _animationSpriteFrame = new();
+
 
         bool _isActivated = false;
         bool _isWindowActive = false;
@@ -173,6 +160,8 @@ namespace FramesToMMSpriteResources
         public bool IsCtrlHeld => _isCtrlHeld;
 
         private bool _isGeneratePanelShowed = true;
+
+        public string[] AnimationSpriteFramePath = new string[3];
 
         public ObservableCollection<string> BreadcrumbItems { get; } = new();
 
@@ -378,8 +367,8 @@ namespace FramesToMMSpriteResources
                     cts?.Cancel();
                     ReduceFileSizeCheckBox.Click -= ReduceFileSizeCheckBox_Click;
                     WorkingPathTextBox.TextChanged -= WorkingPathTextBox_LostFocus;
-                    UnloadFrameResources();
-                
+                    FrameCoordinateEditorControl.UnloadAnimation();
+
                     await Task.Delay(30);
                     cts?.Cancel();
                     SaveAllConfigs();
@@ -431,7 +420,7 @@ namespace FramesToMMSpriteResources
         {
             SaveAllConfigs();
             ProgramConfig.WorkingPath = (sender as TextBox)!.Text;
-            UnloadFrameResources();
+            FrameCoordinateEditorControl.UnloadAnimation();
             ReloadTreeViewAndConfigs();
         }
 
@@ -541,13 +530,6 @@ namespace FramesToMMSpriteResources
         TreeItem GetSelectedTreeItem()
         {
             return (TreeViewControl.SelectedNode.Content as TreeItem)!;
-        }
-
-        void UnloadFrameResources()
-        {
-            _animationSpriteFrame = new AnimationSpriteFrame();
-            FrameCoordinateEditorControl.UnloadAnimation();
- 
         }
 
         void ReloadTreeViewAndConfigs()
@@ -1397,16 +1379,16 @@ namespace FramesToMMSpriteResources
             await ChangePanelGraphic(animate, FramePanel);
             string[] newPath = [gameThemeName, subjectName, animationName];
 
-            bool subjectEquals = (_animationSpriteFrame.Path[0] == newPath[0] && _animationSpriteFrame.Path[1] == newPath[1]);
-            bool animationEquals = (subjectEquals && _animationSpriteFrame.Path[2] == newPath[2]);
+            bool subjectEquals = (AnimationSpriteFramePath[0] == newPath[0] && AnimationSpriteFramePath[1] == newPath[1]);
+            bool animationEquals = (subjectEquals && AnimationSpriteFramePath[2] == newPath[2]);
             if (!animationEquals)
             {
-                if (!subjectEquals || (TreeViewControl.SelectedNode == null || !isFromFramePanel && animationName != _animationSpriteFrame.Path[2]))
+                if (!subjectEquals || (TreeViewControl.SelectedNode == null || !isFromFramePanel && animationName != AnimationSpriteFramePath[2]))
                 {
                     FrameCoordinateEditorControl.UnloadAnimation();
                 }
-                _animationSpriteFrame.LoadedSpriteFrames.LoadedSpriteFrames = [];
-                _animationSpriteFrame.Path = newPath;
+                FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames = [];
+                AnimationSpriteFramePath = newPath;
                 cts?.Cancel();
             }
 
@@ -1451,11 +1433,11 @@ namespace FramesToMMSpriteResources
 
             string animationPath = Path.Combine(gameThemePath, subjectName, "raw", animationName);
 
-            if (_animationSpriteFrame.LoadedSpriteFrames.LoadedSpriteFrames.Count == 0)
+            if (FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames.Count == 0)
             {
                 IsLoadingFrames = true;
 
-                var tempAnimationSpriteFrame = new AnimationSpriteFrame(_animationSpriteFrame.Path, new([], new(0,0)));
+                SpriteFrames tempAnimationSpriteFrames = new([], new(0,0));
 
                 ColorHelper.TryParse(subjectConfig.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
                 SKColor backgroundSKColor = new(r, g, b, a);
@@ -1487,7 +1469,7 @@ namespace FramesToMMSpriteResources
                 
                         var skb = SKBitmap.Decode(codec, desiredInfo);
 
-                        tempAnimationSpriteFrame.LoadedSpriteFrames.Size = new(skb.Width, skb.Height);
+                        tempAnimationSpriteFrames.Size = new(skb.Width, skb.Height);
 
                         if (backgroundSKColor.Alpha != 0 && subjectConfig.RemoveBackground)
                             ColorHelper.RemoveColorWithThresholdInPlace(skb, backgroundSKColor.Red, backgroundSKColor.Green, backgroundSKColor.Blue, backgroundSKColor.Alpha, subjectConfig.ColorTreshold);
@@ -1519,12 +1501,10 @@ namespace FramesToMMSpriteResources
                     if (spriteFrame == null)
                         throw new Exception($"Failed to decode image: {framePath}");
 
-                    tempAnimationSpriteFrame.LoadedSpriteFrames.LoadedSpriteFrames.Add(spriteFrame);
+                    tempAnimationSpriteFrames.LoadedSpriteFrames.Add(spriteFrame);
                     
                 }
                 ct.ThrowIfCancellationRequested();
-
-                _animationSpriteFrame = tempAnimationSpriteFrame;
 
                 var selectedNodeAfter = TreeViewControl.SelectedNode;
 
@@ -1540,7 +1520,7 @@ namespace FramesToMMSpriteResources
                 }
 
                 IsLoadingFrames = false;
-                FrameCoordinateEditorControl.LoadAnimation(_animationSpriteFrame.LoadedSpriteFrames, subjectConfig, animationName, backgroundSKColor);
+                FrameCoordinateEditorControl.LoadAnimation(tempAnimationSpriteFrames, subjectConfig, animationName, backgroundSKColor);
             }
 
             if (TreeViewControl.SelectedNode != null)
@@ -1874,7 +1854,7 @@ namespace FramesToMMSpriteResources
             {
                 currentConfig.ColorTreshold = threshold;
             }
-            _animationSpriteFrame.Path = new string[3];
+            AnimationSpriteFramePath = new string[3];
         }
 
         private void ResizeTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
@@ -1915,7 +1895,7 @@ namespace FramesToMMSpriteResources
             {
                 currentConfig.CropSprites = (sender as CheckBox)!.IsChecked!.Value;
             }
-            _animationSpriteFrame.Path = new string[3];
+            AnimationSpriteFramePath = new string[3];
         }
 
         private void ClickRemoveBackground(object sender, RoutedEventArgs e)
@@ -1925,7 +1905,7 @@ namespace FramesToMMSpriteResources
             {
                 currentConfig.RemoveBackground = removeBackground;
             }
-            _animationSpriteFrame.Path = new string[3];
+            AnimationSpriteFramePath = new string[3];
         }
 
         private void ClickIsHdCheckBox(object sender, RoutedEventArgs e)
@@ -1944,7 +1924,7 @@ namespace FramesToMMSpriteResources
             {
                 currentConfig.BackgroundColor = backgroundColor;
             }
-            _animationSpriteFrame.Path = new string[3];
+            AnimationSpriteFramePath = new string[3];
         }
 
 
@@ -2188,7 +2168,7 @@ namespace FramesToMMSpriteResources
             }
 
             SaveAllConfigs();
-            UnloadFrameResources();
+            FrameCoordinateEditorControl.UnloadAnimation();
             ReloadTreeViewAndConfigs();
     
             IsGenerating = false;
