@@ -659,7 +659,7 @@ namespace FramesToMMSpriteResources
 
         private static (SKBitmap cropped, IntVector2 offset) TrimColor(SKBitmap src)
         {
-            var (left, top, right, bottom) = ColorHelper.TrimColor(src, subjectConfig, parsedBackgroundColor);
+            var (left, top, right, bottom) = ColorHelper.RectTrimColor(src, subjectConfig, parsedBackgroundColor);
 
 
 
@@ -671,7 +671,7 @@ namespace FramesToMMSpriteResources
             if (left == 0 && top == 0 && right == src.Width && bottom == src.Height)
                 return (src, new IntVector2(0, 0));
 
-            var cropped = CropBitmap(src, left, top, right - left, bottom - top);
+            var cropped = ColorHelper.CropBitmap(src, left, top, right - left, bottom - top);
             return (cropped, new IntVector2(left, top));
         }
 
@@ -697,18 +697,7 @@ namespace FramesToMMSpriteResources
             return (leftAligned, topAligned, rightAligned, bottomAligned);
         }
 
-        private static SKBitmap CropBitmap(SKBitmap src, int left, int top, int width, int height)
-        {
-            var cropped = new SKBitmap(new SKImageInfo(width, height, src.ColorType, src.AlphaType));
-            using (var canvas = new SKCanvas(cropped))
-            {
-                canvas.Clear(SKColors.Transparent);
-                var sourceRect = new SKRect(left, top, left + width, top + height);
-                var destRect = new SKRect(0, 0, width, height);
-                canvas.DrawBitmap(src, sourceRect, destRect);
-            }
-            return cropped;
-        }
+
 
         private static SKBitmap EnsureEvenDimensions(SKBitmap src)
         {

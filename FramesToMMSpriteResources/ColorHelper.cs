@@ -24,9 +24,20 @@ namespace FramesToMMSpriteResources
          
             return SKColor.FromHsl(newHue, s, flippedValue, color.Alpha);
         }
+        public static SKBitmap CropBitmap(SKBitmap src, int left, int top, int width, int height)
+        {
+            var cropped = new SKBitmap(new SKImageInfo(width, height, src.ColorType, src.AlphaType));
+            using (var canvas = new SKCanvas(cropped))
+            {
+                canvas.Clear(SKColors.Transparent);
+                var sourceRect = new SKRect(left, top, left + width, top + height);
+                var destRect = new SKRect(0, 0, width, height);
+                canvas.DrawBitmap(src, sourceRect, destRect);
+            }
+            return cropped;
+        }
 
-
-        public static (int left, int top, int right, int bottom) TrimColor(SKBitmap src, SubjectConfig subjectConfig, (byte r, byte g, byte b, byte a)? parsedBackgroundColor)
+        public static (int left, int top, int right, int bottom) RectTrimColor(SKBitmap src, SubjectConfig subjectConfig, (byte r, byte g, byte b, byte a)? parsedBackgroundColor)
         {
             IntVector2 size = new(src.Width, src.Height);
             var pixels = src.GetPixelSpan();

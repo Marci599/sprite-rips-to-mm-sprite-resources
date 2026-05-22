@@ -6,12 +6,7 @@
     IsTabStop="True"
     KeyDown="RootGrid_KeyDown"
     KeyUp="RootGrid_KeyUp">
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/>
-        </Grid.ColumnDefinitions>
-        <Border Margin="20 20 10 90" Grid.Column="0" Padding="0" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+
             <Grid>
                 <skia:SKSwapChainPanel x:Name="CoordinateCanvas"
                     HorizontalAlignment="Stretch"
@@ -137,69 +132,5 @@
                     </StackPanel>
                 </Border>
             </Grid>
-        </Border>
-        <ScrollView Grid.Column="1" Width="250" CornerRadius="0">
-            <StackPanel Spacing="10"  Margin="0 20 20 90">
-                <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
-                    <StackPanel Spacing="12">
-                        <TextBlock Text="Offset" Style="{StaticResource SectionHeaderStyle}"/>
-                        <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <NumberBox Grid.Column="0" x:Name="OffsetXTextBox" Header="X" PlaceholderText="0" Minimum="-999999" Maximum="999999"/>
-                            <NumberBox Grid.Column="1" x:Name="OffsetYTextBox" Header="Y" PlaceholderText="0" Minimum="-999999" Maximum="999999"/>
-                        </Grid>
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
-                    <StackPanel Spacing="12">
-                        <TextBlock Text="Align" Style="{StaticResource SectionHeaderStyle}"/>
-                        <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                        <RadioButtons x:Name="BasedOnRadioButtons" Header="Based on" MaxColumns="2" SelectedIndex="0">
-                            <RadioButton Content="Raw sprite size"/>
-                            <RadioButton Content="Cropped sprite size"/>
-                        </RadioButtons>
-                        <Grid ColumnSpacing="10" Margin="0 0 0 0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Button Grid.Column="0" Click="ALignCenterButton_Click" HorizontalAlignment="Stretch" Height="32">
-                                <FontIcon Glyph="&#xE73F;" FontSize="12"/>
-                            </Button>
-                            <Button Grid.Column="1" Click="ALignDownButton_Click" HorizontalAlignment="Stretch" Height="32">
-                                <FontIcon Glyph="&#xE74B;" FontSize="12"/>
-                            </Button>
-                            <Button Grid.Column="2" Click="ALignTopLeftButton_Click" HorizontalAlignment="Stretch" Height="32">
-                                <FontIcon Glyph="&#xEA4F;" FontSize="12"/>
-                            </Button>
-                        </Grid>
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 8">
-                    <StackPanel Spacing="12">
-                        <TextBlock Text="Remove movement" Style="{StaticResource SectionHeaderStyle}"/>
-                        <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="32"/>
-                            </Grid.ColumnDefinitions>
-                            <NumberBox Grid.Column="0" x:Name="DirectionNumberBox" Header="Direction" PlaceholderText="90" Minimum="-999999" Maximum="999999"/>
-                            <NumberBox Grid.Column="1" x:Name="SpeedNumberBox" Header="Speed" PlaceholderText="0" Minimum="-999999" Maximum="999999"/>
-                            <Button Grid.Column="2" x:Name="RemoveMovementButton" VerticalAlignment="Bottom" Padding="9" Height="32" Click="RemoveMovementButton_Click">
-                                <FontIcon Glyph="&#xE768;" FontSize="12"/>
-                            </Button>
-                        </Grid>
-                        <TextBlock Text="Select frames you want to remove movement between" Style="{StaticResource HelperTextStyle}" Margin="0 -8 0 0"/>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
-        </ScrollView>
-    </Grid>
+  
 </UserControl>

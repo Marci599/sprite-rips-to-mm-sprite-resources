@@ -28,7 +28,7 @@ using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
 
-
+//TODO: CONTROL DETECT STUCK WHEN UNFOCUSING WINDOW
 namespace FramesToMMSpriteResources
 {
     public enum ItemDepth
@@ -110,13 +110,40 @@ namespace FramesToMMSpriteResources
     public class AnimationSpriteFrame
     {
         public string[] Path = new string[3];
-        public List<SKBitmap> WriteableBitmaps = [];
+        public SpriteFrames LoadedSpriteFrames = new();
         
         public AnimationSpriteFrame() { }
-        public AnimationSpriteFrame(string[] path, List<SKBitmap> writeableBitmaps)
+        public AnimationSpriteFrame(string[] path, SpriteFrames loadedSpriteFrames)
         {
             Path = path;
-            WriteableBitmaps = writeableBitmaps;
+            LoadedSpriteFrames = loadedSpriteFrames;
+        }
+    }
+
+    public class SpriteFrames
+    {
+   
+        public List<SpriteFrame> LoadedSpriteFrames = [];
+        public IntVector2 Size;
+
+        public SpriteFrames() { }
+        public SpriteFrames(List<SpriteFrame> loadedSpriteFrames, IntVector2 size)
+        {
+            LoadedSpriteFrames = loadedSpriteFrames;
+            Size = size;
+        }
+    }
+
+    public class SpriteFrame
+    {
+        public SKBitmap WriteableBitmap;
+        public SKRectI CroppedRect;
+
+        public SpriteFrame(SKBitmap writeableBitmap, SKRectI croppedRect)
+        {
+            WriteableBitmap = writeableBitmap;
+            CroppedRect = croppedRect;
+  
         }
     }
 
@@ -128,9 +155,9 @@ namespace FramesToMMSpriteResources
 
         public static ProgramConfig ProgramConfig;
 
-        private HashSet<object> _currentConfigs;
+        public static HashSet<object> _currentConfigs;
 
-        AnimationSpriteFrame _animationSpriteFrame = new AnimationSpriteFrame();
+        AnimationSpriteFrame _animationSpriteFrame = new();
 
         bool _isActivated = false;
         bool _isWindowActive = false;
@@ -288,54 +315,10 @@ namespace FramesToMMSpriteResources
                     handledEventsToo: true);
             }
 
-            FrameCoordinateEditorControl.RemoveMovementButtonClick -= RemoveMovementButton_Click;
-            FrameCoordinateEditorControl.RemoveMovementButtonClick += RemoveMovementButton_Click;
+
         }
 
-        private void RemoveMovementButton_Click(float direaction, float speed)
-        {
-            var node = TreeViewControl.SelectedNode;
-            var gameThemeName = (node.Parent.Parent.Parent.Content as TreeItem)!.Text;
-            var subjectName = (node.Parent.Parent.Content as TreeItem)!.Text;
-            var animationNode = node.Parent;
-            var animationName = (animationNode.Content as TreeItem)!.Text;
-          
-            List<FrameConfig> frameConfigList = ProgramConfig.GameThemeConfigs[gameThemeName].SubjectConfigs[subjectName].AnimationConfigs[animationName].FrameCongfigs;
 
-            Vector2? initialPosition = null;
-            for (int i = 0; i < animationNode.Children.Count; i++)
-            {
-                var frameNodeContent = (animationNode.Children[i].Content as TreeItem)!;
-                if (frameNodeContent.IsSelected)
-                {
-                   
-                    if (initialPosition == null)
-                    {
-                        initialPosition = new(frameConfigList[i].Offset.X, frameConfigList[i].Offset.Y);
-                    }
-                    else
-                    {
-                        initialPosition -= ConvertToVector2(direaction, speed);
-                        frameConfigList[i].Offset = new((int)Math.Round(initialPosition.Value.X), (int)Math.Round(initialPosition.Value.Y));
-                    }
-                }
-            }
-            if((node.Content as TreeItem).Text != "000")
-            {
-                FrameCoordinateEditorControl.RefreshOffsetFieldVisually();
-            }
-        }
-
-        public Vector2 ConvertToVector2(double angleInDegrees, float distance)
-        { 
-            double radians = (angleInDegrees * Math.PI) / 180.0;
-
-          
-            float x = (float)(Math.Sin(radians) * distance);
-            float y = (float)(Math.Cos(radians) * distance);
-
-            return new Vector2(x, y);
-        }
 
         private void MainWindow_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
@@ -553,6 +536,11 @@ namespace FramesToMMSpriteResources
         void SaveProgramConfig()
         {
             SaveJson(Path.Combine(AppContext.BaseDirectory, CONFIG_FILENAME), ProgramConfig);
+        }
+
+        TreeItem GetSelectedTreeItem()
+        {
+            return (TreeViewControl.SelectedNode.Content as TreeItem)!;
         }
 
         void UnloadFrameResources()
@@ -773,7 +761,7 @@ namespace FramesToMMSpriteResources
                             {
 
                                 TreeViewControl.SelectedNode = frameTreeViewNode;
-                                (TreeViewControl.SelectedNode.Content as TreeItem)!.IsSelected = true;
+                                GetSelectedTreeItem().IsSelected = true;
                                 TreeViewControl.SelectedNode = null;
 
                                 if (ProgramConfig.SelectedNodes.Last() == frameName)
@@ -796,7 +784,7 @@ namespace FramesToMMSpriteResources
                     {
 
                         TreeViewControl.SelectedNode = animationTreeItem;
-                        (TreeViewControl.SelectedNode.Content as TreeItem)!.IsSelected = true;
+                        GetSelectedTreeItem().IsSelected = true;
                         TreeViewControl.SelectedNode = null;
 
                         if (ProgramConfig.SelectedNodes.Last() == animationName)
@@ -820,7 +808,7 @@ namespace FramesToMMSpriteResources
                 ProgramConfig.SelectedNodes.Contains(subjectName))
                 {
                     TreeViewControl.SelectedNode = subjectTreeItem;
-                    (TreeViewControl.SelectedNode.Content as TreeItem)!.IsSelected = true;
+                    GetSelectedTreeItem().IsSelected = true;
                     TreeViewControl.SelectedNode = null;
 
                     if (ProgramConfig.SelectedNodes.Last() == subjectName)
@@ -839,7 +827,7 @@ namespace FramesToMMSpriteResources
                 ProgramConfig.SelectedNodes.Contains(gameThemeName))
             {
                 TreeViewControl.SelectedNode = gameThemeTreeItem;
-                (TreeViewControl.SelectedNode.Content as TreeItem)!.IsSelected = true;
+                GetSelectedTreeItem().IsSelected = true;
                 TreeViewControl.SelectedNode = null;
 
                 if (ProgramConfig.SelectedNodes.Last() == gameThemeName)
@@ -1220,7 +1208,7 @@ namespace FramesToMMSpriteResources
             ProgramConfig.SelectedNodes!.Remove(selectedNode.Text);
             ProgramConfig.SelectedNodes.Add(selectedNode.Text);
 
-            FrameCoordinateEditorControl.EnableMovementControls(ProgramConfig.SelectedNodes.Count > 1);
+            RemoveMovementButton.IsEnabled = ProgramConfig.SelectedNodes.Count > 1;
 
             selectedNode.IsSelected = true;
         }
@@ -1372,16 +1360,16 @@ namespace FramesToMMSpriteResources
             RecoverYCheckBox.IsChecked = animationConfig.RecoverCroppedOffset.Y;
 
             DelayTextBox.Text = animationConfig.Delay.ToString();
-            OffsetXTextBox.Text = animationConfig.Offset.Value.X.ToString();
-            OffsetYTextBox.Text = animationConfig.Offset.Value.Y.ToString();
+            AnimationOffsetXTextBox.Text = animationConfig.Offset.Value.X.ToString();
+            AnimationOffsetYTextBox.Text = animationConfig.Offset.Value.Y.ToString();
 
             RegenerateCheckBox.Click += ClickRegenerateCheckBox;
             RecoverXCheckBox.Click += ClickRecoverXCheckBox;
             RecoverYCheckBox.Click += ClickRecoverYCheckBox;
 
             DelayTextBox.ValueChanged += DelayTextBox_ValueChanged;
-            OffsetXTextBox.ValueChanged += OffsetXTextBox_ValueChanged;
-            OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
+            AnimationOffsetXTextBox.ValueChanged += AnimationOffsetXTextBox_ValueChanged;
+            AnimationOffsetYTextBox.ValueChanged += AnimationOffsetYTextBox_ValueChanged;
         }
 
         CancellationTokenSource? cts= null;
@@ -1405,7 +1393,7 @@ namespace FramesToMMSpriteResources
             CheckFrameCountAndDisplayWarning((node.Parent.Parent.Content as TreeItem)!.Count);
 
             GenerateButton.Content = $"Generate {ProgramConfig.SelectedNodePath![1]}";
-
+            bool isFromFramePanel = (TreeViewControl.SelectedNode == null || (TreeViewControl.SelectedNode.Content as TreeItem)!.Depth == ItemDepth.Frame);
             await ChangePanelGraphic(animate, FramePanel);
             string[] newPath = [gameThemeName, subjectName, animationName];
 
@@ -1413,11 +1401,11 @@ namespace FramesToMMSpriteResources
             bool animationEquals = (subjectEquals && _animationSpriteFrame.Path[2] == newPath[2]);
             if (!animationEquals)
             {
-                if (!subjectEquals || (TreeViewControl.SelectedNode == null || ((TreeViewControl.SelectedNode.Content as TreeItem)!.Depth != ItemDepth.Frame) && animationName != _animationSpriteFrame.Path[2]))
+                if (!subjectEquals || (TreeViewControl.SelectedNode == null || !isFromFramePanel && animationName != _animationSpriteFrame.Path[2]))
                 {
                     FrameCoordinateEditorControl.UnloadAnimation();
                 }
-                _animationSpriteFrame.WriteableBitmaps = [];
+                _animationSpriteFrame.LoadedSpriteFrames.LoadedSpriteFrames = [];
                 _animationSpriteFrame.Path = newPath;
                 cts?.Cancel();
             }
@@ -1437,7 +1425,7 @@ namespace FramesToMMSpriteResources
             cts = new();
             try
             {
-                await LoadCoordinateEditorAsync(gameThemeName, subjectName, animationName, subjectConfig, frameName, selectedIndex, frameConfig, cts.Token);
+                await LoadCoordinateEditorAsync(gameThemeName, subjectName, animationName, subjectConfig, frameName, selectedIndex, frameConfig, node, cts.Token);
             }
             catch
             {
@@ -1449,7 +1437,7 @@ namespace FramesToMMSpriteResources
             }
         }
 
-        async Task LoadCoordinateEditorAsync(string gameThemeName, string subjectName, string animationName, SubjectConfig subjectConfig, string frameName, int selectedIndex, FrameConfig frameConfig, CancellationToken ct)
+        async Task LoadCoordinateEditorAsync(string gameThemeName, string subjectName, string animationName, SubjectConfig subjectConfig, string frameName, int selectedIndex, FrameConfig frameConfig, TreeViewNode node, CancellationToken ct)
         {
             string gameThemePath;
             if (IsUsingGameThemes)
@@ -1463,24 +1451,25 @@ namespace FramesToMMSpriteResources
 
             string animationPath = Path.Combine(gameThemePath, subjectName, "raw", animationName);
 
-            if (_animationSpriteFrame.WriteableBitmaps.Count == 0)
+            if (_animationSpriteFrame.LoadedSpriteFrames.LoadedSpriteFrames.Count == 0)
             {
                 IsLoadingFrames = true;
 
-                var tempAnimationSpriteFrame = new AnimationSpriteFrame(_animationSpriteFrame.Path, []);
+                var tempAnimationSpriteFrame = new AnimationSpriteFrame(_animationSpriteFrame.Path, new([], new(0,0)));
 
                 ColorHelper.TryParse(subjectConfig.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
                 SKColor backgroundSKColor = new(r, g, b, a);
 
+          
 
-                for (int i = 0; i < TreeViewControl.SelectedNode.Parent.Children.Count; i++)         
+                for (int i = 0; i < node.Parent.Children.Count; i++)         
                 {
                     FrameConfig frameConfigInLoop = subjectConfig.AnimationConfigs![animationName].FrameCongfigs[i];
                     ct.ThrowIfCancellationRequested();
 
                     string framePath = Path.Combine(animationPath, $"{frameConfigInLoop.Name}.png");
 
-                    var bmp = await Task.Run(() =>
+                    SpriteFrame spriteFrame = await Task.Run(() =>
                     {
                         ct.ThrowIfCancellationRequested();
 
@@ -1497,15 +1486,41 @@ namespace FramesToMMSpriteResources
 
                 
                         var skb = SKBitmap.Decode(codec, desiredInfo);
-                        if(backgroundSKColor.Alpha != 0 && subjectConfig.RemoveBackground)
+
+                        tempAnimationSpriteFrame.LoadedSpriteFrames.Size = new(skb.Width, skb.Height);
+
+                        if (backgroundSKColor.Alpha != 0 && subjectConfig.RemoveBackground)
                             ColorHelper.RemoveColorWithThresholdInPlace(skb, backgroundSKColor.Red, backgroundSKColor.Green, backgroundSKColor.Blue, backgroundSKColor.Alpha, subjectConfig.ColorTreshold);
-                        return skb;
+
+                        var (left, top, right, bottom) = ColorHelper.RectTrimColor(skb, subjectConfig, (backgroundSKColor.Red, backgroundSKColor.Green, backgroundSKColor.Blue, backgroundSKColor.Alpha));
+                        SKRectI rect = new(left, top, right, bottom);
+
+                        bool isSame = (left == 0 && top == 0 && right == skb.Width && bottom == skb.Height);
+                        if ((subjectConfig.CropSprites || subjectConfig.RemoveBackground || backgroundSKColor.Alpha == 0) && !isSame)
+                        {  
+                       
+                            var width = right - left;
+                            var height = bottom - top;
+                            var cropped = new SKBitmap(new SKImageInfo(width, height, skb.ColorType, skb.AlphaType));
+                            using (var canvas = new SKCanvas(cropped))
+                            {
+                                canvas.Clear(SKColors.Transparent);
+                                var sourceRect = new SKRect(left, top, left + width, top + height);
+                                var destRect = new SKRect(0, 0, width, height);
+                                canvas.DrawBitmap(skb, sourceRect, destRect);
+                            }
+                       
+                            return new SpriteFrame(cropped, rect);
+                        }
+                        return new SpriteFrame(skb, rect);
+
                     }, ct);
 
-                    if (bmp == null)
+                    if (spriteFrame == null)
                         throw new Exception($"Failed to decode image: {framePath}");
 
-                    tempAnimationSpriteFrame.WriteableBitmaps.Add(bmp);
+                    tempAnimationSpriteFrame.LoadedSpriteFrames.LoadedSpriteFrames.Add(spriteFrame);
+                    
                 }
                 ct.ThrowIfCancellationRequested();
 
@@ -1525,18 +1540,36 @@ namespace FramesToMMSpriteResources
                 }
 
                 IsLoadingFrames = false;
-                FrameCoordinateEditorControl.LoadAnimation(_animationSpriteFrame.WriteableBitmaps, subjectConfig, animationName, backgroundSKColor);
+                FrameCoordinateEditorControl.LoadAnimation(_animationSpriteFrame.LoadedSpriteFrames, subjectConfig, animationName, backgroundSKColor);
             }
 
             if (TreeViewControl.SelectedNode != null)
             {
-                if ((TreeViewControl.SelectedNode.Content as TreeItem)!.Depth == ItemDepth.Frame)
+                if (GetSelectedTreeItem().Depth == ItemDepth.Frame)
                 {
                     FrameCoordinateEditorControl.SetSpriteIndex(selectedIndex);
 
 
-                    FrameCoordinateEditorControl.SpritePositionChanged += SpriteOffset_ValueChanged;
+
+
+
+                    DirectionNumberBox.Value = subjectConfig.AnimationConfigs![animationName].Direction;
+                    SpeedNumberBox.Value = subjectConfig.AnimationConfigs![animationName].Speed;
+
+                    BasedOnRadioButtons.SelectedIndex = (int)subjectConfig.AnimationConfigs![animationName].AlignBasedOn;
+
+                    OffsetXTextBox.Value = frameConfig.Offset.X;
+                    OffsetYTextBox.Value = frameConfig.Offset.Y;
+
                     FrameCoordinateEditorControl.SpritePositionMoved += SpriteOffset_ValueMoved;
+
+                    DirectionNumberBox.ValueChanged += DirectionNumberBox_ValueChanged;
+                    SpeedNumberBox.ValueChanged += SpeedNumberBox_ValueChanged;
+
+                    BasedOnRadioButtons.SelectionChanged += BasedOnRadioButtons_SelectionChanged;
+
+                    OffsetXTextBox.ValueChanged += OffsetXTextBox_ValueChanged;
+                    OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
                 }
             }
         }
@@ -1559,11 +1592,222 @@ namespace FramesToMMSpriteResources
             RecoverYCheckBox.Click -= ClickRecoverYCheckBox;
 
             DelayTextBox.ValueChanged -= DelayTextBox_ValueChanged;
+            AnimationOffsetXTextBox.ValueChanged -= AnimationOffsetXTextBox_ValueChanged;
+            AnimationOffsetYTextBox.ValueChanged -= AnimationOffsetYTextBox_ValueChanged;
+
+            FrameCoordinateEditorControl.SpritePositionMoved -= SpriteOffset_ValueMoved;
+
+            DirectionNumberBox.ValueChanged -= DirectionNumberBox_ValueChanged;
+            SpeedNumberBox.ValueChanged -= SpeedNumberBox_ValueChanged;
+
+            BasedOnRadioButtons.SelectionChanged -= BasedOnRadioButtons_SelectionChanged;
+
+            OffsetXTextBox.ValueChanged -= OffsetXTextBox_ValueChanged;
+            OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
+        }
+
+        FrameConfig GetCurrentFrameConfig()
+        {
+            var gameThemeName = (TreeViewControl.SelectedNode.Parent.Parent.Parent.Content as TreeItem)!.Text;
+            var subjectName = (TreeViewControl.SelectedNode.Parent.Parent.Content as TreeItem)!.Text;
+            var animationName = (TreeViewControl.SelectedNode.Parent.Content as TreeItem)!.Text;
+            string frameName = (TreeViewControl.SelectedNode.Content as TreeItem)!.Text;
+            return ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].FrameCongfigs[int.Parse(frameName)];
+        }
+
+        AnimationConfig GetCurrentFrameAnimationConfig()
+        {
+            var node = TreeViewControl.SelectedNode;
+            var gameThemeName = (node.Parent.Parent.Parent.Content as TreeItem)!.Text;
+            var subjectName = (node.Parent.Parent.Content as TreeItem)!.Text;
+            var animationName = (node.Parent.Content as TreeItem)!.Text;
+
+            return ProgramConfig.GameThemeConfigs[gameThemeName].SubjectConfigs[subjectName].AnimationConfigs[animationName];
+        }
+
+        public void RefreshOffsetFieldVisually()
+        {
             OffsetXTextBox.ValueChanged -= OffsetXTextBox_ValueChanged;
             OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
 
-            FrameCoordinateEditorControl.SpritePositionChanged -= SpriteOffset_ValueChanged;
-            FrameCoordinateEditorControl.SpritePositionMoved -= SpriteOffset_ValueMoved;
+            var frameConfig = GetCurrentFrameConfig();
+
+            OffsetXTextBox.Value = frameConfig.Offset.X;
+            OffsetYTextBox.Value = frameConfig.Offset.Y;
+
+            OffsetXTextBox.ValueChanged += OffsetXTextBox_ValueChanged;
+            OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
+        }
+
+        private void RemoveMovementButton_Click(object sender, RoutedEventArgs e)
+        {
+
+
+            var animationNode = TreeViewControl.SelectedNode.Parent;
+       
+
+            AnimationConfig animationConfig = GetCurrentFrameAnimationConfig();
+            List<FrameConfig> frameConfigList = animationConfig.FrameCongfigs;
+
+
+            Vector2? initialPosition = null;
+            for (int i = 0; i < animationNode.Children.Count; i++)
+            {
+                var frameNodeContent = (animationNode.Children[i].Content as TreeItem)!;
+                if (frameNodeContent.IsSelected)
+                {
+
+                    if (initialPosition == null)
+                    {
+                        initialPosition = new(frameConfigList[i].Offset.X, frameConfigList[i].Offset.Y);
+                    }
+                    else
+                    {
+                        initialPosition -= ConvertToVector2(animationConfig.Direction, animationConfig.Speed);
+                        frameConfigList[i].Offset = new((int)Math.Round(initialPosition.Value.X), (int)Math.Round(initialPosition.Value.Y));
+                    }
+                }
+            }
+            if ((TreeViewControl.SelectedNode.Content as TreeItem)!.Text != "000")
+            {
+                RefreshOffsetFieldVisually();
+            }
+            FrameCoordinateEditorControl.UpdateVisuals();
+        }
+
+        public Vector2 ConvertToVector2(double angleInDegrees, float distance)
+        {
+            double radians = (angleInDegrees * Math.PI) / 180.0;
+
+
+            float x = (float)(Math.Sin(radians) * distance);
+            float y = (float)(Math.Cos(radians) * distance);
+
+            return new Vector2(x, y);
+        }
+
+        private void ALignDownButton_Click(object sender, RoutedEventArgs e)
+        {
+
+
+            int rawPositionX = (FrameCoordinateEditorControl.PreviewSpriteFrames.Size.X / 2) * -1;
+            int rawPositionY = FrameCoordinateEditorControl.PreviewSpriteFrames.Size.Y;
+            AnimationConfig animationConfig = GetCurrentFrameAnimationConfig();
+
+            if (animationConfig.AlignBasedOn == AlignBasedOn.RawSpriteSie)
+            {
+                SpriteOffset_ValueChanged(new(rawPositionX, rawPositionY));
+            }
+            else
+            {
+                List<FrameConfig> frameConfigList = animationConfig.FrameCongfigs;
+                var animationNode = TreeViewControl.SelectedNode.Parent;
+                for (int i = 0; i < animationNode.Children.Count; i++)
+                {
+                    var frameNodeContent = (animationNode.Children[i].Content as TreeItem)!;
+                    if (frameNodeContent.IsSelected)
+                    {
+                        int croppedPositionX = rawPositionX + ((FrameCoordinateEditorControl.PreviewSpriteFrames.Size.X - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Width) / 2) - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Left;
+                        int croppedPositionY = rawPositionY - (FrameCoordinateEditorControl.PreviewSpriteFrames.Size.Y - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Bottom);
+                        
+                        frameConfigList[i].Offset = new(croppedPositionX, croppedPositionY);
+
+                    }
+                }
+            }
+
+            RefreshOffsetFieldVisually();
+            FrameCoordinateEditorControl.UpdateVisuals();
+        }
+
+        private void ALignTopLeftButton_Click(object sender, RoutedEventArgs e)
+        {
+            AnimationConfig animationConfig = GetCurrentFrameAnimationConfig();
+            if (animationConfig.AlignBasedOn == AlignBasedOn.RawSpriteSie)
+            {
+                SpriteOffset_ValueChanged(new(0, 0));
+            }
+            else
+            {
+                List<FrameConfig> frameConfigList = animationConfig.FrameCongfigs;
+                var animationNode = TreeViewControl.SelectedNode.Parent;
+                for (int i = 0; i < animationNode.Children.Count; i++)
+                {
+                    var frameNodeContent = (animationNode.Children[i].Content as TreeItem)!;
+                    if (frameNodeContent.IsSelected)
+                    {
+                        int croppedPositionX = 0 - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Left;
+                        int croppedPositionY = 0 + FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Top;
+
+                        frameConfigList[i].Offset = new(croppedPositionX, croppedPositionY);
+
+                    }
+                }
+            }
+            RefreshOffsetFieldVisually();
+            FrameCoordinateEditorControl.UpdateVisuals();
+        }
+
+        private void ALignCenterButton_Click(object sender, RoutedEventArgs e)
+        {
+
+            int rawPositionX = (FrameCoordinateEditorControl.PreviewSpriteFrames.Size.X / 2) * -1;
+            int rawPositionY = FrameCoordinateEditorControl.PreviewSpriteFrames.Size.Y / 2;
+            AnimationConfig animationConfig = GetCurrentFrameAnimationConfig();
+            if (animationConfig.AlignBasedOn == AlignBasedOn.RawSpriteSie)
+            {
+                SpriteOffset_ValueChanged(new(rawPositionX, rawPositionY));
+            }
+            else
+            {
+                List<FrameConfig> frameConfigList = animationConfig.FrameCongfigs;
+                var animationNode = TreeViewControl.SelectedNode.Parent;
+                for (int i = 0; i < animationNode.Children.Count; i++)
+                {
+                    var frameNodeContent = (animationNode.Children[i].Content as TreeItem)!;
+                    if (frameNodeContent.IsSelected)
+                    {
+                        int croppedPositionX = rawPositionX + ((FrameCoordinateEditorControl.PreviewSpriteFrames.Size.X - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Width) / 2) - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Left;
+                        int croppedPositionY = rawPositionY + (((FrameCoordinateEditorControl.PreviewSpriteFrames.Size.Y - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Height) / 2) - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Top) * -1;
+
+                        frameConfigList[i].Offset = new(croppedPositionX, croppedPositionY);
+                    }
+                }
+            }
+            RefreshOffsetFieldVisually();
+            FrameCoordinateEditorControl.UpdateVisuals();
+        }
+
+
+
+        private void OffsetXTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+        {
+
+            SpriteOffset_ValueChanged(new(double.IsNaN(sender.Value) ? 0 : (int)sender.Value, GetCurrentFrameConfig().Offset.Y));
+            FrameCoordinateEditorControl.UpdateVisuals();
+
+        }
+
+        private void OffsetYTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+        {
+            SpriteOffset_ValueChanged(new IntVector2(GetCurrentFrameConfig().Offset.X, double.IsNaN(sender.Value) ? 0 : (int)sender.Value));
+            FrameCoordinateEditorControl.UpdateVisuals();
+
+        }
+
+        private void BasedOnRadioButtons_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            GetCurrentFrameAnimationConfig().AlignBasedOn = (AlignBasedOn)(sender as RadioButtons)!.SelectedIndex;
+        }
+
+        private void DirectionNumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+        {
+            GetCurrentFrameAnimationConfig().Direction = double.IsNaN(sender.Value) ? 90 : (float)sender.Value;
+        }
+
+        private void SpeedNumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+        {
+            GetCurrentFrameAnimationConfig().Speed = double.IsNaN(sender.Value) ? 0 : (float)sender.Value;
         }
 
         private void SpriteOffset_ValueChanged(IntVector2 intVector2)
@@ -1580,9 +1824,10 @@ namespace FramesToMMSpriteResources
             {
                 currentConfig.Offset = new(currentConfig.Offset.X + intVector2.X, currentConfig.Offset.Y + intVector2.Y);
             }
+            RefreshOffsetFieldVisually();
         }
 
-        private void OffsetYTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+        private void AnimationOffsetYTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
         {
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
@@ -1590,7 +1835,7 @@ namespace FramesToMMSpriteResources
             }         
         }
 
-        private void OffsetXTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+        private void AnimationOffsetXTextBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
         {
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
@@ -1670,6 +1915,7 @@ namespace FramesToMMSpriteResources
             {
                 currentConfig.CropSprites = (sender as CheckBox)!.IsChecked!.Value;
             }
+            _animationSpriteFrame.Path = new string[3];
         }
 
         private void ClickRemoveBackground(object sender, RoutedEventArgs e)
@@ -1806,7 +2052,7 @@ namespace FramesToMMSpriteResources
             OpenSettingsAsync();
         }
 
-        private void BottomBarStackPanel_LayoutUpdated(object sender, object e)
+        private void BottomBarStackPanel_LayoutUpdated(object? sender, object e)
         {
             BottomBarStackPanel.LayoutUpdated -= BottomBarStackPanel_LayoutUpdated;
 
@@ -1942,6 +2188,7 @@ namespace FramesToMMSpriteResources
             }
 
             SaveAllConfigs();
+            UnloadFrameResources();
             ReloadTreeViewAndConfigs();
     
             IsGenerating = false;
@@ -2064,7 +2311,19 @@ namespace FramesToMMSpriteResources
                 AnimationStackPanel.Padding.Top,
                 AnimationStackPanel.Padding.Right,
                 BottomBarStackPanel.ActualHeight + 12 * 2);
-        }
+
+            CanvasBorder.Margin = new Thickness(
+                CanvasBorder.Margin.Left,
+                CanvasBorder.Margin.Top,
+                CanvasBorder.Margin.Right,
+                BottomBarStackPanel.ActualHeight + 12 * 2);
+
+            FrameConfigPanel.Padding = new Thickness(
+                FrameConfigPanel.Padding.Left,
+                FrameConfigPanel.Padding.Top,
+                FrameConfigPanel.Padding.Right,
+                BottomBarStackPanel.ActualHeight + 12 * 2);
+            }
 
         private async void ProgramDirectoryButton_Click(object sender, RoutedEventArgs e)
         {
@@ -2143,25 +2402,25 @@ namespace FramesToMMSpriteResources
                 switch (depth)
                 {
                     case ItemDepth.GameTheme:
-                        _currentConfigs = new(ProgramConfig.GameThemeConfigs!.Values);
+                        _currentConfigs = [.. ProgramConfig.GameThemeConfigs!.Values];
                         break;
 
                     case ItemDepth.Subject:
                         var gameThemeName = (selectedNode.Parent!.Content as TreeItem)!.Text;
-                        _currentConfigs = new(ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs!.Values);
+                        _currentConfigs = [.. ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs!.Values];
                         break;
 
                     case ItemDepth.Animation:
                         gameThemeName = (selectedNode.Parent!.Parent.Content as TreeItem)!.Text;
                         var subjectName = (selectedNode.Parent.Content as TreeItem)!.Text;
-                        _currentConfigs = new(ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs!.Values);
+                        _currentConfigs = [.. ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs!.Values];
                         break;
 
                     case ItemDepth.Frame:
                         gameThemeName = (selectedNode.Parent!.Parent.Parent.Content as TreeItem)!.Text;
                         subjectName = (selectedNode.Parent.Parent.Content as TreeItem)!.Text;
                         string animationName = (selectedNode.Parent.Content as TreeItem)!.Text;
-                        _currentConfigs = new(ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].FrameCongfigs!);
+                        _currentConfigs = [.. ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].FrameCongfigs!];
                         break;
                   
                     default:
@@ -2218,6 +2477,12 @@ namespace FramesToMMSpriteResources
      
             return true;
         }
+
+
+
+
+
+
 
         private void ClearAllTreeItemSelections()
         {
