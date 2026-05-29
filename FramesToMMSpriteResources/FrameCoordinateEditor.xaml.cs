@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.WindowsAppSDK.Runtime.Packages;
 using SkiaSharp;
@@ -45,6 +46,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private ResizeDirection _previewResizeDirection;
     private double _previewResizeStartWidth;
     private double _previewResizeStartHeight;
+    private double _previewResizeTargetWidth;
+    private double _previewResizeTargetHeight;
     private Vector2 _previewResizeStartPointer;
     private readonly InputCursor _resizeLeftCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeWestEast);
     private readonly InputCursor _resizeBottomCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeNorthSouth);
@@ -64,9 +67,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         Windows.System.VirtualKey.RightShift,
     ];
     private readonly DispatcherTimer _nudgeHoldTimer = new();
-    private readonly DispatcherTimer _canvasResizeTimer = new();
-    private bool _coordinateResizePending;
-    private bool _previewResizePending;
     private int _nudgeHoldTick;
     private const int NudgeHoldDelayTicks = 10;
     byte lightA, lightB;
@@ -111,9 +111,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _nudgeHoldTimer.Interval = TimeSpan.FromSeconds(1.0 / 60.0);
         _nudgeHoldTimer.Tick -= NudgeHoldTimer_Tick;
         _nudgeHoldTimer.Tick += NudgeHoldTimer_Tick;
-        _canvasResizeTimer.Interval = TimeSpan.FromSeconds(1.0 / 60.0);
-        _canvasResizeTimer.Tick -= CanvasResizeTimer_Tick;
-        _canvasResizeTimer.Tick += CanvasResizeTimer_Tick;
     
         ZoomNumberBox.Value = 100;
 
@@ -330,57 +327,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void CoordinateCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        _subjectConfig.EditorCanvas.Pan = PreserveCanvasOrigin(e.PreviousSize, e.NewSize, _subjectConfig.EditorCanvas.Pan);
-        ScheduleCoordinateCanvasRedraw();
-        UpdateZoomControls();
-    }
-
-    private void CanvasResizeTimer_Tick(object? sender, object e)
-    {
-        _canvasResizeTimer.Stop();
-
-        if (_coordinateResizePending)
-        {
-            _coordinateResizePending = false;
-            CoordinateCanvas.Invalidate();
-        }
-
-        if (_previewResizePending)
-        {
-            _previewResizePending = false;
-            AnimationPreviewCanvas.Invalidate();
-        }
-    }
-
-    private void ScheduleCoordinateCanvasRedraw()
-    {
-        _coordinateResizePending = true;
-        if (!_canvasResizeTimer.IsEnabled)
-        {
-            _canvasResizeTimer.Start();
-        }
-    }
-
-    private void SchedulePreviewCanvasRedraw()
-    {
-        _previewResizePending = true;
-        if (!_canvasResizeTimer.IsEnabled)
-        {
-            _canvasResizeTimer.Start();
-        }
-    }
-
-    private static Vector2 PreserveCanvasOrigin(Windows.Foundation.Size previousSize, Windows.Foundation.Size newSize, Vector2 pan)
-    {
-        if (previousSize.Width <= 0 || previousSize.Height <= 0 ||
-            newSize.Width <= 0 || newSize.Height <= 0)
-        {
-            return pan;
-        }
-
-        return pan + new Vector2(
-            (float)((previousSize.Width - newSize.Width) / 2.0),
-            (float)((previousSize.Height - newSize.Height) / 2.0));
+        UpdateVisuals();
     }
 
     private void CoordinateCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
@@ -644,8 +591,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void AnimationPreviewCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        _subjectConfig.PreviewCanvas.Pan = PreserveCanvasOrigin(e.PreviousSize, e.NewSize, _subjectConfig.PreviewCanvas.Pan);
-        SchedulePreviewCanvasRedraw();
+        UpdateAnimationPreviewFrame();
         //SetMaxPreviewSize();
     }
 
@@ -744,6 +690,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _previewResizeStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
         _previewResizeStartWidth = AnimationPreviewHostBorder.ActualWidth;
         _previewResizeStartHeight = AnimationPreviewHostBorder.ActualHeight;
+        _previewResizeTargetWidth = _previewResizeStartWidth;
+        _previewResizeTargetHeight = _previewResizeStartHeight;
+        AnimationPreviewHostBorder.RenderTransformOrigin = direction is ResizeDirection.Left or ResizeDirection.BottomLeft
+            ? new Windows.Foundation.Point(1, 0)
+            : new Windows.Foundation.Point(0, 0);
+        AnimationPreviewHostBorder.RenderTransform = new ScaleTransform();
         handle.CapturePointer(e.Pointer);
         e.Handled = true;
     }
@@ -770,12 +722,9 @@ public sealed partial class FrameCoordinateEditor : UserControl
             height = _previewResizeStartHeight + delta.Y;
         }
 
-        width = ClampPreviewSize(width, AnimationPreviewHostBorder.MinWidth, AnimationPreviewHostBorder.MaxWidth);
-        height = ClampPreviewSize(height, AnimationPreviewHostBorder.MinHeight, AnimationPreviewHostBorder.MaxHeight);
-
-        _subjectConfig.PreviewSize = new((float)width, (float)height);
-        AnimationPreviewHostBorder.Width = width;
-        AnimationPreviewHostBorder.Height = height;
+        _previewResizeTargetWidth = ClampPreviewSize(width, AnimationPreviewHostBorder.MinWidth, AnimationPreviewHostBorder.MaxWidth);
+        _previewResizeTargetHeight = ClampPreviewSize(height, AnimationPreviewHostBorder.MinHeight, AnimationPreviewHostBorder.MaxHeight);
+        ApplyPreviewResizeTransform();
         e.Handled = true;
     }
 
@@ -786,6 +735,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
             handle.ReleasePointerCapture(e.Pointer);
         }
 
+        CommitPreviewResize();
         _previewResizeDirection = ResizeDirection.None;
         ProtectedCursor = null;
         e.Handled = true;
@@ -800,6 +750,31 @@ public sealed partial class FrameCoordinateEditor : UserControl
         return Math.Clamp(value, min, resolvedMax);
     }
 
+    private void ApplyPreviewResizeTransform()
+    {
+        if (AnimationPreviewHostBorder.RenderTransform is not ScaleTransform scaleTransform)
+        {
+            scaleTransform = new ScaleTransform();
+            AnimationPreviewHostBorder.RenderTransform = scaleTransform;
+        }
+
+        scaleTransform.ScaleX = _previewResizeStartWidth <= 0 ? 1 : _previewResizeTargetWidth / _previewResizeStartWidth;
+        scaleTransform.ScaleY = _previewResizeStartHeight <= 0 ? 1 : _previewResizeTargetHeight / _previewResizeStartHeight;
+    }
+
+    private void CommitPreviewResize()
+    {
+        if (_previewResizeDirection == ResizeDirection.None)
+        {
+            return;
+        }
+
+        AnimationPreviewHostBorder.RenderTransform = null;
+        AnimationPreviewHostBorder.Width = _previewResizeTargetWidth;
+        AnimationPreviewHostBorder.Height = _previewResizeTargetHeight;
+        _subjectConfig.PreviewSize = new((float)_previewResizeTargetWidth, (float)_previewResizeTargetHeight);
+        UpdateAnimationPreviewFrame();
+    }
 
     private void AnimationPreviewCanvas_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
     {
