@@ -3,7 +3,6 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.WindowsAppSDK.Runtime.Packages;
 using SkiaSharp;
@@ -46,8 +45,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private ResizeDirection _previewResizeDirection;
     private double _previewResizeStartWidth;
     private double _previewResizeStartHeight;
-    private double _previewResizeTargetWidth;
-    private double _previewResizeTargetHeight;
     private Vector2 _previewResizeStartPointer;
     private readonly InputCursor _resizeLeftCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeWestEast);
     private readonly InputCursor _resizeBottomCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeNorthSouth);
@@ -690,12 +687,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _previewResizeStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
         _previewResizeStartWidth = AnimationPreviewHostBorder.ActualWidth;
         _previewResizeStartHeight = AnimationPreviewHostBorder.ActualHeight;
-        _previewResizeTargetWidth = _previewResizeStartWidth;
-        _previewResizeTargetHeight = _previewResizeStartHeight;
-        AnimationPreviewHostBorder.RenderTransformOrigin = direction is ResizeDirection.Left or ResizeDirection.BottomLeft
-            ? new Windows.Foundation.Point(1, 0)
-            : new Windows.Foundation.Point(0, 0);
-        AnimationPreviewHostBorder.RenderTransform = new ScaleTransform();
         handle.CapturePointer(e.Pointer);
         e.Handled = true;
     }
@@ -714,17 +705,18 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         if (_previewResizeDirection is ResizeDirection.Left or ResizeDirection.BottomLeft)
         {
-            width = _previewResizeStartWidth - delta.X;
+            width = Math.Max(0, _previewResizeStartWidth - delta.X);          
         }
 
         if (_previewResizeDirection is ResizeDirection.Bottom or ResizeDirection.BottomLeft)
         {
-            height = _previewResizeStartHeight + delta.Y;
+            height = Math.Max(0, _previewResizeStartHeight + delta.Y);        
         }
 
-        _previewResizeTargetWidth = ClampPreviewSize(width, AnimationPreviewHostBorder.MinWidth, AnimationPreviewHostBorder.MaxWidth);
-        _previewResizeTargetHeight = ClampPreviewSize(height, AnimationPreviewHostBorder.MinHeight, AnimationPreviewHostBorder.MaxHeight);
-        ApplyPreviewResizeTransform();
+        _subjectConfig.PreviewSize = new((float)width, (float)height);
+        AnimationPreviewHostBorder.Width = width;
+        AnimationPreviewHostBorder.Height = height;
+        UpdateAnimationPreviewFrame();
         e.Handled = true;
     }
 
@@ -735,45 +727,9 @@ public sealed partial class FrameCoordinateEditor : UserControl
             handle.ReleasePointerCapture(e.Pointer);
         }
 
-        CommitPreviewResize();
         _previewResizeDirection = ResizeDirection.None;
         ProtectedCursor = null;
         e.Handled = true;
-    }
-
-
-    private static double ClampPreviewSize(double value, double min, double max)
-    {
-        double resolvedMax = double.IsNaN(max) || double.IsInfinity(max) || max <= 0
-            ? double.PositiveInfinity
-            : max;
-        return Math.Clamp(value, min, resolvedMax);
-    }
-
-    private void ApplyPreviewResizeTransform()
-    {
-        if (AnimationPreviewHostBorder.RenderTransform is not ScaleTransform scaleTransform)
-        {
-            scaleTransform = new ScaleTransform();
-            AnimationPreviewHostBorder.RenderTransform = scaleTransform;
-        }
-
-        scaleTransform.ScaleX = _previewResizeStartWidth <= 0 ? 1 : _previewResizeTargetWidth / _previewResizeStartWidth;
-        scaleTransform.ScaleY = _previewResizeStartHeight <= 0 ? 1 : _previewResizeTargetHeight / _previewResizeStartHeight;
-    }
-
-    private void CommitPreviewResize()
-    {
-        if (_previewResizeDirection == ResizeDirection.None)
-        {
-            return;
-        }
-
-        AnimationPreviewHostBorder.RenderTransform = null;
-        AnimationPreviewHostBorder.Width = _previewResizeTargetWidth;
-        AnimationPreviewHostBorder.Height = _previewResizeTargetHeight;
-        _subjectConfig.PreviewSize = new((float)_previewResizeTargetWidth, (float)_previewResizeTargetHeight);
-        UpdateAnimationPreviewFrame();
     }
 
     private void AnimationPreviewCanvas_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
