@@ -412,8 +412,8 @@ namespace FramesToMMSpriteResources
 
                     if (gameThemeConfig.IsHd)
                     {
-                        originOffsetX = RoundAwayFromZero(originOffsetX * scaleX);
-                        originOffsetY = RoundAwayFromZero(originOffsetY * scaleY);
+                        originOffsetX = ScaleHdOffset(originOffsetX);
+                        originOffsetY = ScaleHdOffset(originOffsetY);
                     }
                     else
                     {
@@ -798,6 +798,10 @@ namespace FramesToMMSpriteResources
         }
 
         private static int EnsureEvenValue(int v) => (v % 2 == 0) ? v : v + 1;
+
+
+        private static double ScaleHdOffset(double hdPixelOffset)
+            => RoundAwayFromZero(hdPixelOffset) / 2.0;
 
         private static int RoundHalfUp(double value) => (int)Math.Floor(value + 0.5);
 
