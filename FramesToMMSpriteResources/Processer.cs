@@ -694,10 +694,11 @@ namespace FramesToMMSpriteResources
 
             var fallback = new SKBitmap(new SKImageInfo(newW, newH, source.ColorType, source.AlphaType));
             using (var canvas = new SKCanvas(fallback))
+            using (var image = SKImage.FromBitmap(source))
             using (var paint = new SKPaint { IsAntialias = false })
             {
                 canvas.Clear(SKColors.Transparent);
-                canvas.DrawBitmap(source, new SKRect(0, 0, newW, newH), new SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None), paint);
+                canvas.DrawImage(image, new SKRect(0, 0, newW, newH), new SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None), paint);
             }
             return fallback;
         }
@@ -724,6 +725,7 @@ namespace FramesToMMSpriteResources
 
             var resized = new SKBitmap(new SKImageInfo(newW, newH, source.ColorType, source.AlphaType));
             using (var canvas = new SKCanvas(resized))
+            using (var image = SKImage.FromBitmap(source))
             using (var paint = new SKPaint { IsAntialias = false })
             {
                 canvas.Clear(SKColors.Transparent);
@@ -732,7 +734,7 @@ namespace FramesToMMSpriteResources
                     (float)(top * scale - scaledTop),
                     (float)(right * scale - scaledLeft),
                     (float)(bottom * scale - scaledTop));
-                canvas.DrawBitmap(source, destRect, new SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None), paint);
+                canvas.DrawImage(image, destRect, new SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None), paint);
             }
             return resized;
         }
