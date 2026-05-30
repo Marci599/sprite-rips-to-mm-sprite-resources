@@ -17,6 +17,7 @@ using System.IO;
 using System.Linq;
 using System.Media;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text.Json;
 using System.Threading;
@@ -158,6 +159,9 @@ namespace FramesToMMSpriteResources
 
         private bool _isCtrlHeld = false;
         public bool IsCtrlHeld => _isCtrlHeld;
+
+        [DllImport("user32.dll")]
+        private static extern short GetAsyncKeyState(int vKey);
 
         private bool _isGeneratePanelShowed = true;
 
@@ -363,6 +367,7 @@ namespace FramesToMMSpriteResources
                     _waitingForSecondaryActivation = false;
            
                     _isWindowActive = false;
+                    ClearKeyboardState();
                     CheckForAllowProgramEditing();
                     cts?.Cancel();
                     ReduceFileSizeCheckBox.Click -= ReduceFileSizeCheckBox_Click;
@@ -414,6 +419,7 @@ namespace FramesToMMSpriteResources
             await Task.Delay(1);
 
             CheckForAllowProgramEditing();
+            SyncKeyboardState();
         }
 
         private async void WorkingPathTextBox_LostFocus(object sender, RoutedEventArgs e)
@@ -1550,6 +1556,11 @@ namespace FramesToMMSpriteResources
 
                     OffsetXTextBox.ValueChanged += OffsetXTextBox_ValueChanged;
                     OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
+
+                    if (_isWindowActive)
+                    {
+                        SyncKeyboardState();
+                    }
                 }
             }
         }
@@ -2311,6 +2322,37 @@ namespace FramesToMMSpriteResources
             await Windows.System.Launcher.LaunchUriAsync(new Uri("file:///" + exeDir.Replace('\\', '/')));
         }
 
+        private void ClearKeyboardState()
+        {
+            _isCtrlHeld = false;
+            FrameCoordinateEditorControl.ClearNudgeKeyState();
+        }
+
+        private void SyncKeyboardState()
+        {
+            _isCtrlHeld = IsVirtualKeyDown(Windows.System.VirtualKey.Control) ||
+                          IsVirtualKeyDown(Windows.System.VirtualKey.LeftControl) ||
+                          IsVirtualKeyDown(Windows.System.VirtualKey.RightControl);
+
+            bool isFrameEditorOpen =
+                FramePanel.Visibility == Visibility.Visible &&
+                TreeViewControl.SelectedNode != null &&
+                (TreeViewControl.SelectedNode.Content as TreeItem)!.Depth == ItemDepth.Frame &&
+                FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames.Count > 0;
+
+            if (isFrameEditorOpen)
+            {
+                FrameCoordinateEditorControl.SyncNudgeKeyState(IsVirtualKeyDown);
+            }
+            else
+            {
+                FrameCoordinateEditorControl.ClearNudgeKeyState();
+            }
+        }
+
+        private static bool IsVirtualKeyDown(Windows.System.VirtualKey key)
+            => (GetAsyncKeyState((int)key) & 0x8000) != 0;
+
         private void MainRootGrid_KeyDown(object sender, KeyRoutedEventArgs e)
         {
             if (e.Key == Windows.System.VirtualKey.R && FramePanel.Visibility == Visibility.Visible)
@@ -2337,7 +2379,8 @@ namespace FramesToMMSpriteResources
             bool isFrameEditorOpen =
                 FramePanel.Visibility == Visibility.Visible &&
                 TreeViewControl.SelectedNode != null &&
-                (TreeViewControl.SelectedNode.Content as TreeItem)!.Depth == ItemDepth.Frame;
+                (TreeViewControl.SelectedNode.Content as TreeItem)!.Depth == ItemDepth.Frame &&
+                FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames.Count > 0;
 
             if (isFrameEditorOpen && FrameCoordinateEditorControl.HandleNudgeKeyDown(e.Key))
             {

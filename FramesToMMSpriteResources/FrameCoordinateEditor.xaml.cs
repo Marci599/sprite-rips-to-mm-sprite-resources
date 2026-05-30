@@ -50,6 +50,19 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private readonly InputCursor _resizeBottomCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeNorthSouth);
     private readonly InputCursor _resizeCornerCursor = InputSystemCursor.Create(InputSystemCursorShape.SizeNortheastSouthwest);
     private readonly HashSet<Windows.System.VirtualKey> _heldNudgeKeys = [];
+    private static readonly Windows.System.VirtualKey[] NudgeTrackedKeys =
+    [
+        Windows.System.VirtualKey.W,
+        Windows.System.VirtualKey.A,
+        Windows.System.VirtualKey.S,
+        Windows.System.VirtualKey.D,
+        Windows.System.VirtualKey.Control,
+        Windows.System.VirtualKey.LeftControl,
+        Windows.System.VirtualKey.RightControl,
+        Windows.System.VirtualKey.Shift,
+        Windows.System.VirtualKey.LeftShift,
+        Windows.System.VirtualKey.RightShift,
+    ];
     private readonly DispatcherTimer _nudgeHoldTimer = new();
     private int _nudgeHoldTick;
     private const int NudgeHoldDelayTicks = 10;
@@ -297,7 +310,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
     }
 
     public void UnloadAnimation()
-    {     
+    {
+        ClearNudgeKeyState();
         LoadAnimation(new([], new(0,0)), _subjectConfig, _animationConfigName, null);
         UpdateVisuals();
     }
@@ -494,6 +508,28 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _heldNudgeKeys.Remove(key);
         UpdateNudgeMotionState(hadDirection);
         return true;
+    }
+
+    public void ClearNudgeKeyState()
+    {
+        _heldNudgeKeys.Clear();
+        _nudgeHoldTick = 0;
+        _nudgeHoldTimer.Stop();
+    }
+
+    public void SyncNudgeKeyState(Func<Windows.System.VirtualKey, bool> isKeyDown)
+    {
+        bool hadDirection = HasHeldDirectionKey();
+        _heldNudgeKeys.Clear();
+        foreach (var key in NudgeTrackedKeys)
+        {
+            if (isKeyDown(key))
+            {
+                _heldNudgeKeys.Add(key);
+            }
+        }
+
+        UpdateNudgeMotionState(hadDirection);
     }
 
     private void UpdateNudgeMotionState(bool hadDirectionBeforeChange)

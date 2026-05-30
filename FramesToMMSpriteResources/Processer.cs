@@ -18,14 +18,16 @@ namespace FramesToMMSpriteResources
         public SKBitmap Image { get; }
         public IntVector2 OriginalSize { get; }
         public IntVector2 TrimOffset { get; }
+        public IntVector2 FrameOffset { get; }
         public string AnimationName { get; }
         public JsonObject? OldFrameJson { get; }
 
-        public ProcessedSprite(SKBitmap image, IntVector2 originalSize, IntVector2 trimOffset, string animationName, JsonObject? oldFrameJson)
+        public ProcessedSprite(SKBitmap image, IntVector2 originalSize, IntVector2 trimOffset, IntVector2 frameOffset, string animationName, JsonObject? oldFrameJson)
         {
             Image = image;
             OriginalSize = originalSize;
             TrimOffset = trimOffset;
+            FrameOffset = frameOffset;
             AnimationName = animationName;
             OldFrameJson = oldFrameJson;
         }
@@ -141,11 +143,7 @@ namespace FramesToMMSpriteResources
                 int spritesCount = 0;
                 string animationPath = Path.Combine(subjectPath, "raw", animationName);
 
-                var i = 0;
-
-                var spritePaths = Directory.GetFiles(animationPath)
-    .Where(p => Path.GetExtension(p) == ".png")
-    .ToArray();
+                var spritePaths = GetOrderedSpritePaths(animationPath, animationConfig);
 
                 var localSprites = new ProcessedSprite[spritePaths.Length];
 
@@ -157,6 +155,7 @@ namespace FramesToMMSpriteResources
                 Parallel.For(0, spritePaths.Length, parallelOptions, i =>
                 {
                     var spritePath = spritePaths[i];
+                    IntVector2 frameOffset = GetFrameOffset(animationConfig, i);
 
                     SKBitmap working = SKBitmap.Decode(spritePath)
                         ?? throw new InvalidOperationException($"Failed to decode sprite: {spritePath}");
@@ -169,18 +168,13 @@ namespace FramesToMMSpriteResources
                         if (subjectConfig.ResizeToPercent != 100 && subjectConfig.ResizeToPercent > 0)
                         {
                             var scale = subjectConfig.ResizeToPercent / 100.0;
-                            int newW = Math.Max(1, (int)(working.Width * scale + 0.5));
-                            int newH = Math.Max(1, (int)(working.Height * scale + 0.5));
-
-                            if (newW != working.Width || newH != working.Height)
+                            var resized = ResizeBitmapNearestFromOrigin(working, frameOffset, scale, out IntVector2 resizedFrameOffset);
+                            if (!ReferenceEquals(resized, working))
                             {
-                                var resized = ResizeBitmapNearest(working, newW, newH);
-                                if (!ReferenceEquals(resized, working))
-                                {
-                                    working.Dispose();
-                                    working = resized;
-                                }
+                                working.Dispose();
+                                working = resized;
                             }
+                            frameOffset = resizedFrameOffset;
                         }
 
                         var originalSize = new IntVector2(working.Width, working.Height);
@@ -210,7 +204,7 @@ namespace FramesToMMSpriteResources
 
                         JsonObject? oldJson = (list != null && i < list.Count) ? list[i] : null;
 
-                        localSprites[i] = new ProcessedSprite(working, originalSize, offset, animationName, oldJson);
+                        localSprites[i] = new ProcessedSprite(working, originalSize, offset, frameOffset, animationName, oldJson);
                         working = null;
                     }
                     finally
@@ -380,30 +374,46 @@ namespace FramesToMMSpriteResources
                     int trimTop = trim.Y;
                     int originalWidth = orig.X;
                     int originalHeight = orig.Y;
-
-                    if (!recover.X)
+                    int visibleWidth = (int)Math.Abs(rightScaled - leftScaled);
+                    int visibleHeight = (int)Math.Abs(bottomScaled - topScaled);
+                    if (gameThemeConfig.IsHd)
                     {
-                        trimLeft = 0;
-                        originalWidth = (int)Math.Abs(rightScaled - leftScaled);
-                        if (gameThemeConfig.IsHd) originalWidth *= 2;
+                        visibleWidth *= 2;
+                        visibleHeight *= 2;
                     }
-                    if (!recover.Y)
+
+                    double originOffsetX;
+                    if (recover.X)
                     {
-                        trimTop = 0;
-                        originalHeight = (int)Math.Abs(bottomScaled - topScaled);
-                        if (gameThemeConfig.IsHd) originalHeight *= 2;
+                        originOffsetX = -sprite.FrameOffset.X - trimLeft;
+                    }
+                    else
+                    {
+                        double defaultFrameOffsetX = -(originalWidth / 2.0);
+                        double frameOffsetDeltaX = sprite.FrameOffset.X - defaultFrameOffsetX;
+                        originOffsetX = visibleWidth / 2.0 - frameOffsetDeltaX;
+                    }
+
+                    double originOffsetY;
+                    if (recover.Y)
+                    {
+                        originOffsetY = sprite.FrameOffset.Y - trimTop;
+                    }
+                    else
+                    {
+                        double defaultFrameOffsetY = originalHeight;
+                        double frameOffsetDeltaY = sprite.FrameOffset.Y - defaultFrameOffsetY;
+                        originOffsetY = visibleHeight - frameOffsetDeltaY;
                     }
 
                     var extra = animConfig.Offset;
-                    double originOffsetX = originalWidth / 2.0 - trimLeft;
-                    double originOffsetY = originalHeight - trimTop;
-                    originOffsetX += extra.Value.X;
-                    originOffsetY += extra.Value.Y;
+                    originOffsetX += extra?.X ?? 0;
+                    originOffsetY += extra?.Y ?? 0;
 
                     if (gameThemeConfig.IsHd)
                     {
-                        originOffsetX = RoundAwayFromZero(originOffsetX * scaleX);
-                        originOffsetY = RoundAwayFromZero(originOffsetY * scaleY);
+                        originOffsetX = ScaleHdOffset(originOffsetX);
+                        originOffsetY = ScaleHdOffset(originOffsetY);
                     }
                     else
                     {
@@ -638,6 +648,40 @@ namespace FramesToMMSpriteResources
             ColorHelper.RemoveColorWithThresholdInPlace(src, r, g, b, a, subjectConfig.ColorTreshold);
         }
 
+
+
+        private static string[] GetOrderedSpritePaths(string animationPath, AnimationConfig animationConfig)
+        {
+            if (animationConfig.FrameCongfigs != null && animationConfig.FrameCongfigs.Count > 0)
+            {
+                var orderedPaths = animationConfig.FrameCongfigs
+                    .Where(frameConfig => !string.IsNullOrWhiteSpace(frameConfig.Name))
+                    .Select(frameConfig => Path.Combine(animationPath, $"{frameConfig.Name}.png"))
+                    .Where(File.Exists)
+                    .ToArray();
+
+                if (orderedPaths.Length > 0)
+                    return orderedPaths;
+            }
+
+            return Directory.GetFiles(animationPath)
+                .Where(p => string.Equals(Path.GetExtension(p), ".png", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        private static IntVector2 GetFrameOffset(AnimationConfig animationConfig, int frameIndex)
+        {
+            if (animationConfig.FrameCongfigs != null &&
+                frameIndex >= 0 &&
+                frameIndex < animationConfig.FrameCongfigs.Count)
+            {
+                return animationConfig.FrameCongfigs[frameIndex].Offset;
+            }
+
+            return new IntVector2(0, 0);
+        }
+
         private static SKBitmap ResizeBitmapNearest(SKBitmap source, int newW, int newH)
         {
             if (newW == source.Width && newH == source.Height)
@@ -650,11 +694,49 @@ namespace FramesToMMSpriteResources
 
             var fallback = new SKBitmap(new SKImageInfo(newW, newH, source.ColorType, source.AlphaType));
             using (var canvas = new SKCanvas(fallback))
+            using (var image = SKImage.FromBitmap(source))
+            using (var paint = new SKPaint { IsAntialias = false })
             {
                 canvas.Clear(SKColors.Transparent);
-                canvas.DrawBitmap(source, new SKRect(0, 0, newW, newH));
+                canvas.DrawImage(image, new SKRect(0, 0, newW, newH), new SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None), paint);
             }
             return fallback;
+        }
+
+
+        private static SKBitmap ResizeBitmapNearestFromOrigin(SKBitmap source, IntVector2 frameOffset, double scale, out IntVector2 resizedFrameOffset)
+        {
+            double left = frameOffset.X;
+            double top = -frameOffset.Y;
+            double right = left + source.Width;
+            double bottom = top + source.Height;
+
+            int scaledLeft = RoundHalfUp(left * scale);
+            int scaledTop = RoundHalfUp(top * scale);
+            int scaledRight = RoundHalfUp(right * scale);
+            int scaledBottom = RoundHalfUp(bottom * scale);
+
+            int newW = Math.Max(1, scaledRight - scaledLeft);
+            int newH = Math.Max(1, scaledBottom - scaledTop);
+            resizedFrameOffset = new IntVector2(scaledLeft, -scaledTop);
+
+            if (scale == 1.0 && newW == source.Width && newH == source.Height && resizedFrameOffset == frameOffset)
+                return source;
+
+            var resized = new SKBitmap(new SKImageInfo(newW, newH, source.ColorType, source.AlphaType));
+            using (var canvas = new SKCanvas(resized))
+            using (var image = SKImage.FromBitmap(source))
+            using (var paint = new SKPaint { IsAntialias = false })
+            {
+                canvas.Clear(SKColors.Transparent);
+                var destRect = new SKRect(
+                    (float)(left * scale - scaledLeft),
+                    (float)(top * scale - scaledTop),
+                    (float)(right * scale - scaledLeft),
+                    (float)(bottom * scale - scaledTop));
+                canvas.DrawImage(image, destRect, new SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None), paint);
+            }
+            return resized;
         }
 
         private static (SKBitmap cropped, IntVector2 offset) TrimColor(SKBitmap src)
@@ -716,6 +798,10 @@ namespace FramesToMMSpriteResources
         }
 
         private static int EnsureEvenValue(int v) => (v % 2 == 0) ? v : v + 1;
+
+
+        private static double ScaleHdOffset(double hdPixelOffset)
+            => RoundAwayFromZero(hdPixelOffset) / 2.0;
 
         private static int RoundHalfUp(double value) => (int)Math.Floor(value + 0.5);
 
