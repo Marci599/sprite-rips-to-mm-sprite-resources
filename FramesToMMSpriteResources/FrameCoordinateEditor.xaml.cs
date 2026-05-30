@@ -1044,6 +1044,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void ApplyHeldNudgeKeys()
     {
+        if (MainWindow.IsCtrlHeld) return;
+
         int dx = (_heldNudgeKeys.Contains(Windows.System.VirtualKey.D) ? 1 : 0) -
                  (_heldNudgeKeys.Contains(Windows.System.VirtualKey.A) ? 1 : 0);
         int dy = (_heldNudgeKeys.Contains(Windows.System.VirtualKey.W) ? 1 : 0) -

@@ -21,6 +21,9 @@ namespace FramesToMMSpriteResources
         [JsonPropertyName("delay")]
         public int Delay = 1;
 
+        [JsonPropertyName("loop_type")]
+        public int LoopType = 0;
+
         [JsonPropertyName("offset")]
         public Vector2? Offset;
 

@@ -29,7 +29,7 @@ using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
 
-//TODO: CONTROL DETECT STUCK WHEN UNFOCUSING WINDOW
+//TODO: WHEN THERE IS A NODE SAVED AS SELECTED, BUT THE FOLDER/SPRITE GETS REMOVED, PROGRAM CRASHES
 namespace FramesToMMSpriteResources
 {
     public enum ItemDepth
@@ -157,8 +157,8 @@ namespace FramesToMMSpriteResources
         private readonly int _fadeOutMs = 50;
         private readonly int _fadeInMs = 100;
 
-        private bool _isCtrlHeld = false;
-        public bool IsCtrlHeld => _isCtrlHeld;
+        private static bool _isCtrlHeld = false;
+        public static bool IsCtrlHeld => _isCtrlHeld;
 
         [DllImport("user32.dll")]
         private static extern short GetAsyncKeyState(int vKey);
@@ -643,7 +643,7 @@ namespace FramesToMMSpriteResources
                     OpenSettingsAndHideGeneratePanelImmediately();
                     if (!string.IsNullOrWhiteSpace(ProgramConfig.WorkingPath))
                     {
-                        SetInfoBar(InfoBarSeverity.Error, "Wrong hierarchy or missing folders", "The way you've set your files and folders up is wrong... Do you have the \"raw\" folders inside the animation folders?", false);
+                        SetInfoBar(InfoBarSeverity.Error, "Wrong hierarchy or missing folders", "The way you've set your files and folders up is wrong... Do you have the \"raw\" folders inside the subject folders?", false);
                     }
                 }
             }
@@ -1348,6 +1348,9 @@ namespace FramesToMMSpriteResources
             RecoverYCheckBox.IsChecked = animationConfig.RecoverCroppedOffset.Y;
 
             DelayTextBox.Text = animationConfig.Delay.ToString();
+
+            LoopTypeComboBox.SelectedIndex = animationConfig.LoopType;
+
             AnimationOffsetXTextBox.Text = animationConfig.Offset.Value.X.ToString();
             AnimationOffsetYTextBox.Text = animationConfig.Offset.Value.Y.ToString();
 
@@ -1356,6 +1359,9 @@ namespace FramesToMMSpriteResources
             RecoverYCheckBox.Click += ClickRecoverYCheckBox;
 
             DelayTextBox.ValueChanged += DelayTextBox_ValueChanged;
+
+            LoopTypeComboBox.SelectionChanged += LoopTypeComboBox_SelectionChanged;
+
             AnimationOffsetXTextBox.ValueChanged += AnimationOffsetXTextBox_ValueChanged;
             AnimationOffsetYTextBox.ValueChanged += AnimationOffsetYTextBox_ValueChanged;
         }
@@ -1583,6 +1589,7 @@ namespace FramesToMMSpriteResources
             RecoverYCheckBox.Click -= ClickRecoverYCheckBox;
 
             DelayTextBox.ValueChanged -= DelayTextBox_ValueChanged;
+            LoopTypeComboBox.SelectionChanged -= LoopTypeComboBox_SelectionChanged;
             AnimationOffsetXTextBox.ValueChanged -= AnimationOffsetXTextBox_ValueChanged;
             AnimationOffsetYTextBox.ValueChanged -= AnimationOffsetYTextBox_ValueChanged;
 
@@ -1839,6 +1846,14 @@ namespace FramesToMMSpriteResources
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
                 currentConfig.Delay = double.IsNaN(sender.Value) ? 1 : (int)sender.Value;
+            }
+        }
+
+        private void LoopTypeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            foreach (AnimationConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.LoopType = (sender as ComboBox).SelectedIndex;
             }
         }
 

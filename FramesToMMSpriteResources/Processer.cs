@@ -221,7 +221,8 @@ namespace FramesToMMSpriteResources
                 {
                     ["name"] = animationName,
                     ["frames"] = frameRange,
-                    ["delay"] = animationConfig.Delay
+                    ["delay"] = animationConfig.Delay,
+                    ["loopType"] = animationConfig.LoopType
                 });
                 frameIndex += spritesCount;
             }
@@ -438,8 +439,9 @@ namespace FramesToMMSpriteResources
                 var name = anim["name"].ToString();
                 var framesList = (List<int>)anim["frames"];
                 var delay = Convert.ToInt32(anim["delay"]);
+                var loopType = Convert.ToInt32(anim["loopType"]);
                 var frameStr = string.Join(",", framesList);
-                named.Add(new JsonObject { ["Name"] = name, ["Frames"] = frameStr, ["Delay"] = delay });
+                named.Add(new JsonObject { ["Name"] = name, ["Frames"] = frameStr, ["Delay"] = delay, ["LoopType"] = loopType });
             }
 
             return new JsonObject

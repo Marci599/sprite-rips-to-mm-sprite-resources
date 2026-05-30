@@ -189,7 +189,7 @@
                                                     <TextBlock Text="If already transparent, leave it blank" Style="{StaticResource HelperTextStyle}"/>
                                                 </StackPanel>
 
-                                                <NumberBox x:Name="ThresholdTextBox" PlaceholderText="100" Header="Color threshold" Minimum="0" Maximum="999999" SpinButtonPlacementMode="Inline"/>
+                                                <NumberBox x:Name="ThresholdTextBox" PlaceholderText="100" Header="Color threshold" Minimum="0" Maximum="999" SpinButtonPlacementMode="Inline"/>
 
                                                 <CheckBox x:Name="RemoveBackgroundCheckBox" Content="Remove background"/>
                                                 <StackPanel Spacing="4">
@@ -232,8 +232,12 @@
                                     </StackPanel>
 
                                     <NumberBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay" MaxWidth="1000" Minimum="-1" Maximum="999999" SpinButtonPlacementMode="Inline"/>
+                                    <ComboBox x:Name="LoopTypeComboBox" Header="Loop mode" HorizontalAlignment="Stretch"  MaxWidth="1000">
+                                        <x:String>Default</x:String>
+                                        <x:String>Loop</x:String>
+                                        <x:String>No loop</x:String>
+                                    </ComboBox>
 
-             
                                     <Expander HorizontalAlignment="Stretch"
                                         HorizontalContentAlignment="Stretch"
                                         MaxWidth="1000"
