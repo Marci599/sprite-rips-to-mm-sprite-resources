@@ -371,7 +371,8 @@ namespace FramesToMMSpriteResources
                     CheckForAllowProgramEditing();
                     cts?.Cancel();
                     ReduceFileSizeCheckBox.Click -= ReduceFileSizeCheckBox_Click;
-                    WorkingPathTextBox.TextChanged -= WorkingPathTextBox_LostFocus;
+                    WorkingPathTextBox.TextChanged -= WorkingPathTextBox_TextChanged;
+                    GeneratePathTextBox.TextChanged -= GeneratePathTextBox_TextChanged;
                     FrameCoordinateEditorControl.UnloadAnimation();
 
                     await Task.Delay(30);
@@ -407,13 +408,17 @@ namespace FramesToMMSpriteResources
 
             ReduceFileSizeCheckBox.IsChecked = ProgramConfig.ReduceFileSize;
             WorkingPathTextBox.Text = ProgramConfig.WorkingPath;
+            GeneratePathTextBox.Text = ProgramConfig.GeneratePath;
 
             ReduceFileSizeCheckBox.Click -= ReduceFileSizeCheckBox_Click;
             ReduceFileSizeCheckBox.Click += ReduceFileSizeCheckBox_Click;
 
-            WorkingPathTextBox.TextChanged -= WorkingPathTextBox_LostFocus;
-            WorkingPathTextBox.TextChanged += WorkingPathTextBox_LostFocus;
-   
+            WorkingPathTextBox.TextChanged -= WorkingPathTextBox_TextChanged;
+            WorkingPathTextBox.TextChanged += WorkingPathTextBox_TextChanged;
+
+            GeneratePathTextBox.TextChanged -= GeneratePathTextBox_TextChanged;
+            GeneratePathTextBox.TextChanged += GeneratePathTextBox_TextChanged;
+
             _isWindowActive = true;
 
             await Task.Delay(1);
@@ -422,12 +427,20 @@ namespace FramesToMMSpriteResources
             SyncKeyboardState();
         }
 
-        private async void WorkingPathTextBox_LostFocus(object sender, RoutedEventArgs e)
+        private async void WorkingPathTextBox_TextChanged(object sender, RoutedEventArgs e)
         {
             SaveAllConfigs();
             ProgramConfig.WorkingPath = (sender as TextBox)!.Text;
             FrameCoordinateEditorControl.UnloadAnimation();
             ReloadTreeViewAndConfigs();
+        }
+
+        private async void GeneratePathTextBox_TextChanged(object sender, RoutedEventArgs e)
+        {
+
+            ProgramConfig.GeneratePath = (sender as TextBox)!.Text;
+
+ 
         }
 
         private void ReduceFileSizeCheckBox_Click(object sender, RoutedEventArgs e)
@@ -459,9 +472,9 @@ namespace FramesToMMSpriteResources
             }
             else
             {
-                ProgramConfig.IsHd = ProgramConfig.GameThemeConfigs!["Game Theme"].IsHd;
+                ProgramConfig.IsHd = ProgramConfig.GameThemeConfigs!["Assets"].IsHd;
                 SaveProgramConfig();
-                SaveSubjects(WorkingPath, "Game Theme");
+                SaveSubjects(WorkingPath, "Assets");
             }
         }
 
@@ -471,18 +484,22 @@ namespace FramesToMMSpriteResources
             foreach (var subjectDir in subjectDirs)
             {
                 string subjectName = Path.GetFileName(subjectDir);
-                var subjectConfigPath = Path.Combine(subjectDir, CONFIG_FILENAME);
-
-                SaveJson(subjectConfigPath, ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName]);
-
-                var animationDirs = Directory.GetDirectories(Path.Combine(subjectDir, "raw"));
-                foreach (var animationDir in animationDirs)
+                if (subjectName != "_generated")
                 {
-                    string animationName = Path.GetFileName(animationDir);
-                    var animationConfigPath = Path.Combine(animationDir, CONFIG_FILENAME);
+                    var subjectConfigPath = Path.Combine(subjectDir, CONFIG_FILENAME);
 
-                    SaveJson(animationConfigPath, ProgramConfig.GameThemeConfigs[gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName]);
+                    SaveJson(subjectConfigPath, ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName]);
+
+                    var animationDirs = Directory.GetDirectories(subjectDir);
+                    foreach (var animationDir in animationDirs)
+                    {
+                        string animationName = Path.GetFileName(animationDir);
+                        var animationConfigPath = Path.Combine(animationDir, CONFIG_FILENAME);
+
+                        SaveJson(animationConfigPath, ProgramConfig.GameThemeConfigs[gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName]);
+                    }
                 }
+                
             }
         }
 
@@ -612,6 +629,7 @@ namespace FramesToMMSpriteResources
 
                 foreach (var gameThemeDir in gameThemeDirs)
                 {
+                    Debug.WriteLine("HERERERE");
                     string gameThemeName = Path.GetFileName(gameThemeDir);
 
                     var gameThemeConfigPath = Path.Combine(gameThemeDir, CONFIG_FILENAME);
@@ -629,7 +647,7 @@ namespace FramesToMMSpriteResources
                     ProgramConfig.SelectedNodePath ??= [];
                     GameThemeConfig gameThemeConfig = new(ProgramConfig.IsHd, true);
 
-                    SetUpSubjectTreeViewAndConfigs(WorkingPath, "Game Theme", gameThemeConfig);
+                    SetUpSubjectTreeViewAndConfigs(WorkingPath, "Assets", gameThemeConfig);
 
                     ChangeEditorPanel();
                 }
@@ -643,7 +661,7 @@ namespace FramesToMMSpriteResources
                     OpenSettingsAndHideGeneratePanelImmediately();
                     if (!string.IsNullOrWhiteSpace(ProgramConfig.WorkingPath))
                     {
-                        SetInfoBar(InfoBarSeverity.Error, "Wrong hierarchy or missing folders", "The way you've set your files and folders up is wrong... Do you have the \"raw\" folders inside the subject folders?", false);
+                        SetInfoBar(InfoBarSeverity.Error, "Wrong hierarchy or missing folders", "The way you've set your files and folders up is wrong...", false);
                     }
                 }
             }
@@ -669,141 +687,145 @@ namespace FramesToMMSpriteResources
         {
             var gameThemeTreeItem = new TreeViewNode { Content = new TreeItem(gameThemeName, ItemDepth.GameTheme), IsExpanded = gameThemeConfig.IsExpanded };
 
-            var subjectDirs = Directory.GetDirectories(gameThemeDir);         
+            var subjectDirs = Directory.GetDirectories(gameThemeDir);
 
             foreach (var subjectDir in subjectDirs)
             {
                 string subjectName = Path.GetFileName(subjectDir);
-
-                var subjectConfigPath = Path.Combine(subjectDir, CONFIG_FILENAME);
-                SubjectConfig subjectConfig = LoadJson<SubjectConfig>(subjectConfigPath);
-
-                var subjectTreeItem = new TreeViewNode { Content = new TreeItem(subjectName, ItemDepth.Subject), IsExpanded = subjectConfig.IsExpanded };
-
-                var animationDirs = Directory.GetDirectories(Path.Combine(subjectDir, "raw"));
-                int framesSum = 0;
-                foreach (var animationDir in animationDirs)
+                if (subjectName != "_generated")
                 {
-                    string animationName = Path.GetFileName(animationDir);
+                    var subjectConfigPath = Path.Combine(subjectDir, CONFIG_FILENAME);
+                    SubjectConfig subjectConfig = LoadJson<SubjectConfig>(subjectConfigPath);
 
-                    var animationConfigPath = Path.Combine(animationDir, CONFIG_FILENAME);
-                    AnimationConfig animationConfig = LoadJson<AnimationConfig>(animationConfigPath);         
+                    var subjectTreeItem = new TreeViewNode { Content = new TreeItem(subjectName, ItemDepth.Subject), IsExpanded = subjectConfig.IsExpanded };
 
-                    var frameFiles = Directory.GetFiles(animationDir);
-                    var fileCount = frameFiles.Length;
-                    
-                    if (File.Exists(animationConfigPath))
+                    var animationDirs = Directory.GetDirectories(subjectDir);
+                    int framesSum = 0;
+                    foreach (var animationDir in animationDirs)
                     {
-                        fileCount--;
-                    }
+                        string animationName = Path.GetFileName(animationDir);
 
-                    framesSum += fileCount;
-                    TreeItem treeItem;
 
-                    if(animationConfig.GeneratedFrameCount == -1)
-                    {
-                        animationConfig.GeneratedFrameCount = fileCount;
-                    }
+                        var animationConfigPath = Path.Combine(animationDir, CONFIG_FILENAME);
+                        AnimationConfig animationConfig = LoadJson<AnimationConfig>(animationConfigPath);
 
-                    if (animationConfig.GeneratedFrameCount == fileCount)
-                    {
-                        treeItem = new(animationName, ItemDepth.Animation, fileCount);
-                    }
-                    else
-                    {
-                        treeItem = new(animationName, ItemDepth.Animation, animationConfig.GeneratedFrameCount, fileCount);
-                    }
-                    
-                    var animationTreeItem = new TreeViewNode { Content = treeItem, IsExpanded = animationConfig.IsExpanded};
-                    
-                    int frameIndex = 0;
+                        var frameFiles = Directory.GetFiles(animationDir);
+                        var fileCount = frameFiles.Length;
 
-                    animationConfig.FrameCongfigs ??= [];
-
-                    foreach (var frameFile in frameFiles)
-                    {
-                        if(Path.GetExtension(frameFile) != ".json")
+                        if (File.Exists(animationConfigPath))
                         {
-                            string fileName = Path.GetFileNameWithoutExtension(frameFile);
-                            if (frameIndex < animationConfig.FrameCongfigs.Count)
+                            fileCount--;
+                        }
+
+                        framesSum += fileCount;
+                        TreeItem treeItem;
+
+                        if (animationConfig.GeneratedFrameCount == -1)
+                        {
+                            animationConfig.GeneratedFrameCount = fileCount;
+                        }
+
+                        if (animationConfig.GeneratedFrameCount == fileCount)
+                        {
+                            treeItem = new(animationName, ItemDepth.Animation, fileCount);
+                        }
+                        else
+                        {
+                            treeItem = new(animationName, ItemDepth.Animation, animationConfig.GeneratedFrameCount, fileCount);
+                        }
+
+                        var animationTreeItem = new TreeViewNode { Content = treeItem, IsExpanded = animationConfig.IsExpanded };
+
+                        int frameIndex = 0;
+
+                        animationConfig.FrameCongfigs ??= [];
+
+                        foreach (var frameFile in frameFiles)
+                        {
+                            if (Path.GetExtension(frameFile) != ".json")
                             {
-                                animationConfig.FrameCongfigs[frameIndex].Name = fileName;                                                
-                            }
-                            else
-                            {
-                                animationConfig.FrameCongfigs.Add(new FrameConfig(fileName));
-                            }
-
-                            string frameName = frameIndex.ToString("D3");
-                            TreeItem frameTreeItem = new(frameName, ItemDepth.Frame);
-                            var frameTreeViewNode = new TreeViewNode { Content = frameTreeItem };
-
-                            animationTreeItem.Children.Add(frameTreeViewNode);
-
-                            if (ProgramConfig.SelectedNodes != null &&
-                                ProgramConfig.SelectedNodePath!.Count == 3 &&
-                                ProgramConfig.SelectedNodePath[0] == gameThemeName &&
-                                ProgramConfig.SelectedNodePath[1] == subjectName &&
-                                ProgramConfig.SelectedNodePath[2] == animationName &&
-                                ProgramConfig.SelectedNodes.Contains(frameName))
-                            {
-
-                                TreeViewControl.SelectedNode = frameTreeViewNode;
-                                GetSelectedTreeItem().IsSelected = true;
-                                TreeViewControl.SelectedNode = null;
-
-                                if (ProgramConfig.SelectedNodes.Last() == frameName)
+                                string fileName = Path.GetFileNameWithoutExtension(frameFile);
+                                if (frameIndex < animationConfig.FrameCongfigs.Count)
                                 {
-                                    lastSelectedNode = frameTreeViewNode;
+                                    animationConfig.FrameCongfigs[frameIndex].Name = fileName;
                                 }
+                                else
+                                {
+                                    animationConfig.FrameCongfigs.Add(new FrameConfig(fileName));
+                                }
+
+                                string frameName = frameIndex.ToString("D3");
+                                TreeItem frameTreeItem = new(frameName, ItemDepth.Frame);
+                                var frameTreeViewNode = new TreeViewNode { Content = frameTreeItem };
+
+                                animationTreeItem.Children.Add(frameTreeViewNode);
+
+                                if (ProgramConfig.SelectedNodes != null &&
+                                    ProgramConfig.SelectedNodePath!.Count == 3 &&
+                                    ProgramConfig.SelectedNodePath[0] == gameThemeName &&
+                                    ProgramConfig.SelectedNodePath[1] == subjectName &&
+                                    ProgramConfig.SelectedNodePath[2] == animationName &&
+                                    ProgramConfig.SelectedNodes.Contains(frameName))
+                                {
+
+                                    TreeViewControl.SelectedNode = frameTreeViewNode;
+                                    GetSelectedTreeItem().IsSelected = true;
+                                    TreeViewControl.SelectedNode = null;
+
+                                    if (ProgramConfig.SelectedNodes.Last() == frameName)
+                                    {
+                                        lastSelectedNode = frameTreeViewNode;
+                                    }
+                                }
+                                frameIndex++;
                             }
-                            frameIndex++;
+                        }
+
+                        subjectConfig.AnimationConfigs![animationName] = animationConfig;
+                        subjectTreeItem.Children.Add(animationTreeItem);
+
+                        if (ProgramConfig.SelectedNodes != null &&
+                            ProgramConfig.SelectedNodePath!.Count == 2 &&
+                            ProgramConfig.SelectedNodePath[0] == gameThemeName &&
+                            ProgramConfig.SelectedNodePath[1] == subjectName &&
+                            ProgramConfig.SelectedNodes.Contains(animationName))
+                        {
+
+                            TreeViewControl.SelectedNode = animationTreeItem;
+                            GetSelectedTreeItem().IsSelected = true;
+                            TreeViewControl.SelectedNode = null;
+
+                            if (ProgramConfig.SelectedNodes.Last() == animationName)
+                            {
+                                lastSelectedNode = animationTreeItem;
+                            }
                         }
                     }
 
-                    subjectConfig.AnimationConfigs![animationName] = animationConfig;
-                    subjectTreeItem.Children.Add(animationTreeItem);
+                    (subjectTreeItem.Content as TreeItem)!.Count = framesSum;
+                    (subjectTreeItem.Content as TreeItem)!.CountText = framesSum.ToString();
 
-                    if (ProgramConfig.SelectedNodes != null &&
-                        ProgramConfig.SelectedNodePath!.Count == 2 &&
-                        ProgramConfig.SelectedNodePath[0] == gameThemeName &&
-                        ProgramConfig.SelectedNodePath[1] == subjectName &&
-                        ProgramConfig.SelectedNodes.Contains(animationName))
+                    gameThemeConfig.SubjectConfigs![subjectName] = subjectConfig;
+
+                    gameThemeTreeItem.Children.Add(subjectTreeItem);
+
+                    if (ProgramConfig.SelectedNodePath != null &&
+                    ProgramConfig.SelectedNodes != null &&
+                    ProgramConfig.SelectedNodePath.Count == 1 &&
+                    ProgramConfig.SelectedNodePath[0] == gameThemeName &&
+                    ProgramConfig.SelectedNodes.Contains(subjectName))
                     {
-
-                        TreeViewControl.SelectedNode = animationTreeItem;
+                        TreeViewControl.SelectedNode = subjectTreeItem;
                         GetSelectedTreeItem().IsSelected = true;
                         TreeViewControl.SelectedNode = null;
 
-                        if (ProgramConfig.SelectedNodes.Last() == animationName)
+                        if (ProgramConfig.SelectedNodes.Last() == subjectName)
                         {
-                            lastSelectedNode = animationTreeItem;
+                            lastSelectedNode = subjectTreeItem;
                         }
                     }
                 }
 
-                (subjectTreeItem.Content as TreeItem)!.Count = framesSum;
-                (subjectTreeItem.Content as TreeItem)!.CountText = framesSum.ToString();
-
-                gameThemeConfig.SubjectConfigs![subjectName] = subjectConfig;
-
-                gameThemeTreeItem.Children.Add(subjectTreeItem);
-
-                if (ProgramConfig.SelectedNodePath != null &&
-                ProgramConfig.SelectedNodes != null &&
-                ProgramConfig.SelectedNodePath.Count == 1 &&
-                ProgramConfig.SelectedNodePath[0] == gameThemeName &&
-                ProgramConfig.SelectedNodes.Contains(subjectName))
-                {
-                    TreeViewControl.SelectedNode = subjectTreeItem;
-                    GetSelectedTreeItem().IsSelected = true;
-                    TreeViewControl.SelectedNode = null;
-
-                    if (ProgramConfig.SelectedNodes.Last() == subjectName)
-                    {
-                        lastSelectedNode = subjectTreeItem;
-                    }
-                }
             }
 
             ProgramConfig.GameThemeConfigs![gameThemeName] = gameThemeConfig;
@@ -822,7 +844,9 @@ namespace FramesToMMSpriteResources
                 {
                     lastSelectedNode = gameThemeTreeItem;
                 }
-            }         
+                
+
+            }
         }
 
         void UpdateBreadcrumb(params string[] items)
@@ -986,27 +1010,31 @@ namespace FramesToMMSpriteResources
         {
             try
             {
-                var firstLevelDirs = Directory.GetDirectories(path);
-                if (firstLevelDirs.Length == 0)
+                if(GetMaxSubdirectoryDepth(path) == 2)
                 {
-                    return false;
+                    return true;
                 }
 
-                foreach (var first in firstLevelDirs)
-                {
-                    var rawPath = Path.Combine(first, "raw");
-                    if (!Directory.Exists(rawPath))
-                    {
-                        return false;
-                    }
-                }
-
-                return true;
+                return false;
             }
             catch
             {
                 return false;
             }
+        }
+
+        static int GetMaxSubdirectoryDepth(string path, int currentDepth = 0)
+        {
+           
+            var subdirectories = Directory.GetDirectories(path);
+
+            if (subdirectories.Length == 0)
+            {
+                return currentDepth;
+            }
+
+            return subdirectories.Max(subDir => GetMaxSubdirectoryDepth(subDir, currentDepth + 1));
+    
         }
 
         private void TreeViewControl_ItemInvoked(TreeView sender, TreeViewItemInvokedEventArgs args)
@@ -1443,7 +1471,7 @@ namespace FramesToMMSpriteResources
                 gameThemePath = WorkingPath;
             }
 
-            string animationPath = Path.Combine(gameThemePath, subjectName, "raw", animationName);
+            string animationPath = Path.Combine(gameThemePath, subjectName, animationName);
 
             if (FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames.Count == 0)
             {
@@ -2105,8 +2133,8 @@ namespace FramesToMMSpriteResources
         private void ClickGenerateHieararchy(object sender, RoutedEventArgs e)
         {
             var gameThemePath = Path.Combine(WorkingPath, "GameTheme1");
-            var subject1Path = Path.Combine(gameThemePath, "Subject1", "raw");
-            var subject2Path = Path.Combine(gameThemePath, "Subject2", "raw");
+            var subject1Path = Path.Combine(gameThemePath, "Subject1");
+            var subject2Path = Path.Combine(gameThemePath, "Subject2");
             Directory.CreateDirectory(Path.Combine(subject1Path, "Anim1"));
             Directory.CreateDirectory(Path.Combine(subject1Path, "Anim2"));
             Directory.CreateDirectory(Path.Combine(subject1Path, "Anim3"));
@@ -2186,7 +2214,20 @@ namespace FramesToMMSpriteResources
    
                 await Task.Run(async () => await Processer.StartProcessAsync(gameThemeName, subjectName));
                 stopwatch.Stop();
-                SetInfoBar(InfoBarSeverity.Success, "Successfully generated", $"You can find the spritesheet in {subjectName}/generated ({stopwatch.ElapsedMilliseconds}ms)");
+                if (string.IsNullOrWhiteSpace(ProgramConfig.GeneratePath))
+                {
+                    SetInfoBar(InfoBarSeverity.Success, "Successfully generated", $"You can find the spritesheet in _generated ({stopwatch.ElapsedMilliseconds}ms)");
+                }
+                else
+                {
+                    string generatePath = ProgramConfig.GeneratePath;
+                    if (IsUsingGameThemes)
+                    {
+                        generatePath = Path.Combine(ProgramConfig.GeneratePath, gameThemeName, "Sprite");
+                    }
+                    SetInfoBar(InfoBarSeverity.Success, "Successfully generated", $"You can find the spritesheet in {generatePath} ({stopwatch.ElapsedMilliseconds}ms)");
+                }
+                
             }
             catch (Exception er)
             {
@@ -2212,7 +2253,26 @@ namespace FramesToMMSpriteResources
             if (folder != null)
             {
                 WorkingPathTextBox.Text = folder.Path;
-                ProgramConfig.WorkingPath = folder.Path;
+  
+            }
+        }
+
+        private async void BrowseGenerateFolderButton_Click(object sender, RoutedEventArgs e)
+        {
+            var folderPicker = new FolderPicker();
+            folderPicker.FileTypeFilter.Add("*");
+
+ 
+ 
+
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            WinRT.Interop.InitializeWithWindow.Initialize(folderPicker, hwnd);
+
+            var folder = await folderPicker.PickSingleFolderAsync();
+            if (folder != null)
+            {
+                GeneratePathTextBox.Text = folder.Path;
+          
             }
         }
 
@@ -2255,7 +2315,7 @@ namespace FramesToMMSpriteResources
                                 break;
 
                             case ItemDepth.Animation:
-                                configPath = Path.Combine(WorkingPath, ((node.Parent.Parent.Content as TreeItem)!).Text, ((node.Parent.Content as TreeItem)!).Text, "raw", ((node.Content as TreeItem)!).Text);
+                                configPath = Path.Combine(WorkingPath, ((node.Parent.Parent.Content as TreeItem)!).Text, ((node.Parent.Content as TreeItem)!).Text, ((node.Content as TreeItem)!).Text);
                                 break;
 
                             case ItemDepth.Frame:
@@ -2263,7 +2323,7 @@ namespace FramesToMMSpriteResources
                                 var subjectName = (node.Parent.Parent.Content as TreeItem)!.Text;
                                 var animationName = (node.Parent.Content as TreeItem)!.Text;
                                 var frameIndex = int.Parse((node.Content as TreeItem)!.Text);
-                                configPath = Path.Combine(WorkingPath, gameThemeName, subjectName, "raw", animationName, ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].FrameCongfigs[frameIndex].Name + ".png");
+                                configPath = Path.Combine(WorkingPath, gameThemeName, subjectName, animationName, ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].FrameCongfigs[frameIndex].Name + ".png");
                                 break;
                         }
                         if (configPath != null)

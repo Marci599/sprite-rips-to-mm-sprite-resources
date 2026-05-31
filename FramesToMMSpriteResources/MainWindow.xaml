@@ -339,10 +339,28 @@
                                             <StackPanel Spacing="12">
                                                 <TextBlock Text="Align" Style="{StaticResource SectionHeaderStyle}"/>
                                                 <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                                                <RadioButtons x:Name="BasedOnRadioButtons" Header="To origin, based on" MaxColumns="2" SelectedIndex="0">
+                                                <RadioButtons x:Name="ToRadioButtons" Header="To" SelectedIndex="0">
+                                                    <RadioButton Content="Origin"/>
+                                                    <RadioButton Content="Selected frame"/>
+                                                </RadioButtons>
+                                                <RadioButtons x:Name="BasedOnRadioButtons" Header="Based on" SelectedIndex="0">
                                                     <RadioButton Content="Raw sprite size"/>
                                                     <RadioButton Content="Cropped sprite size"/>
                                                 </RadioButtons>
+                                                <StackPanel Spacing="8">
+                                                    <TextBlock Text="On"/>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <CheckBox Grid.Column="0" x:Name="Option2CheckBox" Content="X axis"/>
+                                                        <CheckBox Grid.Column="1" x:Name="Option3CheckBox" Content="Y axis"/>
+                                                    </Grid>
+                                     
+                                                </StackPanel>
+                                        
+
                                                 <Grid ColumnSpacing="10" Margin="0 0 0 0">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="*"/>
@@ -474,7 +492,22 @@
 
                                                 
                                             </StackPanel>
-                   
+
+                                            <Grid ColumnSpacing="0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox x:Name="GeneratePathTextBox" Grid.Column="0" Header="Generate path" PlaceholderText="Default" CornerRadius="4 0 0 4"/>
+                                                <Button x:Name="BrowseGenerateFolderButton" Style="{StaticResource AccentButtonStyle}" Grid.Column="1" VerticalAlignment="Bottom" Click="BrowseGenerateFolderButton_Click" CornerRadius="0 4 4 0">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <FontIcon Glyph="&#xE838;" FontSize="14"/>
+                                                        <TextBlock Text="Browse"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </Grid>
+                           
+
                                             <StackPanel Spacing="8">
                                                 <TextBlock Text="Manage program"/>
                                                 <StackPanel Orientation="Horizontal" Spacing="8">

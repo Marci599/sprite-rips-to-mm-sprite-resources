@@ -12,6 +12,9 @@ namespace FramesToMMSpriteResources
         [JsonPropertyName("working_path")]
         public string? WorkingPath;
 
+        [JsonPropertyName("generate_path")]
+        public string? GeneratePath;
+
         [JsonPropertyName("reduce_file_size")]
         public bool ReduceFileSize = false;
 

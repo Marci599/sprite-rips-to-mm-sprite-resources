@@ -74,16 +74,35 @@ namespace FramesToMMSpriteResources
                 parsedBackgroundColor = (r, g, b, a);
             }
 
-            string subjectPath = MainWindow.IsUsingGameThemes
-                ? Path.Combine(MainWindow.WorkingPath, gameThemeName, subjectName)
-                : Path.Combine(MainWindow.WorkingPath, subjectName);
 
             List<ProcessedSprite> processedSprites = new();
             List<Dictionary<string, object>> animationsMeta = new();
             int frameIndex = 0;
 
             string subPositions = string.Empty;
-            string outputDir = Path.Combine(subjectPath, "generated");
+            string outputDir;
+
+            string subjectPath = MainWindow.IsUsingGameThemes
+              ? Path.Combine(MainWindow.WorkingPath, gameThemeName, subjectName)
+              : Path.Combine(MainWindow.WorkingPath, subjectName);
+
+            if (!Path.Exists(programConfig.GeneratePath))
+            {
+                string gameThemePath = MainWindow.IsUsingGameThemes
+                ? Path.Combine(MainWindow.WorkingPath, gameThemeName)
+                : MainWindow.WorkingPath;
+
+                outputDir = Path.Combine(gameThemePath, "_generated");
+            }
+            else
+            {
+                outputDir = MainWindow.IsUsingGameThemes
+                  ? Path.Combine(programConfig.GeneratePath, gameThemeName, "Sprite")
+                  : programConfig.GeneratePath;
+   
+            }
+
+            
             string spriteFilePath = Path.Combine(outputDir, subjectName + ".sprite");
 
             JsonArray? frames = null;
@@ -141,7 +160,7 @@ namespace FramesToMMSpriteResources
                 
 
                 int spritesCount = 0;
-                string animationPath = Path.Combine(subjectPath, "raw", animationName);
+                string animationPath = Path.Combine(subjectPath, animationName);
 
                 var spritePaths = GetOrderedSpritePaths(animationPath, animationConfig);
 
@@ -236,18 +255,7 @@ namespace FramesToMMSpriteResources
             using var sheetImage = CreateSpriteSheet(processedSprites, finalPositions, canvasSize);
             var payload = ExportSpriteMetadata(processedSprites, finalPositions, canvasSize, animationsMeta, subPositions);
 
-            if (Directory.Exists(outputDir))
-            {
-                foreach (var child in Directory.EnumerateFiles(outputDir))
-                {
-                    try { File.Delete(child); }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine(ex.Message);
-                        Debug.WriteLine(ex.StackTrace);
-                    }
-                }
-            }
+ 
             Directory.CreateDirectory(outputDir);
 
             string extension = ".png";
