@@ -1372,6 +1372,7 @@ namespace FramesToMMSpriteResources
             animationConfig.Offset ??= new Vector2(0, 0);
 
             RegenerateCheckBox.IsChecked = animationConfig.Regenerate;
+            ExcludeCheckBox.IsChecked = animationConfig.Exclude;
             RecoverXCheckBox.IsChecked = animationConfig.RecoverCroppedOffset.X;
             RecoverYCheckBox.IsChecked = animationConfig.RecoverCroppedOffset.Y;
 
@@ -1383,6 +1384,7 @@ namespace FramesToMMSpriteResources
             AnimationOffsetYTextBox.Text = animationConfig.Offset.Value.Y.ToString();
 
             RegenerateCheckBox.Click += ClickRegenerateCheckBox;
+            ExcludeCheckBox.Click += ExcludeCheckBox_Click;
             RecoverXCheckBox.Click += ClickRecoverXCheckBox;
             RecoverYCheckBox.Click += ClickRecoverYCheckBox;
 
@@ -1472,7 +1474,7 @@ namespace FramesToMMSpriteResources
             }
 
             string animationPath = Path.Combine(gameThemePath, subjectName, animationName);
-
+            var animationConfig = subjectConfig.AnimationConfigs![animationName];
             if (FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames.Count == 0)
             {
                 IsLoadingFrames = true;
@@ -1481,12 +1483,13 @@ namespace FramesToMMSpriteResources
 
                 ColorHelper.TryParse(subjectConfig.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
                 SKColor backgroundSKColor = new(r, g, b, a);
+      
 
-          
+
 
                 for (int i = 0; i < node.Parent.Children.Count; i++)         
                 {
-                    FrameConfig frameConfigInLoop = subjectConfig.AnimationConfigs![animationName].FrameCongfigs[i];
+                    FrameConfig frameConfigInLoop = animationConfig.FrameCongfigs[i];
                     ct.ThrowIfCancellationRequested();
 
                     string framePath = Path.Combine(animationPath, $"{frameConfigInLoop.Name}.png");
@@ -1511,7 +1514,7 @@ namespace FramesToMMSpriteResources
 
                         tempAnimationSpriteFrames.Size = new(skb.Width, skb.Height);
 
-                        if (backgroundSKColor.Alpha != 0 && subjectConfig.RemoveBackground)
+                        if (backgroundSKColor.Alpha != 0 && subjectConfig.RemoveBackground && !animationConfig.Exclude)
                             ColorHelper.RemoveColorWithThresholdInPlace(skb, backgroundSKColor.Red, backgroundSKColor.Green, backgroundSKColor.Blue, backgroundSKColor.Alpha, subjectConfig.ColorTreshold);
 
                         var (left, top, right, bottom) = ColorHelper.RectTrimColor(skb, subjectConfig, (backgroundSKColor.Red, backgroundSKColor.Green, backgroundSKColor.Blue, backgroundSKColor.Alpha));
@@ -1555,7 +1558,7 @@ namespace FramesToMMSpriteResources
                     {
                         frameName = selectedNodeAfterContent.Text;
                         selectedIndex = int.Parse(frameName);
-                        frameConfig = subjectConfig.AnimationConfigs![animationName].FrameCongfigs[selectedIndex];
+                        frameConfig = animationConfig.FrameCongfigs[selectedIndex];
                     }
                 }
 
@@ -1573,10 +1576,12 @@ namespace FramesToMMSpriteResources
 
 
 
-                    DirectionNumberBox.Value = subjectConfig.AnimationConfigs![animationName].Direction;
-                    SpeedNumberBox.Value = subjectConfig.AnimationConfigs![animationName].Speed;
+                    DirectionNumberBox.Value = animationConfig.Direction;
+                    SpeedNumberBox.Value = animationConfig.Speed;
 
-                    BasedOnRadioButtons.SelectedIndex = (int)subjectConfig.AnimationConfigs![animationName].AlignBasedOn;
+                    BasedOnRadioButtons.SelectedIndex = (int)animationConfig.AlignBasedOn;
+                    AlignOnXAxis.IsChecked = animationConfig.AlignOnXAxis;
+                    AlignOnYAxis.IsChecked = animationConfig.AlignOnYAxis;
 
                     OffsetXTextBox.Value = frameConfig.Offset.X;
                     OffsetYTextBox.Value = frameConfig.Offset.Y;
@@ -1587,6 +1592,8 @@ namespace FramesToMMSpriteResources
                     SpeedNumberBox.ValueChanged += SpeedNumberBox_ValueChanged;
 
                     BasedOnRadioButtons.SelectionChanged += BasedOnRadioButtons_SelectionChanged;
+                    AlignOnXAxis.Click += AlignOnXAxis_Click;
+                    AlignOnYAxis.Click += AlignOnYAxis_Click;
 
                     OffsetXTextBox.ValueChanged += OffsetXTextBox_ValueChanged;
                     OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
@@ -1613,6 +1620,7 @@ namespace FramesToMMSpriteResources
             SheetHeightTextBox.ValueChanged -= SheetHeightTextBox_ValueChanged;
 
             RegenerateCheckBox.Click -= ClickRegenerateCheckBox;
+            ExcludeCheckBox.Click -= ExcludeCheckBox_Click;
             RecoverXCheckBox.Click -= ClickRecoverXCheckBox;
             RecoverYCheckBox.Click -= ClickRecoverYCheckBox;
 
@@ -1627,6 +1635,8 @@ namespace FramesToMMSpriteResources
             SpeedNumberBox.ValueChanged -= SpeedNumberBox_ValueChanged;
 
             BasedOnRadioButtons.SelectionChanged -= BasedOnRadioButtons_SelectionChanged;
+            AlignOnXAxis.Click -= AlignOnXAxis_Click;
+            AlignOnYAxis.Click -= AlignOnYAxis_Click;
 
             OffsetXTextBox.ValueChanged -= OffsetXTextBox_ValueChanged;
             OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
@@ -1719,10 +1729,17 @@ namespace FramesToMMSpriteResources
             int rawPositionX = (FrameCoordinateEditorControl.PreviewSpriteFrames.Size.X / 2) * -1;
             int rawPositionY = FrameCoordinateEditorControl.PreviewSpriteFrames.Size.Y;
             AnimationConfig animationConfig = GetCurrentFrameAnimationConfig();
+            FrameConfig frameConfig = animationConfig.FrameCongfigs[int.Parse((TreeViewControl.SelectedNode.Content as TreeItem)!.Text)];
 
             if (animationConfig.AlignBasedOn == AlignBasedOn.RawSpriteSie)
             {
-                SpriteOffset_ValueChanged(new(rawPositionX, rawPositionY));
+                int x = frameConfig.Offset.X;
+                int y = frameConfig.Offset.Y;
+                if (animationConfig.AlignOnXAxis)
+                    x = rawPositionX;
+                if (animationConfig.AlignOnYAxis)
+                    y = rawPositionY;
+                SpriteOffset_ValueChanged(new(x, y));
             }
             else
             {
@@ -1733,10 +1750,14 @@ namespace FramesToMMSpriteResources
                     var frameNodeContent = (animationNode.Children[i].Content as TreeItem)!;
                     if (frameNodeContent.IsSelected)
                     {
-                        int croppedPositionX = rawPositionX + ((FrameCoordinateEditorControl.PreviewSpriteFrames.Size.X - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Width) / 2) - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Left;
-                        int croppedPositionY = rawPositionY - (FrameCoordinateEditorControl.PreviewSpriteFrames.Size.Y - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Bottom);
+                        int x = animationConfig.FrameCongfigs[i].Offset.X;
+                        int y = animationConfig.FrameCongfigs[i].Offset.Y;
+                        if (animationConfig.AlignOnXAxis)
+                            x = rawPositionX + ((FrameCoordinateEditorControl.PreviewSpriteFrames.Size.X - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Width) / 2) - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Left;
+                        if (animationConfig.AlignOnYAxis)
+                            y = rawPositionY - (FrameCoordinateEditorControl.PreviewSpriteFrames.Size.Y - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Bottom);     
                         
-                        frameConfigList[i].Offset = new(croppedPositionX, croppedPositionY);
+                        frameConfigList[i].Offset = new(x, y);
 
                     }
                 }
@@ -1749,9 +1770,17 @@ namespace FramesToMMSpriteResources
         private void ALignTopLeftButton_Click(object sender, RoutedEventArgs e)
         {
             AnimationConfig animationConfig = GetCurrentFrameAnimationConfig();
+            FrameConfig frameConfig = animationConfig.FrameCongfigs[int.Parse((TreeViewControl.SelectedNode.Content as TreeItem)!.Text)];
             if (animationConfig.AlignBasedOn == AlignBasedOn.RawSpriteSie)
             {
-                SpriteOffset_ValueChanged(new(0, 0));
+
+                int x = frameConfig.Offset.X;
+                int y = frameConfig.Offset.Y;
+                if (animationConfig.AlignOnXAxis)
+                    x = 0;
+                if (animationConfig.AlignOnYAxis)
+                    y = 0;
+                SpriteOffset_ValueChanged(new(x, y));
             }
             else
             {
@@ -1762,10 +1791,14 @@ namespace FramesToMMSpriteResources
                     var frameNodeContent = (animationNode.Children[i].Content as TreeItem)!;
                     if (frameNodeContent.IsSelected)
                     {
-                        int croppedPositionX = 0 - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Left;
-                        int croppedPositionY = 0 + FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Top;
+                        int x = animationConfig.FrameCongfigs[i].Offset.X;
+                        int y = animationConfig.FrameCongfigs[i].Offset.Y;
+                        if (animationConfig.AlignOnXAxis)
+                            x = 0 - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Left;
+                        if (animationConfig.AlignOnYAxis)
+                            y = 0 + FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Top;
 
-                        frameConfigList[i].Offset = new(croppedPositionX, croppedPositionY);
+                        frameConfigList[i].Offset = new(x, y);
 
                     }
                 }
@@ -1780,9 +1813,16 @@ namespace FramesToMMSpriteResources
             int rawPositionX = (FrameCoordinateEditorControl.PreviewSpriteFrames.Size.X / 2) * -1;
             int rawPositionY = FrameCoordinateEditorControl.PreviewSpriteFrames.Size.Y / 2;
             AnimationConfig animationConfig = GetCurrentFrameAnimationConfig();
+            FrameConfig frameConfig = animationConfig.FrameCongfigs[int.Parse((TreeViewControl.SelectedNode.Content as TreeItem)!.Text)];
             if (animationConfig.AlignBasedOn == AlignBasedOn.RawSpriteSie)
             {
-                SpriteOffset_ValueChanged(new(rawPositionX, rawPositionY));
+                int x = frameConfig.Offset.X;
+                int y = frameConfig.Offset.Y;
+                if(animationConfig.AlignOnXAxis)
+                    x = rawPositionX;
+                if (animationConfig.AlignOnYAxis)
+                    y = rawPositionY;
+                SpriteOffset_ValueChanged(new(x, y));
             }
             else
             {
@@ -1793,10 +1833,15 @@ namespace FramesToMMSpriteResources
                     var frameNodeContent = (animationNode.Children[i].Content as TreeItem)!;
                     if (frameNodeContent.IsSelected)
                     {
-                        int croppedPositionX = rawPositionX + ((FrameCoordinateEditorControl.PreviewSpriteFrames.Size.X - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Width) / 2) - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Left;
-                        int croppedPositionY = rawPositionY + (((FrameCoordinateEditorControl.PreviewSpriteFrames.Size.Y - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Height) / 2) - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Top) * -1;
+                        int x = animationConfig.FrameCongfigs[i].Offset.X;
+                        int y = animationConfig.FrameCongfigs[i].Offset.Y;
 
-                        frameConfigList[i].Offset = new(croppedPositionX, croppedPositionY);
+                        if (animationConfig.AlignOnXAxis)
+                            x = rawPositionX + ((FrameCoordinateEditorControl.PreviewSpriteFrames.Size.X - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Width) / 2) - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Left;
+                        if (animationConfig.AlignOnYAxis)
+                            y = rawPositionY + (((FrameCoordinateEditorControl.PreviewSpriteFrames.Size.Y - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Height) / 2) - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Top) * -1;
+
+                        frameConfigList[i].Offset = new(x, y);
                     }
                 }
             }
@@ -1824,6 +1869,16 @@ namespace FramesToMMSpriteResources
         private void BasedOnRadioButtons_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             GetCurrentFrameAnimationConfig().AlignBasedOn = (AlignBasedOn)(sender as RadioButtons)!.SelectedIndex;
+        }
+
+        private void AlignOnXAxis_Click(object sender, RoutedEventArgs e)
+        {
+            GetCurrentFrameAnimationConfig().AlignOnXAxis = (sender as CheckBox)!.IsChecked!.Value;
+        }
+
+        private void AlignOnYAxis_Click(object sender, RoutedEventArgs e)
+        {
+            GetCurrentFrameAnimationConfig().AlignOnYAxis = (sender as CheckBox)!.IsChecked!.Value;
         }
 
         private void DirectionNumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
@@ -1940,6 +1995,14 @@ namespace FramesToMMSpriteResources
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
                 currentConfig.Regenerate = (sender as CheckBox)!.IsChecked!.Value;
+            }
+        }
+
+        private void ExcludeCheckBox_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (AnimationConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.Exclude = (sender as CheckBox)!.IsChecked!.Value;
             }
         }
 

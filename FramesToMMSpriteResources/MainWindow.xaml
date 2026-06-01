@@ -226,11 +226,12 @@
                         <Grid x:Name="AnimationsPanel" Visibility="Collapsed">
                             <ScrollViewer>
                                 <StackPanel x:Name="AnimationDetailPanel" Spacing="10" Padding="20 14 20 20">
+                                   
                                     <StackPanel Spacing="4" MaxWidth="1000">
                                         <CheckBox x:Name="RegenerateCheckBox" Content="Regenerate frame properties"/>
                                         <TextBlock Text="If disabled, manually modified offsets and sub-positions will remain unchanged"  Style="{StaticResource HelperTextStyle}"/>
                                     </StackPanel>
-
+                                    <CheckBox x:Name="ExcludeCheckBox" Content="Exclude from processing" MaxWidth="1000" HorizontalAlignment="Stretch"/>
                                     <NumberBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay" MaxWidth="1000" Minimum="-1" Maximum="999999" SpinButtonPlacementMode="Inline"/>
                                     <ComboBox x:Name="LoopTypeComboBox" Header="Loop mode" HorizontalAlignment="Stretch"  MaxWidth="1000">
                                         <x:String>Default</x:String>
@@ -339,11 +340,11 @@
                                             <StackPanel Spacing="12">
                                                 <TextBlock Text="Align" Style="{StaticResource SectionHeaderStyle}"/>
                                                 <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                                                <RadioButtons x:Name="ToRadioButtons" Header="To" SelectedIndex="0">
+                                                <!-- <RadioButtons x:Name="AlignToRadioButtons" Header="To" SelectedIndex="0">
                                                     <RadioButton Content="Origin"/>
                                                     <RadioButton Content="Selected frame"/>
-                                                </RadioButtons>
-                                                <RadioButtons x:Name="BasedOnRadioButtons" Header="Based on" SelectedIndex="0">
+                                                </RadioButtons> -->
+                                                <RadioButtons x:Name="BasedOnRadioButtons" Header="To origin, based on" SelectedIndex="0">
                                                     <RadioButton Content="Raw sprite size"/>
                                                     <RadioButton Content="Cropped sprite size"/>
                                                 </RadioButtons>
@@ -354,8 +355,8 @@
                                                             <ColumnDefinition Width="*"/>
                                                             <ColumnDefinition Width="*"/>
                                                         </Grid.ColumnDefinitions>
-                                                        <CheckBox Grid.Column="0" x:Name="Option2CheckBox" Content="X axis"/>
-                                                        <CheckBox Grid.Column="1" x:Name="Option3CheckBox" Content="Y axis"/>
+                                                        <CheckBox Grid.Column="0" x:Name="AlignOnXAxis" Content="X axis"/>
+                                                        <CheckBox Grid.Column="1" x:Name="AlignOnYAxis" Content="Y axis"/>
                                                     </Grid>
                                      
                                                 </StackPanel>

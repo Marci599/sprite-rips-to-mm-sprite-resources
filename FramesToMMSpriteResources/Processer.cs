@@ -179,37 +179,45 @@ namespace FramesToMMSpriteResources
                     SKBitmap working = SKBitmap.Decode(spritePath)
                         ?? throw new InvalidOperationException($"Failed to decode sprite: {spritePath}");
 
+                    var originalSize = new IntVector2(working.Width, working.Height);
+                    IntVector2 offset = new(0, 0);
                     try
                     {
-                        if (!string.IsNullOrEmpty(subjectConfig.BackgroundColor) && subjectConfig.RemoveBackground)
-                            RemoveColorWithThreshold(working);
-
-                        if (subjectConfig.ResizeToPercent != 100 && subjectConfig.ResizeToPercent > 0)
+                        if (!animationConfig.Exclude)
                         {
-                            var scale = subjectConfig.ResizeToPercent / 100.0;
-                            var resized = ResizeBitmapNearestFromOrigin(working, frameOffset, scale, out IntVector2 resizedFrameOffset);
-                            if (!ReferenceEquals(resized, working))
+                            if (!string.IsNullOrEmpty(subjectConfig.BackgroundColor) && subjectConfig.RemoveBackground)
+                                RemoveColorWithThreshold(working);
+
+                            if (subjectConfig.ResizeToPercent != 100 && subjectConfig.ResizeToPercent > 0)
                             {
-                                working.Dispose();
-                                working = resized;
+                                var scale = subjectConfig.ResizeToPercent / 100.0;
+                                var resized = ResizeBitmapNearestFromOrigin(working, frameOffset, scale, out IntVector2 resizedFrameOffset);
+                                if (!ReferenceEquals(resized, working))
+                                {
+                                    working.Dispose();
+                                    working = resized;
+                                }
+                                frameOffset = resizedFrameOffset;
+                                originalSize = new IntVector2(working.Width, working.Height);
                             }
-                            frameOffset = resizedFrameOffset;
+
+                      
+
+                            SKBitmap imgAfterTrim = working;
+                            
+
+                            if (subjectConfig.CropSprites)
+                            {
+                                (imgAfterTrim, offset) = TrimColor(working);
+                                if (!ReferenceEquals(imgAfterTrim, working))
+                                {
+                                    working.Dispose();
+                                    working = imgAfterTrim;
+                                }
+                            }
                         }
 
-                        var originalSize = new IntVector2(working.Width, working.Height);
-
-                        SKBitmap imgAfterTrim = working;
-                        IntVector2 offset = new(0, 0);
-
-                        if (subjectConfig.CropSprites)
-                        {
-                            (imgAfterTrim, offset) = TrimColor(working);
-                            if (!ReferenceEquals(imgAfterTrim, working))
-                            {
-                                working.Dispose();
-                                working = imgAfterTrim;
-                            }
-                        }
+                        
 
                         if (gameThemeConfig.IsHd)
                         {

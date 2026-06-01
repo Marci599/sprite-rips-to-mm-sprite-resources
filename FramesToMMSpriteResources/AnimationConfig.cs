@@ -18,6 +18,9 @@ namespace FramesToMMSpriteResources
         [JsonPropertyName("regenerate")]
         public bool Regenerate = true;
 
+        [JsonPropertyName("exclude")]
+        public bool Exclude = false;
+
         [JsonPropertyName("delay")]
         public int Delay = 1;
 
@@ -38,6 +41,11 @@ namespace FramesToMMSpriteResources
 
         [JsonPropertyName("align_based_on")]
         public AlignBasedOn AlignBasedOn = AlignBasedOn.RawSpriteSie;
+
+        [JsonPropertyName("align_on_x_axis")]
+        public bool AlignOnXAxis = true;
+        [JsonPropertyName("align_on_y_axis")]
+        public bool AlignOnYAxis = true;
 
         [JsonPropertyName("direction")]
         public float Direction = 90;
