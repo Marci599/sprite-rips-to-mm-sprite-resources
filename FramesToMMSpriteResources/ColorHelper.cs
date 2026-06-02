@@ -89,6 +89,13 @@ namespace FramesToMMSpriteResources
                     if (y > bottom) bottom = y;
                 }
             }
+
+            if (right == -1 || bottom == -1)
+            {
+    
+                return (0, 0, size.X, size.Y);
+            }
+
             right++;
             bottom++;
             return (left, top, right, bottom);

@@ -958,7 +958,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         SKRect destRect = new(x, y, x + width, y + height);
 
         SKRect croppedDestRect;
-        if (PreviewSpriteFrames.Size.Y != PreviewSpriteFrames.LoadedSpriteFrames[spriteFrameIndex].WriteableBitmap.Info.Size.Height && PreviewSpriteFrames.Size.X != PreviewSpriteFrames.LoadedSpriteFrames[spriteFrameIndex].WriteableBitmap.Info.Size.Width)
+        if (PreviewSpriteFrames.Size.Y != PreviewSpriteFrames.LoadedSpriteFrames[spriteFrameIndex].WriteableBitmap.Info.Size.Height || PreviewSpriteFrames.Size.X != PreviewSpriteFrames.LoadedSpriteFrames[spriteFrameIndex].WriteableBitmap.Info.Size.Width)
         {
             float cx = axisX + ((offset.X + PreviewSpriteFrames.LoadedSpriteFrames[spriteFrameIndex].CroppedRect.Left) * zoom);
             float cy = axisY - ((offset.Y - PreviewSpriteFrames.LoadedSpriteFrames[spriteFrameIndex].CroppedRect.Top) * zoom);
