@@ -101,7 +101,7 @@ namespace FramesToMMSpriteResources
             return (left, top, right, bottom);
         }
 
-        public static void RemoveColorWithThresholdInPlace(SKBitmap bitmap, byte r, byte g, byte b, byte a, int colorThreshold)
+        public static void RemoveColorWithThresholdInPlace(SKBitmap bitmap, byte r, byte g, byte b, byte a, int colorThreshold, bool resetRGBtoo = false)
         {
             var pixels = bitmap.GetPixelSpan();
             int length = pixels.Length;
@@ -115,7 +115,17 @@ namespace FramesToMMSpriteResources
 
                 if (IsWithinThreshold(pr, pg, pb, pa, r, g, b, a, colorThreshold))
                 {
-                    pixels[i + 3] = 0;
+                    if (resetRGBtoo)
+                    {
+                        pixels[i + 0] = 0;
+                        pixels[i + 1] = 0;
+                        pixels[i + 2] = 0;
+                        pixels[i + 3] = 0;
+                    }
+                    else
+                    {
+                        pixels[i + 3] = 0;
+                    }
                 }
             }
 

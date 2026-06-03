@@ -710,29 +710,12 @@ namespace FramesToMMSpriteResources
                         AnimationConfig animationConfig = LoadJson<AnimationConfig>(animationConfigPath);
 
                         var frameFiles = Directory.GetFiles(animationDir);
-                        var fileCount = frameFiles.Length;
+       
 
-                        if (File.Exists(animationConfigPath))
-                        {
-                            fileCount--;
-                        }
-
-                        framesSum += fileCount;
+               
+                        
                         TreeItem treeItem;
-
-                        if (animationConfig.GeneratedFrameCount == -1)
-                        {
-                            animationConfig.GeneratedFrameCount = fileCount;
-                        }
-
-                        if (animationConfig.GeneratedFrameCount == fileCount)
-                        {
-                            treeItem = new(animationName, ItemDepth.Animation, fileCount);
-                        }
-                        else
-                        {
-                            treeItem = new(animationName, ItemDepth.Animation, animationConfig.GeneratedFrameCount, fileCount);
-                        }
+                        treeItem = new(animationName, ItemDepth.Animation);                      
 
                         var animationTreeItem = new TreeViewNode { Content = treeItem, IsExpanded = animationConfig.IsExpanded };
 
@@ -742,7 +725,7 @@ namespace FramesToMMSpriteResources
 
                         foreach (var frameFile in frameFiles)
                         {
-                            if (Path.GetExtension(frameFile) != ".json")
+                            if (Path.GetExtension(frameFile) == ".png")
                             {
                                 string fileName = Path.GetFileNameWithoutExtension(frameFile);
                                 if (frameIndex < animationConfig.FrameCongfigs.Count)
@@ -781,6 +764,25 @@ namespace FramesToMMSpriteResources
                             }
                         }
 
+                        if (animationConfig.GeneratedFrameCount == -1)
+                        {
+                            animationConfig.GeneratedFrameCount = frameIndex;
+                        }
+
+                        if (animationConfig.GeneratedFrameCount == frameIndex)
+                        {
+                            (animationTreeItem.Content as TreeItem)!.Count = frameIndex;
+                            (animationTreeItem.Content as TreeItem)!.CountText = frameIndex.ToString();
+          
+                        }
+                        else
+                        {
+                            (animationTreeItem.Content as TreeItem)!.Count = frameIndex;
+                            (animationTreeItem.Content as TreeItem)!.CountText = $"{animationConfig.GeneratedFrameCount} → {frameIndex}";
+                        
+                        }
+
+                        framesSum += frameIndex;
                         subjectConfig.AnimationConfigs![animationName] = animationConfig;
                         subjectTreeItem.Children.Add(animationTreeItem);
 
@@ -1325,6 +1327,8 @@ namespace FramesToMMSpriteResources
             CropSpritesCheckBox.IsChecked = subjectConfig.CropSprites;
 
             ResizeTextBox.Text = subjectConfig.ResizeToPercent.ToString();
+            SamplingComboBox.SelectedIndex = subjectConfig.FilterMode;
+            MipmapComboBox.SelectedIndex = subjectConfig.MipmapMode;
             ColorTextBox.Text = subjectConfig.BackgroundColor;
             ThresholdTextBox.Text = subjectConfig.ColorTreshold.ToString();
             SheetWidthTextBox.Text = subjectConfig.Sheet.Width.ToString();
@@ -1337,6 +1341,8 @@ namespace FramesToMMSpriteResources
             CropSpritesCheckBox.Click += ClickCropSpritesCheckBox;
 
             ResizeTextBox.ValueChanged += ResizeTextBox_ValueChanged;
+            SamplingComboBox.SelectionChanged += SamplingComboBox_SelectionChanged;
+            MipmapComboBox.SelectionChanged += MipmapComboBox_SelectionChanged;
             ColorTextBox.TextChanged += ColorTextBox_TextChanged;
             ThresholdTextBox.ValueChanged += ThresholdTextBox_ValueChanged;
 
@@ -1613,6 +1619,8 @@ namespace FramesToMMSpriteResources
             CropSpritesCheckBox.Click -= ClickCropSpritesCheckBox;
 
             ResizeTextBox.ValueChanged -= ResizeTextBox_ValueChanged;
+            SamplingComboBox.SelectionChanged -= SamplingComboBox_SelectionChanged;
+            MipmapComboBox.SelectionChanged += MipmapComboBox_SelectionChanged;
             ColorTextBox.TextChanged -= ColorTextBox_TextChanged;
             ThresholdTextBox.ValueChanged -= ThresholdTextBox_ValueChanged;
 
@@ -1970,7 +1978,23 @@ namespace FramesToMMSpriteResources
         {
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
-                currentConfig.ResizeToPercent = double.IsNaN(sender.Value) ? 100 : (int)sender.Value;
+                currentConfig.ResizeToPercent = double.IsNaN(sender.Value) ? 100 : (float)sender.Value;
+            }
+        }
+
+        private void SamplingComboBox_SelectionChanged(object sender, RoutedEventArgs e)
+        {
+            foreach (SubjectConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.FilterMode = (sender as ComboBox)!.SelectedIndex;
+            }
+        }
+
+        private void MipmapComboBox_SelectionChanged(object sender, RoutedEventArgs e)
+        {
+            foreach (SubjectConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.MipmapMode = (sender as ComboBox)!.SelectedIndex;
             }
         }
 

@@ -12,7 +12,13 @@ namespace FramesToMMSpriteResources
     public class SubjectConfig : ParentConfig
     {
         [JsonPropertyName("resize_to_percent")]
-        public int ResizeToPercent = 100;
+        public float ResizeToPercent = 100;
+
+        [JsonPropertyName("sampling_mode")]
+        public int FilterMode = 0;
+
+        [JsonPropertyName("mipmap_mode")]
+        public int MipmapMode = 0;
 
         [JsonPropertyName("background_color")]
         public string? BackgroundColor;

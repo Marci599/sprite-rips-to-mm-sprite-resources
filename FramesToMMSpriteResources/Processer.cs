@@ -22,6 +22,7 @@ namespace FramesToMMSpriteResources
         public string AnimationName { get; }
         public JsonObject? OldFrameJson { get; }
 
+
         public ProcessedSprite(SKBitmap image, IntVector2 originalSize, IntVector2 trimOffset, IntVector2 frameOffset, string animationName, JsonObject? oldFrameJson)
         {
             Image = image;
@@ -61,6 +62,8 @@ namespace FramesToMMSpriteResources
         private static GameThemeConfig gameThemeConfig = null!;
         private static SubjectConfig subjectConfig = null!;
         private static (byte r, byte g, byte b, byte a)? parsedBackgroundColor;
+
+        private static SKSamplingOptions _samplingOption;
 
         public static async Task StartProcessAsync(string gameThemeName, string subjectName)
         {
@@ -102,7 +105,11 @@ namespace FramesToMMSpriteResources
    
             }
 
+          
+            _samplingOption = new SKSamplingOptions((SKFilterMode)subjectConfig.FilterMode, (SKMipmapMode)subjectConfig.MipmapMode);
+        
             
+
             string spriteFilePath = Path.Combine(outputDir, subjectName + ".sprite");
 
             JsonArray? frames = null;
@@ -191,7 +198,7 @@ namespace FramesToMMSpriteResources
                             if (subjectConfig.ResizeToPercent != 100 && subjectConfig.ResizeToPercent > 0)
                             {
                                 var scale = subjectConfig.ResizeToPercent / 100.0;
-                                var resized = ResizeBitmapNearestFromOrigin(working, frameOffset, scale, out IntVector2 resizedFrameOffset);
+                                var resized = ResizeBitmapFromOrigin(working, frameOffset, scale, out IntVector2 resizedFrameOffset);
                                 if (!ReferenceEquals(resized, working))
                                 {
                                     working.Dispose();
@@ -275,7 +282,7 @@ namespace FramesToMMSpriteResources
             {
                 int halfW = Math.Max(1, (sheetImage.Width + 1) / 2);
                 int halfH = Math.Max(1, (sheetImage.Height + 1) / 2);
-                using var sheetHalf = ResizeBitmapNearest(sheetImage, halfW, halfH);
+                using var sheetHalf = ResizeBitmap(sheetImage, halfW, halfH, new SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None));
                 SaveBitmapToFile(sheetHalf, spritesheetPath);
                 spritesheetPath2x = Path.Combine(outputDir, subjectName + "@2x" + extension);
             }
@@ -663,7 +670,8 @@ namespace FramesToMMSpriteResources
                 return;
 
             var (r, g, b, a) = parsedBackgroundColor.Value;
-            ColorHelper.RemoveColorWithThresholdInPlace(src, r, g, b, a, subjectConfig.ColorTreshold);
+            bool nearest = (subjectConfig.FilterMode == 0 && subjectConfig.MipmapMode == 0);
+            ColorHelper.RemoveColorWithThresholdInPlace(src, r, g, b, a, subjectConfig.ColorTreshold, !nearest);
         }
 
 
@@ -700,13 +708,13 @@ namespace FramesToMMSpriteResources
             return new IntVector2(0, 0);
         }
 
-        private static SKBitmap ResizeBitmapNearest(SKBitmap source, int newW, int newH)
+        private static SKBitmap ResizeBitmap(SKBitmap source, int newW, int newH, SKSamplingOptions samplingOptions)
         {
             if (newW == source.Width && newH == source.Height)
                 return source;
 
-            var sampling = new SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None);
-            var resized = source.Resize(new SKImageInfo(newW, newH, source.ColorType, source.AlphaType), sampling);
+          
+            var resized = source.Resize(new SKImageInfo(newW, newH, source.ColorType, source.AlphaType), samplingOptions);
             if (resized != null)
                 return resized;
 
@@ -716,13 +724,13 @@ namespace FramesToMMSpriteResources
             using (var paint = new SKPaint { IsAntialias = false })
             {
                 canvas.Clear(SKColors.Transparent);
-                canvas.DrawImage(image, new SKRect(0, 0, newW, newH), new SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None), paint);
+                canvas.DrawImage(image, new SKRect(0, 0, newW, newH), samplingOptions, paint);
             }
             return fallback;
         }
 
 
-        private static SKBitmap ResizeBitmapNearestFromOrigin(SKBitmap source, IntVector2 frameOffset, double scale, out IntVector2 resizedFrameOffset)
+        private static SKBitmap ResizeBitmapFromOrigin(SKBitmap source, IntVector2 frameOffset, double scale, out IntVector2 resizedFrameOffset)
         {
             double left = frameOffset.X;
             double top = -frameOffset.Y;
@@ -752,7 +760,7 @@ namespace FramesToMMSpriteResources
                     (float)(top * scale - scaledTop),
                     (float)(right * scale - scaledLeft),
                     (float)(bottom * scale - scaledTop));
-                canvas.DrawImage(image, destRect, new SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None), paint);
+                canvas.DrawImage(image, destRect, _samplingOption, paint);
             }
             return resized;
         }

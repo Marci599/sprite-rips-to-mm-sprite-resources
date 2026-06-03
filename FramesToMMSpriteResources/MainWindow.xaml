@@ -158,65 +158,96 @@
                         <!-- Subject Panel (default visible) -->
                         <Grid x:Name="SubjectPanel" Visibility="Collapsed">
                             <ScrollViewer>
-                                <StackPanel Padding="20 20 20 20">
+                                <StackPanel Padding="20 20 20 20" Spacing="10">
                                     <Grid ColumnSpacing="10" MaxWidth="1000">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
+                                        
+                                            <!-- Color Group -->
+                                            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
+                                                <StackPanel Spacing="12">
+                                                    <TextBlock Text="Background color" Style="{StaticResource SectionHeaderStyle}"/>
+                                                    <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+                                                    <StackPanel Spacing="4">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="32"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBox x:Name="ColorTextBox" Grid.Column="0" PlaceholderText="#00000000" Header="Color" CornerRadius="4 0 0 4"/>
+                                                            <Border x:Name="ColorPreviewBorder" Grid.Column="1" BorderThickness="1" Background="White" CornerRadius="0 4 4 0" Height="32" VerticalAlignment="Bottom"/>
 
-                                        <!-- Processing Group -->
-                                        <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
-                                            <StackPanel Spacing="12">
-                                                <TextBlock Text="Processing" Style="{StaticResource SectionHeaderStyle}"/>
+                                                        </Grid>
 
-                                                <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+                                                        <TextBlock Text="If already transparent, leave it blank" Style="{StaticResource HelperTextStyle}"/>
+                                                    </StackPanel>
 
-                                                <NumberBox x:Name="ResizeTextBox" PlaceholderText="100" Header="Resize to percent" Minimum="1" Maximum="999999" SpinButtonPlacementMode="Inline"/>
-                                      
+                                                <NumberBox x:Name="ThresholdTextBox" PlaceholderText="100" Header="Threshold" Minimum="0" Maximum="999" SpinButtonPlacementMode="Compact"/>
 
-                                                <StackPanel Spacing="4">
-                                                    <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="32"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <TextBox x:Name="ColorTextBox" Grid.Column="0" PlaceholderText="#00000000" Header="Background color" CornerRadius="4 0 0 4"/>
-                                                        <Border x:Name="ColorPreviewBorder" Grid.Column="1" BorderThickness="1" Background="White" CornerRadius="0 4 4 0" Height="32" VerticalAlignment="Bottom"/>
-                                                     
-                                                    </Grid>
-
-                                                    <TextBlock Text="If already transparent, leave it blank" Style="{StaticResource HelperTextStyle}"/>
                                                 </StackPanel>
-
-                                                <NumberBox x:Name="ThresholdTextBox" PlaceholderText="100" Header="Color threshold" Minimum="0" Maximum="999" SpinButtonPlacementMode="Inline"/>
-
-                                                <CheckBox x:Name="RemoveBackgroundCheckBox" Content="Remove background"/>
-                                                <StackPanel Spacing="4">
-                                                    <CheckBox x:Name="CropSpritesCheckBox" Content="Crop sprites"/>
-                                                    <TextBlock Text="Cropping reduces file size"  Style="{StaticResource HelperTextStyle}"/>
-                                                    <TextBlock Text="Cropping is based on the bg color and threshold"  Style="{StaticResource HelperTextStyle}"/>
-                                                </StackPanel>
-
-                                            </StackPanel>
-                                        </Border>
+                                            </Border>
 
                                         <!-- Sheet Dimensions Group -->
-                                        <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}">
+                                        <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}" >
                                             <StackPanel Spacing="12">
                                                 <TextBlock Text="Exporting" Style="{StaticResource SectionHeaderStyle}"/>
                                                 <Rectangle Style="{StaticResource GroupDividerStyle}"/>
 
-                                                <NumberBox x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width" Minimum="1" Maximum="999999" SpinButtonPlacementMode="Inline"/>
+                                                <NumberBox x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width" Minimum="1" Maximum="999999" SpinButtonPlacementMode="Compact"/>
 
                                                 <StackPanel Spacing="4">
-                                                    <NumberBox x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height" Minimum="1" Maximum="999999" SpinButtonPlacementMode="Inline"/>
+                                                    <NumberBox x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height" Minimum="1" Maximum="999999" SpinButtonPlacementMode="Compact"/>
                                                     <TextBlock Text="For automatic sizing, leave it blank" Style="{StaticResource HelperTextStyle}"/>
                                                 </StackPanel>
 
                                             </StackPanel>
                                         </Border>
+
+                                        
+
+                     
                                     </Grid>
+
+                                    <!-- Processing Group -->
+                                    <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
+                                        <StackPanel Spacing="12">
+                                            <TextBlock Text="Processing" Style="{StaticResource SectionHeaderStyle}"/>
+
+                                            <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+
+
+
+
+
+                                            <CheckBox x:Name="RemoveBackgroundCheckBox" Content="Remove background"/>
+                                            <Grid ColumnSpacing="10">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <NumberBox Grid.Column="0" x:Name="ResizeTextBox" PlaceholderText="100" Header="Resize to percent" Minimum="1" Maximum="999999" SpinButtonPlacementMode="Compact" />
+                                                <ComboBox Grid.Column="1" x:Name="SamplingComboBox" Header="Filter mode" HorizontalAlignment="Stretch">
+                                                    <x:String>Nearest</x:String>
+                                                    <x:String>Linear</x:String>
+                                                </ComboBox>
+                                                <ComboBox Grid.Column="2" x:Name="MipmapComboBox" Header="Mipmap mode" HorizontalAlignment="Stretch">
+                                                    <x:String>None</x:String>
+                                                    <x:String>Nearest</x:String>
+                                                    <x:String>Linear</x:String>
+                                                </ComboBox>
+                                            </Grid>
+
+                                            <StackPanel Spacing="4">
+                                                <CheckBox x:Name="CropSpritesCheckBox" Content="Crop sprites"/>
+                                                <TextBlock Text="Cropping reduces file size"  Style="{StaticResource HelperTextStyle}"/>
+                                                <TextBlock Text="Cropping is based on the bg color and threshold"  Style="{StaticResource HelperTextStyle}"/>
+                                            </StackPanel>
+
+                                        </StackPanel>
+                                    </Border>
 
                                 </StackPanel>
                             </ScrollViewer>
@@ -225,81 +256,91 @@
                         <!-- Animations Panel (hidden by default) -->
                         <Grid x:Name="AnimationsPanel" Visibility="Collapsed">
                             <ScrollViewer>
-                                <StackPanel x:Name="AnimationDetailPanel" Spacing="10" Padding="20 14 20 20">
-                                   
-                                    <StackPanel Spacing="4" MaxWidth="1000">
-                                        <CheckBox x:Name="RegenerateCheckBox" Content="Regenerate frame properties"/>
-                                        <TextBlock Text="If disabled, manually modified offsets and sub-positions will remain unchanged"  Style="{StaticResource HelperTextStyle}"/>
-                                    </StackPanel>
-                                    <CheckBox x:Name="ExcludeCheckBox" Content="Exclude from processing" MaxWidth="1000" HorizontalAlignment="Stretch"/>
-                                    <NumberBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay" MaxWidth="1000" Minimum="-1" Maximum="999999" SpinButtonPlacementMode="Inline"/>
-                                    <ComboBox x:Name="LoopTypeComboBox" Header="Loop mode" HorizontalAlignment="Stretch"  MaxWidth="1000">
-                                        <x:String>Default</x:String>
-                                        <x:String>Loop</x:String>
-                                        <x:String>No loop</x:String>
-                                    </ComboBox>
+                                <StackPanel x:Name="AnimationDetailPanel" Spacing="10" Padding="20 20 20 20">
 
-                                    <Expander HorizontalAlignment="Stretch"
-                                        HorizontalContentAlignment="Stretch"
-                                        MaxWidth="1000"
-                                        MinHeight="0"
-                                              Padding="16 10 16 16">
-                                        <Expander.Header>
-                                            <TextBlock Text="Advanced options" Style="{StaticResource HelperTextStyle}"/>
-                                        </Expander.Header>
+                                    <Grid ColumnSpacing="10"   MaxWidth="1000">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
 
-                                        <Expander.Content>
-                                            <Grid RowSpacing="10">
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="*"/>
-                                                    <RowDefinition Height="*"/>
-                                                    <RowDefinition Height="*"/>
-                                                </Grid.RowDefinitions>
-                                                <TextBlock Grid.Row="0" Text="It's better not to tinker with these settings since as of v2.0.0 you can adjust and align offsets for each frame, and now I don't know if there is even a need for these options."  Style="{StaticResource HelperTextStyle}"/>
-                                                <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
-                                                    <StackPanel Spacing="12">
-                                                        <TextBlock Text="Offset" Style="{StaticResource SectionHeaderStyle}"/>
-                                                        <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                                                        <StackPanel Spacing="4">
-                                                            <Grid ColumnSpacing="8">
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                </Grid.ColumnDefinitions>
 
-                                                                <NumberBox Grid.Column="0" x:Name="AnimationOffsetXTextBox" PlaceholderText="0" Header="X" Maximum="999999" Minimum="-999999" SpinButtonPlacementMode="Inline"/>
-                                                                <NumberBox Grid.Column="1" x:Name="AnimationOffsetYTextBox" PlaceholderText="0" Header="Y" Maximum="999999" Minimum="-999999" SpinButtonPlacementMode="Inline"/>
+                                        <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
+                                            <StackPanel Spacing="12">
+                                                <TextBlock Text="Properties" Style="{StaticResource SectionHeaderStyle}"/>
 
-                                                            </Grid>
-                                                            <TextBlock Text="Adjusts the offset of every frame after processing"  Style="{StaticResource HelperTextStyle}"/>
-                                                        </StackPanel>
-                                                    </StackPanel>
-                                                </Border>
-                                                <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}"
-                                                    HorizontalAlignment="Stretch">
-                                                    <StackPanel Spacing="12">
-                                                        <TextBlock Text="Recover cropped offset" Style="{StaticResource SectionHeaderStyle}"/>
-                                                        <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                                                        <StackPanel Spacing="4">
-                                                            <Grid ColumnSpacing="8">
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                </Grid.ColumnDefinitions>
-                                                                <CheckBox Grid.Column="0" x:Name="RecoverXCheckBox" Content="X"/>
-                                                                <CheckBox Grid.Column="1" x:Name="RecoverYCheckBox" Content="Y"/>
-                                                            </Grid>
-                                                            <TextBlock Text="If enabled, the offsets will be adjusted to account for any cropping that was done"
+                                                <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+
+
+
+                                                <NumberBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay" Minimum="-1" Maximum="999999" SpinButtonPlacementMode="Compact"/>
+                                                <ComboBox x:Name="LoopTypeComboBox" Header="Loop mode" HorizontalAlignment="Stretch">
+                                                    <x:String>Default</x:String>
+                                                    <x:String>Loop</x:String>
+                                                    <x:String>No loop</x:String>
+                                                </ComboBox>
+
+
+
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}">
+                                            <StackPanel Spacing="12">
+                                                <TextBlock Text="Generating" Style="{StaticResource SectionHeaderStyle}"/>
+
+                                                <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+
+
+                                        
+
+                                                
+                                             
+                                                    
+                                                            <StackPanel Spacing="4">
+                                                                <Grid ColumnSpacing="8">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                    </Grid.ColumnDefinitions>
+
+                                                        <NumberBox Grid.Column="0" x:Name="AnimationOffsetXTextBox" PlaceholderText="0" Header="Offset X" Maximum="999999" Minimum="-999999" SpinButtonPlacementMode="Compact"/>
+                                                        <NumberBox Grid.Column="1" x:Name="AnimationOffsetYTextBox" PlaceholderText="0" Header="Offset Y" Maximum="999999" Minimum="-999999" SpinButtonPlacementMode="Compact"/>
+
+                                                                </Grid>
+                                                                <TextBlock Text="Adjusts the offset of every frame after processing"  Style="{StaticResource HelperTextStyle}"/>
+                                                            </StackPanel>
+                                         
+                                                    
+                                                            <StackPanel Spacing="4">
+                                                        <TextBlock Text="Recover cropped offset on"/>
+                                                        <Grid ColumnSpacing="8">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <CheckBox Grid.Column="0" x:Name="RecoverXCheckBox" Content="X axis"/>
+                                                                    <CheckBox Grid.Column="1" x:Name="RecoverYCheckBox" Content="Y axis"/>
+                                                                </Grid>
+                                                                <TextBlock Text="If enabled, the offsets will be adjusted to account for any cropping that was done"
                                                                 Style="{StaticResource HelperTextStyle}"/>
-                                                        </StackPanel>
+                                                            </StackPanel>
+                                                    <StackPanel Spacing="4">
+                                                        <CheckBox x:Name="RegenerateCheckBox" Content="Regenerate frame properties"/>
+                                                        <TextBlock Text="If disabled, offsets and sub-positions won't be overwritten"  Style="{StaticResource HelperTextStyle}"/>
                                                     </StackPanel>
-                                                </Border>
-                                            </Grid>
-                                            
-                                        </Expander.Content>
-                                    </Expander>
+                                           
 
 
+                                            </StackPanel>
+                                        </Border>
+
+                            
+
+                                    </Grid>
+
+
+                                    <CheckBox x:Name="ExcludeCheckBox" Content="Exclude from processing" MaxWidth="1000" HorizontalAlignment="Stretch"/>
                                 </StackPanel>
                             </ScrollViewer>
                         </Grid>
