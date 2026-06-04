@@ -7,9 +7,15 @@ using System.Threading.Tasks;
 
 namespace FramesToMMSpriteResources
 {
-    public abstract class ParentConfig
+    public class InterfaceConfig
     {
         [JsonPropertyName("is_expanded")]
         public bool IsExpanded = false;
+
+        public InterfaceConfig() { }
+        public InterfaceConfig(bool isExpanded)
+        {
+            IsExpanded = isExpanded;
+        }
     }
 }

@@ -19,12 +19,6 @@ namespace FramesToMMSpriteResources
             Name = name;
         }
 
-        public FrameConfig(string name, IntVector2 offset)
-        {
-            Name = name;
-            Offset = offset;
-            
-        }
 
 
     }

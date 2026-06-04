@@ -1,4 +1,5 @@
-﻿using Microsoft.UI.Windowing;
+﻿using FramesToMMSpriteResources.DataConfig;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Hosting;
@@ -17,6 +18,7 @@ using System.IO;
 using System.Linq;
 using System.Media;
 using System.Numerics;
+using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text.Json;
@@ -30,8 +32,7 @@ using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
 
 //TODO: WHEN THERE IS A NODE SAVED AS SELECTED, BUT THE FOLDER/SPRITE GETS REMOVED, PROGRAM CRASHES
-//TODO: SAVE UI STATES IN A DIFFERENT FILE THAT CAN BE IGNORABLE ON VERSION CONTROL
-//TODO: MAKE THE PROGRAM IMPORTED PROJECT BASED
+//TODO: MAKE THE PROGRAM REMEMBER PATHS, REMOVE GAME THEME MODE?
 //TODO: REMOVE UNUSED OFFSETS AFTER GENERATION
 namespace FramesToMMSpriteResources
 {
@@ -141,6 +142,7 @@ namespace FramesToMMSpriteResources
     public sealed partial class MainWindow : Window
     {
         private static readonly string CONFIG_FILENAME = "config.json";
+        private static readonly string INTERFACE_CONFIG_FILENAME = "interface.json";
 
         public static string WorkingPath = AppContext.BaseDirectory;
 
@@ -467,9 +469,10 @@ namespace FramesToMMSpriteResources
                 foreach (var gameThemeDir in gameThemeDirs)
                 {
                     string gameThemeName = Path.GetFileName(gameThemeDir);
-                    var gameThemeConfigPath = Path.Combine(gameThemeDir, CONFIG_FILENAME);
+         
 
-                    SaveJson(gameThemeConfigPath, ProgramConfig.GameThemeConfigs![gameThemeName]);
+                    SaveJson(Path.Combine(gameThemeDir, CONFIG_FILENAME), ProgramConfig.GameThemeConfigs![gameThemeName]);
+                    SaveJson(Path.Combine(gameThemeDir, INTERFACE_CONFIG_FILENAME), ProgramConfig.GameThemeConfigs![gameThemeName].InterfaceConfig);
                     SaveSubjects(gameThemeDir, gameThemeName);
                 }
             }
@@ -489,17 +492,19 @@ namespace FramesToMMSpriteResources
                 string subjectName = Path.GetFileName(subjectDir);
                 if (subjectName != "_generated")
                 {
-                    var subjectConfigPath = Path.Combine(subjectDir, CONFIG_FILENAME);
+     
 
-                    SaveJson(subjectConfigPath, ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName]);
+                    SaveJson(Path.Combine(subjectDir, CONFIG_FILENAME), ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName]);
+                    SaveJson(Path.Combine(subjectDir, INTERFACE_CONFIG_FILENAME), ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].InterfaceConfig);
 
                     var animationDirs = Directory.GetDirectories(subjectDir);
                     foreach (var animationDir in animationDirs)
                     {
                         string animationName = Path.GetFileName(animationDir);
-                        var animationConfigPath = Path.Combine(animationDir, CONFIG_FILENAME);
+   
 
-                        SaveJson(animationConfigPath, ProgramConfig.GameThemeConfigs[gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName]);
+                        SaveJson(Path.Combine(animationDir, CONFIG_FILENAME), ProgramConfig.GameThemeConfigs[gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName]);
+                        SaveJson(Path.Combine(animationDir, INTERFACE_CONFIG_FILENAME), ProgramConfig.GameThemeConfigs[gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].InterfaceConfig);
                     }
                 }
                 
@@ -632,11 +637,11 @@ namespace FramesToMMSpriteResources
 
                 foreach (var gameThemeDir in gameThemeDirs)
                 {
-                    Debug.WriteLine("HERERERE");
                     string gameThemeName = Path.GetFileName(gameThemeDir);
 
-                    var gameThemeConfigPath = Path.Combine(gameThemeDir, CONFIG_FILENAME);
-                    GameThemeConfig gameThemeConfig = LoadJson<GameThemeConfig>(gameThemeConfigPath);
+           
+                    GameThemeConfig gameThemeConfig = LoadJson<GameThemeConfig>(Path.Combine(gameThemeDir, CONFIG_FILENAME));
+                    gameThemeConfig.InterfaceConfig = LoadJson<InterfaceConfig>(Path.Combine(gameThemeDir, INTERFACE_CONFIG_FILENAME));
 
                     SetUpSubjectTreeViewAndConfigs(gameThemeDir, gameThemeName, gameThemeConfig);
                 }
@@ -648,7 +653,11 @@ namespace FramesToMMSpriteResources
                 if (AreSubjectsCorrect(WorkingPath))
                 {
                     ProgramConfig.SelectedNodePath ??= [];
-                    GameThemeConfig gameThemeConfig = new(ProgramConfig.IsHd, true);
+                    GameThemeConfig gameThemeConfig = new()
+                    {
+                        IsHd = true,
+                        InterfaceConfig = new InterfaceConfig(true)
+                    };
 
                     SetUpSubjectTreeViewAndConfigs(WorkingPath, "Assets", gameThemeConfig);
 
@@ -688,7 +697,7 @@ namespace FramesToMMSpriteResources
 
         void SetUpSubjectTreeViewAndConfigs(string gameThemeDir, string gameThemeName, GameThemeConfig gameThemeConfig)
         {
-            var gameThemeTreeItem = new TreeViewNode { Content = new TreeItem(gameThemeName, ItemDepth.GameTheme), IsExpanded = gameThemeConfig.IsExpanded };
+            var gameThemeTreeItem = new TreeViewNode { Content = new TreeItem(gameThemeName, ItemDepth.GameTheme), IsExpanded = gameThemeConfig.InterfaceConfig.IsExpanded };
 
             var subjectDirs = Directory.GetDirectories(gameThemeDir);
 
@@ -697,10 +706,11 @@ namespace FramesToMMSpriteResources
                 string subjectName = Path.GetFileName(subjectDir);
                 if (subjectName != "_generated")
                 {
-                    var subjectConfigPath = Path.Combine(subjectDir, CONFIG_FILENAME);
-                    SubjectConfig subjectConfig = LoadJson<SubjectConfig>(subjectConfigPath);
+              
+                    SubjectConfig subjectConfig = LoadJson<SubjectConfig>(Path.Combine(subjectDir, CONFIG_FILENAME));
+                    subjectConfig.InterfaceConfig = LoadJson<SubjectInterfaceConfig>(Path.Combine(subjectDir, INTERFACE_CONFIG_FILENAME));
 
-                    var subjectTreeItem = new TreeViewNode { Content = new TreeItem(subjectName, ItemDepth.Subject), IsExpanded = subjectConfig.IsExpanded };
+                    var subjectTreeItem = new TreeViewNode { Content = new TreeItem(subjectName, ItemDepth.Subject), IsExpanded = subjectConfig.InterfaceConfig.IsExpanded };
 
                     var animationDirs = Directory.GetDirectories(subjectDir);
                     int framesSum = 0;
@@ -709,8 +719,9 @@ namespace FramesToMMSpriteResources
                         string animationName = Path.GetFileName(animationDir);
 
 
-                        var animationConfigPath = Path.Combine(animationDir, CONFIG_FILENAME);
-                        AnimationConfig animationConfig = LoadJson<AnimationConfig>(animationConfigPath);
+     
+                        AnimationConfig animationConfig = LoadJson<AnimationConfig>(Path.Combine(animationDir, CONFIG_FILENAME));
+                        animationConfig.InterfaceConfig = LoadJson<AnimationInterfaceConfig>(Path.Combine(animationDir, INTERFACE_CONFIG_FILENAME));
 
                         var frameFiles = Directory.GetFiles(animationDir);
        
@@ -720,7 +731,7 @@ namespace FramesToMMSpriteResources
                         TreeItem treeItem;
                         treeItem = new(animationName, ItemDepth.Animation);                      
 
-                        var animationTreeItem = new TreeViewNode { Content = treeItem, IsExpanded = animationConfig.IsExpanded };
+                        var animationTreeItem = new TreeViewNode { Content = treeItem, IsExpanded = animationConfig.InterfaceConfig.IsExpanded };
 
                         int frameIndex = 0;
 
@@ -1583,14 +1594,14 @@ namespace FramesToMMSpriteResources
 
 
 
+                    AnimationInterfaceConfig animationInterfaceConfig = (animationConfig.InterfaceConfig as AnimationInterfaceConfig)!;
 
+                    DirectionNumberBox.Value = animationInterfaceConfig.Direction;
+                    SpeedNumberBox.Value = animationInterfaceConfig.Speed;
 
-                    DirectionNumberBox.Value = animationConfig.Direction;
-                    SpeedNumberBox.Value = animationConfig.Speed;
-
-                    BasedOnRadioButtons.SelectedIndex = (int)animationConfig.AlignBasedOn;
-                    AlignOnXAxis.IsChecked = animationConfig.AlignOnXAxis;
-                    AlignOnYAxis.IsChecked = animationConfig.AlignOnYAxis;
+                    BasedOnRadioButtons.SelectedIndex = (int)animationInterfaceConfig.AlignBasedOn;
+                    AlignOnXAxis.IsChecked = animationInterfaceConfig.AlignOnXAxis;
+                    AlignOnYAxis.IsChecked = animationInterfaceConfig.AlignOnYAxis;
 
                     OffsetXTextBox.Value = frameConfig.Offset.X;
                     OffsetYTextBox.Value = frameConfig.Offset.Y;
@@ -1694,6 +1705,7 @@ namespace FramesToMMSpriteResources
        
 
             AnimationConfig animationConfig = GetCurrentFrameAnimationConfig();
+            AnimationInterfaceConfig animationInterfaceConfig = (animationConfig.InterfaceConfig as AnimationInterfaceConfig)!;
             List<FrameConfig> frameConfigList = animationConfig.FrameCongfigs;
 
 
@@ -1710,7 +1722,7 @@ namespace FramesToMMSpriteResources
                     }
                     else
                     {
-                        initialPosition -= ConvertToVector2(animationConfig.Direction, animationConfig.Speed);
+                        initialPosition -= ConvertToVector2(animationInterfaceConfig.Direction, animationInterfaceConfig.Speed);
                         frameConfigList[i].Offset = new((int)Math.Round(initialPosition.Value.X), (int)Math.Round(initialPosition.Value.Y));
                     }
                 }
@@ -1740,15 +1752,16 @@ namespace FramesToMMSpriteResources
             int rawPositionX = (FrameCoordinateEditorControl.PreviewSpriteFrames.Size.X / 2) * -1;
             int rawPositionY = FrameCoordinateEditorControl.PreviewSpriteFrames.Size.Y;
             AnimationConfig animationConfig = GetCurrentFrameAnimationConfig();
+            AnimationInterfaceConfig animationInterfaceConfig = (animationConfig.InterfaceConfig as AnimationInterfaceConfig)!;
             FrameConfig frameConfig = animationConfig.FrameCongfigs[int.Parse((TreeViewControl.SelectedNode.Content as TreeItem)!.Text)];
 
-            if (animationConfig.AlignBasedOn == AlignBasedOn.RawSpriteSie)
+            if (animationInterfaceConfig.AlignBasedOn == AlignBasedOn.RawSpriteSie)
             {
                 int x = frameConfig.Offset.X;
                 int y = frameConfig.Offset.Y;
-                if (animationConfig.AlignOnXAxis)
+                if (animationInterfaceConfig.AlignOnXAxis)
                     x = rawPositionX;
-                if (animationConfig.AlignOnYAxis)
+                if (animationInterfaceConfig.AlignOnYAxis)
                     y = rawPositionY;
                 SpriteOffset_ValueChanged(new(x, y));
             }
@@ -1763,9 +1776,9 @@ namespace FramesToMMSpriteResources
                     {
                         int x = animationConfig.FrameCongfigs[i].Offset.X;
                         int y = animationConfig.FrameCongfigs[i].Offset.Y;
-                        if (animationConfig.AlignOnXAxis)
+                        if (animationInterfaceConfig.AlignOnXAxis)
                             x = rawPositionX + ((FrameCoordinateEditorControl.PreviewSpriteFrames.Size.X - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Width) / 2) - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Left;
-                        if (animationConfig.AlignOnYAxis)
+                        if (animationInterfaceConfig.AlignOnYAxis)
                             y = rawPositionY - (FrameCoordinateEditorControl.PreviewSpriteFrames.Size.Y - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Bottom);     
                         
                         frameConfigList[i].Offset = new(x, y);
@@ -1782,14 +1795,15 @@ namespace FramesToMMSpriteResources
         {
             AnimationConfig animationConfig = GetCurrentFrameAnimationConfig();
             FrameConfig frameConfig = animationConfig.FrameCongfigs[int.Parse((TreeViewControl.SelectedNode.Content as TreeItem)!.Text)];
-            if (animationConfig.AlignBasedOn == AlignBasedOn.RawSpriteSie)
+            AnimationInterfaceConfig animationInterfaceConfig = (animationConfig.InterfaceConfig as AnimationInterfaceConfig)!;
+            if (animationInterfaceConfig.AlignBasedOn == AlignBasedOn.RawSpriteSie)
             {
 
                 int x = frameConfig.Offset.X;
                 int y = frameConfig.Offset.Y;
-                if (animationConfig.AlignOnXAxis)
+                if (animationInterfaceConfig.AlignOnXAxis)
                     x = 0;
-                if (animationConfig.AlignOnYAxis)
+                if (animationInterfaceConfig.AlignOnYAxis)
                     y = 0;
                 SpriteOffset_ValueChanged(new(x, y));
             }
@@ -1804,9 +1818,9 @@ namespace FramesToMMSpriteResources
                     {
                         int x = animationConfig.FrameCongfigs[i].Offset.X;
                         int y = animationConfig.FrameCongfigs[i].Offset.Y;
-                        if (animationConfig.AlignOnXAxis)
+                        if (animationInterfaceConfig.AlignOnXAxis)
                             x = 0 - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Left;
-                        if (animationConfig.AlignOnYAxis)
+                        if (animationInterfaceConfig.AlignOnYAxis)
                             y = 0 + FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Top;
 
                         frameConfigList[i].Offset = new(x, y);
@@ -1824,14 +1838,15 @@ namespace FramesToMMSpriteResources
             int rawPositionX = (FrameCoordinateEditorControl.PreviewSpriteFrames.Size.X / 2) * -1;
             int rawPositionY = FrameCoordinateEditorControl.PreviewSpriteFrames.Size.Y / 2;
             AnimationConfig animationConfig = GetCurrentFrameAnimationConfig();
+            AnimationInterfaceConfig animationInterfaceConfig = (animationConfig.InterfaceConfig as AnimationInterfaceConfig)!;
             FrameConfig frameConfig = animationConfig.FrameCongfigs[int.Parse((TreeViewControl.SelectedNode.Content as TreeItem)!.Text)];
-            if (animationConfig.AlignBasedOn == AlignBasedOn.RawSpriteSie)
+            if (animationInterfaceConfig.AlignBasedOn == AlignBasedOn.RawSpriteSie)
             {
                 int x = frameConfig.Offset.X;
                 int y = frameConfig.Offset.Y;
-                if(animationConfig.AlignOnXAxis)
+                if(animationInterfaceConfig.AlignOnXAxis)
                     x = rawPositionX;
-                if (animationConfig.AlignOnYAxis)
+                if (animationInterfaceConfig.AlignOnYAxis)
                     y = rawPositionY;
                 SpriteOffset_ValueChanged(new(x, y));
             }
@@ -1847,9 +1862,9 @@ namespace FramesToMMSpriteResources
                         int x = animationConfig.FrameCongfigs[i].Offset.X;
                         int y = animationConfig.FrameCongfigs[i].Offset.Y;
 
-                        if (animationConfig.AlignOnXAxis)
+                        if (animationInterfaceConfig.AlignOnXAxis)
                             x = rawPositionX + ((FrameCoordinateEditorControl.PreviewSpriteFrames.Size.X - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Width) / 2) - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Left;
-                        if (animationConfig.AlignOnYAxis)
+                        if (animationInterfaceConfig.AlignOnYAxis)
                             y = rawPositionY + (((FrameCoordinateEditorControl.PreviewSpriteFrames.Size.Y - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Height) / 2) - FrameCoordinateEditorControl.PreviewSpriteFrames.LoadedSpriteFrames[i].CroppedRect.Top) * -1;
 
                         frameConfigList[i].Offset = new(x, y);
@@ -1877,29 +1892,34 @@ namespace FramesToMMSpriteResources
 
         }
 
+        private AnimationInterfaceConfig GetCurrentFrameAnimationInterfaceConfig()
+        {
+            return (GetCurrentFrameAnimationConfig().InterfaceConfig as AnimationInterfaceConfig)!;
+        }
+
         private void BasedOnRadioButtons_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            GetCurrentFrameAnimationConfig().AlignBasedOn = (AlignBasedOn)(sender as RadioButtons)!.SelectedIndex;
+            GetCurrentFrameAnimationInterfaceConfig().AlignBasedOn = (AlignBasedOn)(sender as RadioButtons)!.SelectedIndex;
         }
 
         private void AlignOnXAxis_Click(object sender, RoutedEventArgs e)
         {
-            GetCurrentFrameAnimationConfig().AlignOnXAxis = (sender as CheckBox)!.IsChecked!.Value;
+            GetCurrentFrameAnimationInterfaceConfig().AlignOnXAxis = (sender as CheckBox)!.IsChecked!.Value;
         }
 
         private void AlignOnYAxis_Click(object sender, RoutedEventArgs e)
         {
-            GetCurrentFrameAnimationConfig().AlignOnYAxis = (sender as CheckBox)!.IsChecked!.Value;
+            GetCurrentFrameAnimationInterfaceConfig().AlignOnYAxis = (sender as CheckBox)!.IsChecked!.Value;
         }
 
         private void DirectionNumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
         {
-            GetCurrentFrameAnimationConfig().Direction = double.IsNaN(sender.Value) ? 90 : (float)sender.Value;
+            GetCurrentFrameAnimationInterfaceConfig().Direction = double.IsNaN(sender.Value) ? 90 : (float)sender.Value;
         }
 
         private void SpeedNumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
         {
-            GetCurrentFrameAnimationConfig().Speed = double.IsNaN(sender.Value) ? 0 : (float)sender.Value;
+            GetCurrentFrameAnimationInterfaceConfig().Speed = double.IsNaN(sender.Value) ? 0 : (float)sender.Value;
         }
 
         private void SpriteOffset_ValueChanged(IntVector2 intVector2)
@@ -2099,13 +2119,13 @@ namespace FramesToMMSpriteResources
             switch (depth)
             {
                 case ItemDepth.GameTheme:
-                    ProgramConfig.GameThemeConfigs![(node.Content as TreeItem)!.Text].IsExpanded = true;
+                    ProgramConfig.GameThemeConfigs![(node.Content as TreeItem)!.Text].InterfaceConfig.IsExpanded = true;
                     break;
                 case ItemDepth.Subject:
-                    ProgramConfig.GameThemeConfigs![(node.Parent.Content as TreeItem)!.Text].SubjectConfigs![(node.Content as TreeItem)!.Text].IsExpanded = true;
+                    ProgramConfig.GameThemeConfigs![(node.Parent.Content as TreeItem)!.Text].SubjectConfigs![(node.Content as TreeItem)!.Text].InterfaceConfig.IsExpanded = true;
                     break;
                 case ItemDepth.Animation:
-                    ProgramConfig.GameThemeConfigs![(node.Parent.Parent.Content as TreeItem)!.Text].SubjectConfigs![(node.Parent.Content as TreeItem)!.Text].AnimationConfigs![(node.Content as TreeItem)!.Text].IsExpanded = true;
+                    ProgramConfig.GameThemeConfigs![(node.Parent.Parent.Content as TreeItem)!.Text].SubjectConfigs![(node.Parent.Content as TreeItem)!.Text].AnimationConfigs![(node.Content as TreeItem)!.Text].InterfaceConfig.IsExpanded = true;
                     break;
                 default:
                     break;
@@ -2120,15 +2140,15 @@ namespace FramesToMMSpriteResources
             switch (depth)
             {
                 case ItemDepth.GameTheme:
-                    ProgramConfig.GameThemeConfigs![(node.Content as TreeItem)!.Text].IsExpanded = false;
+                    ProgramConfig.GameThemeConfigs![(node.Content as TreeItem)!.Text].InterfaceConfig.IsExpanded = false;
                     break;
 
                 case ItemDepth.Subject:
-                    ProgramConfig.GameThemeConfigs![(node.Parent.Content as TreeItem)!.Text].SubjectConfigs![(node.Content as TreeItem)!.Text].IsExpanded = false;
+                    ProgramConfig.GameThemeConfigs![(node.Parent.Content as TreeItem)!.Text].SubjectConfigs![(node.Content as TreeItem)!.Text].InterfaceConfig.IsExpanded = false;
                     break;
 
                 case ItemDepth.Animation:
-                    ProgramConfig.GameThemeConfigs![(node.Parent.Parent.Content as TreeItem)!.Text].SubjectConfigs![(node.Parent.Content as TreeItem)!.Text].AnimationConfigs![(node.Content as TreeItem)!.Text].IsExpanded = false;
+                    ProgramConfig.GameThemeConfigs![(node.Parent.Parent.Content as TreeItem)!.Text].SubjectConfigs![(node.Parent.Content as TreeItem)!.Text].AnimationConfigs![(node.Content as TreeItem)!.Text].InterfaceConfig.IsExpanded = false;
                     break;
 
                 default:
@@ -2324,6 +2344,7 @@ namespace FramesToMMSpriteResources
                 SetInfoBar(InfoBarSeverity.Error, "Generation failed", er.Message);
             }
 
+
             SaveAllConfigs();
             FrameCoordinateEditorControl.UnloadAnimation();
             ReloadTreeViewAndConfigs();
@@ -2389,23 +2410,25 @@ namespace FramesToMMSpriteResources
                         switch (depth)
                         {
                             case ItemDepth.GameTheme:
-                                if (!string.IsNullOrWhiteSpace(ProgramConfig.WorkingPath))
-                                {
+                                if (IsUsingGameThemes)
                                     configPath = Path.Combine(WorkingPath, ((node.Content as TreeItem)!).Text);
-                                }
                                 else
-                                {
                                     configPath = WorkingPath;
-                                }
 
                                 break;
 
                             case ItemDepth.Subject:
-                                configPath = Path.Combine(WorkingPath, ((node.Parent.Content as TreeItem)!).Text, ((node.Content as TreeItem)!).Text);
+                                if (IsUsingGameThemes)
+                                    configPath = Path.Combine(WorkingPath, ((node.Parent.Content as TreeItem)!).Text, ((node.Content as TreeItem)!).Text);
+                                else
+                                    configPath = Path.Combine(WorkingPath, ((node.Content as TreeItem)!).Text);
                                 break;
 
                             case ItemDepth.Animation:
-                                configPath = Path.Combine(WorkingPath, ((node.Parent.Parent.Content as TreeItem)!).Text, ((node.Parent.Content as TreeItem)!).Text, ((node.Content as TreeItem)!).Text);
+                                if (IsUsingGameThemes)
+                                    configPath = Path.Combine(WorkingPath, ((node.Parent.Parent.Content as TreeItem)!).Text, ((node.Parent.Content as TreeItem)!).Text, ((node.Content as TreeItem)!).Text);
+                                else
+                                    configPath = Path.Combine(WorkingPath, ((node.Parent.Content as TreeItem)!).Text, ((node.Content as TreeItem)!).Text);
                                 break;
 
                             case ItemDepth.Frame:
@@ -2413,7 +2436,10 @@ namespace FramesToMMSpriteResources
                                 var subjectName = (node.Parent.Parent.Content as TreeItem)!.Text;
                                 var animationName = (node.Parent.Content as TreeItem)!.Text;
                                 var frameIndex = int.Parse((node.Content as TreeItem)!.Text);
-                                configPath = Path.Combine(WorkingPath, gameThemeName, subjectName, animationName, ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].FrameCongfigs[frameIndex].Name + ".png");
+                                if (IsUsingGameThemes)
+                                    configPath = Path.Combine(WorkingPath, gameThemeName, subjectName, animationName, ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].FrameCongfigs[frameIndex].Name + ".png");
+                                else
+                                    configPath = Path.Combine(WorkingPath, subjectName, animationName, ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName].FrameCongfigs[frameIndex].Name + ".png");
                                 break;
                         }
                         if (configPath != null)

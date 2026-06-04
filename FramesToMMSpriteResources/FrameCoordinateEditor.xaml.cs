@@ -1,3 +1,4 @@
+using FramesToMMSpriteResources.DataConfig;
 using Microsoft.UI.Input;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -119,10 +120,15 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     }
 
+    private SubjectInterfaceConfig GetSubjectInterfaceConfig()
+    {
+        return (_subjectConfig.InterfaceConfig as SubjectInterfaceConfig)!;
+    }
+
     private void CenterOriginButton_Click(object sender, RoutedEventArgs e)
     {
-        _subjectConfig.EditorCanvas.Pan = Vector2.Zero;
-        _subjectConfig.PreviewCanvas.Pan = Vector2.Zero;
+        GetSubjectInterfaceConfig().EditorCanvas.Pan = Vector2.Zero;
+        GetSubjectInterfaceConfig().PreviewCanvas.Pan = Vector2.Zero;
 
         UpdateAnimationPreviewFrame();
         UpdateVisuals();
@@ -131,6 +137,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
     AnimationConfig getCurrentAnimationConfig()
     {
         return _subjectConfig.AnimationConfigs![_animationConfigName!];
+    }
+
+    AnimationInterfaceConfig getCurrentAnimationInterfaceConfig()
+    {
+        return (_subjectConfig.AnimationConfigs![_animationConfigName!].InterfaceConfig as AnimationInterfaceConfig)!;
     }
 
     FrameConfig getCurrentFrameConfig()
@@ -238,14 +249,14 @@ public sealed partial class FrameCoordinateEditor : UserControl
             _previewTimer.Start();
 
             ShowPreviousToggleSwitch.IsOn = MainWindow.ProgramConfig.ShowPreviousFrameBehind;
-            ZoomNumberBox.Value = (double)(_subjectConfig.EditorCanvas.Zoom * 100);
+            ZoomNumberBox.Value = (double)(GetSubjectInterfaceConfig().EditorCanvas.Zoom * 100);
 
         
 
-            FromNumberBox.Value = getCurrentAnimationConfig().Range.From;
-            if(getCurrentAnimationConfig().Range.To != -1)
+            FromNumberBox.Value = getCurrentAnimationInterfaceConfig().Range.From;
+            if(getCurrentAnimationInterfaceConfig().Range.To != -1)
             {
-                ToNumberBox.Value = getCurrentAnimationConfig().Range.To;
+                ToNumberBox.Value = getCurrentAnimationInterfaceConfig().Range.To;
             }
             else
             {
@@ -254,10 +265,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
             
 
-            if(_subjectConfig.PreviewSize != null)
+            if(GetSubjectInterfaceConfig().PreviewSize != null)
             {
-                AnimationPreviewHostBorder.Width = _subjectConfig.PreviewSize.Value.X;
-                AnimationPreviewHostBorder.Height = _subjectConfig.PreviewSize.Value.Y;
+                AnimationPreviewHostBorder.Width = GetSubjectInterfaceConfig().PreviewSize!.Value.X;
+                AnimationPreviewHostBorder.Height = GetSubjectInterfaceConfig().PreviewSize!.Value.Y;
             }
  
 
@@ -341,7 +352,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         else if (point.Properties.IsRightButtonPressed)
         {
             _dragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
-            _dragStartPan = _subjectConfig.EditorCanvas.Pan;
+            _dragStartPan = GetSubjectInterfaceConfig().EditorCanvas.Pan;
             _isDragging = true;
             CoordinateCanvas.CapturePointer(e.Pointer);
         }
@@ -358,14 +369,14 @@ public sealed partial class FrameCoordinateEditor : UserControl
         var currentPosition = new Vector2((float)point.Position.X, (float)point.Position.Y);
         if (_isDragging)
         {
-            _subjectConfig.EditorCanvas.Pan = _dragStartPan + (currentPosition - _dragStartPointer);
+            GetSubjectInterfaceConfig().EditorCanvas.Pan = _dragStartPan + (currentPosition - _dragStartPointer);
             UpdateVisuals();
         }
         else if (_isFrameDragging)
         {
             var delta = currentPosition - _frameDragStartPointer;
-            int dx = (int)MathF.Round(delta.X / _subjectConfig.EditorCanvas.Zoom);
-            int dy = (int)MathF.Round(-delta.Y / _subjectConfig.EditorCanvas.Zoom);
+            int dx = (int)MathF.Round(delta.X / GetSubjectInterfaceConfig().EditorCanvas.Zoom);
+            int dy = (int)MathF.Round(-delta.Y / GetSubjectInterfaceConfig().EditorCanvas.Zoom);
             IntVector2 newOffset = new(_frameDragStartOffset.X + dx, _frameDragStartOffset.Y + dy);
             IntVector2 currentOffset = getCurrentFrameConfig().Offset;
             if (newOffset != currentOffset)
@@ -391,7 +402,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
             return;
         }
 
-        float oldZoom = _subjectConfig.EditorCanvas.Zoom;
+        float oldZoom = GetSubjectInterfaceConfig().EditorCanvas.Zoom;
         float zoomMultiplier = wheelDelta > 0 ? 1.1f : 0.9f;
         float newZoom = Math.Clamp(oldZoom * zoomMultiplier, MinZoom, MaxZoom);
         if (Math.Abs(newZoom - oldZoom) < 0.0001f)
@@ -401,21 +412,21 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         double centerX = CoordinateCanvas.ActualWidth / 2.0;
         double centerY = CoordinateCanvas.ActualHeight / 2.0;
-        double oldAxisX = centerX + _subjectConfig.EditorCanvas.Pan.X;
-        double oldAxisY = centerY + _subjectConfig.EditorCanvas.Pan.Y;
+        double oldAxisX = centerX + GetSubjectInterfaceConfig().EditorCanvas.Pan.X;
+        double oldAxisY = centerY + GetSubjectInterfaceConfig().EditorCanvas.Pan.Y;
 
         double worldX = (point.Position.X - oldAxisX) / oldZoom;
         double worldY = (oldAxisY - point.Position.Y) / oldZoom;
 
-        _subjectConfig.EditorCanvas.Zoom = newZoom;
+        GetSubjectInterfaceConfig().EditorCanvas.Zoom = newZoom;
 
         double newAxisX = point.Position.X - (worldX * newZoom);
         double newAxisY = point.Position.Y + (worldY * newZoom);
 
-        _subjectConfig.EditorCanvas.Pan = new Vector2((float)(newAxisX - centerX), (float)(newAxisY - centerY));
+        GetSubjectInterfaceConfig().EditorCanvas.Pan = new Vector2((float)(newAxisX - centerX), (float)(newAxisY - centerY));
         if (_isDragging)
         {
-            _dragStartPan = _subjectConfig.EditorCanvas.Pan;
+            _dragStartPan = GetSubjectInterfaceConfig().EditorCanvas.Pan;
             _dragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
         }
         UpdateVisuals();
@@ -430,7 +441,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
 
         _isUpdatingZoomControls = true;
-        double zoomPercent = Math.Round(_subjectConfig.EditorCanvas.Zoom * 100);
+        double zoomPercent = Math.Round(GetSubjectInterfaceConfig().EditorCanvas.Zoom * 100);
       
         ZoomNumberBox.Value = zoomPercent;
         _isUpdatingZoomControls = false;
@@ -444,19 +455,19 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
 
         float newZoom = Math.Clamp((float)sender.Value / 100.0f, MinZoom, MaxZoom);
-        if (Math.Abs(newZoom - _subjectConfig.EditorCanvas.Zoom) < 0.0001f)
+        if (Math.Abs(newZoom - GetSubjectInterfaceConfig().EditorCanvas.Zoom) < 0.0001f)
         {
             return;
         }
 
-        float oldZoom = _subjectConfig.EditorCanvas.Zoom;
+        float oldZoom = GetSubjectInterfaceConfig().EditorCanvas.Zoom;
 
-        _subjectConfig.EditorCanvas.Zoom = newZoom;
+        GetSubjectInterfaceConfig().EditorCanvas.Zoom = newZoom;
 
         double centerX = CoordinateCanvas.ActualWidth / 2.0;
         double centerY = CoordinateCanvas.ActualHeight / 2.0;
-        double oldAxisX = centerX + _subjectConfig.EditorCanvas.Pan.X;
-        double oldAxisY = centerY + _subjectConfig.EditorCanvas.Pan.Y;
+        double oldAxisX = centerX + GetSubjectInterfaceConfig().EditorCanvas.Pan.X;
+        double oldAxisY = centerY + GetSubjectInterfaceConfig().EditorCanvas.Pan.Y;
 
         double worldX = (centerX - oldAxisX) / oldZoom;
         double worldY = (oldAxisY - centerY) / oldZoom;
@@ -464,7 +475,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         double newAxisX = centerX - (worldX * newZoom);
         double newAxisY = centerY + (worldY * newZoom);
 
-        _subjectConfig.EditorCanvas.Pan = new Vector2((float)(newAxisX - centerX), (float)(newAxisY - centerY));
+        GetSubjectInterfaceConfig().EditorCanvas.Pan = new Vector2((float)(newAxisX - centerX), (float)(newAxisY - centerY));
         UpdateVisuals();
     }
 
@@ -614,7 +625,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
 
         _previewDragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
-        _previewDragStartPan = _subjectConfig.PreviewCanvas.Pan;
+        _previewDragStartPan = GetSubjectInterfaceConfig().PreviewCanvas.Pan;
         _isPreviewDragging = true;
         AnimationPreviewCanvas.CapturePointer(e.Pointer);
         e.Handled = true;
@@ -629,7 +640,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         var point = e.GetCurrentPoint(AnimationPreviewCanvas);
         var currentPosition = new Vector2((float)point.Position.X, (float)point.Position.Y);
-        _subjectConfig.PreviewCanvas.Pan = _previewDragStartPan + (currentPosition - _previewDragStartPointer);
+        GetSubjectInterfaceConfig().PreviewCanvas.Pan = _previewDragStartPan + (currentPosition - _previewDragStartPointer);
         UpdateAnimationPreviewFrame();
         e.Handled = true;
     }
@@ -713,7 +724,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
             height = Math.Max(0, _previewResizeStartHeight + delta.Y);        
         }
 
-        _subjectConfig.PreviewSize = new((float)width, (float)height);
+        GetSubjectInterfaceConfig().PreviewSize = new((float)width, (float)height);
         AnimationPreviewHostBorder.Width = width;
         AnimationPreviewHostBorder.Height = height;
         UpdateAnimationPreviewFrame();
@@ -741,7 +752,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
             return;
         }
 
-        float oldZoom = _subjectConfig.PreviewCanvas.Zoom;
+        float oldZoom = GetSubjectInterfaceConfig().PreviewCanvas.Zoom;
         float zoomMultiplier = wheelDelta > 0 ? 1.1f : 0.9f;
         float newZoom = Math.Clamp(oldZoom * zoomMultiplier, MinPreviewZoom, MaxPreviewZoom);
         if (Math.Abs(newZoom - oldZoom) < 0.0001f)
@@ -751,20 +762,20 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         double centerX = AnimationPreviewCanvas.ActualWidth / 2.0;
         double centerY = AnimationPreviewCanvas.ActualHeight / 2.0;
-        double oldAxisX = centerX + _subjectConfig.PreviewCanvas.Pan.X;
-        double oldAxisY = centerY + _subjectConfig.PreviewCanvas.Pan.Y;
+        double oldAxisX = centerX + GetSubjectInterfaceConfig().PreviewCanvas.Pan.X;
+        double oldAxisY = centerY + GetSubjectInterfaceConfig().PreviewCanvas.Pan.Y;
 
         double worldX = (point.Position.X - oldAxisX) / oldZoom;
         double worldY = (oldAxisY - point.Position.Y) / oldZoom;
 
-        _subjectConfig.PreviewCanvas.Zoom = newZoom;
+        GetSubjectInterfaceConfig().PreviewCanvas.Zoom = newZoom;
 
         double newAxisX = point.Position.X - (worldX * newZoom);
         double newAxisY = point.Position.Y + (worldY * newZoom);
-        _subjectConfig.PreviewCanvas.Pan = new Vector2((float)(newAxisX - centerX), (float)(newAxisY - centerY));
+        GetSubjectInterfaceConfig().PreviewCanvas.Pan = new Vector2((float)(newAxisX - centerX), (float)(newAxisY - centerY));
         if (_isPreviewDragging)
         {
-            _previewDragStartPan = _subjectConfig.PreviewCanvas.Pan;
+            _previewDragStartPan = GetSubjectInterfaceConfig().PreviewCanvas.Pan;
             _previewDragStartPointer = new Vector2((float)point.Position.X, (float)point.Position.Y);
         }
 
@@ -774,12 +785,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     int GetCorrectRangeToValue()
     {
-        if(getCurrentAnimationConfig().Range.To == -1)
+        if(getCurrentAnimationInterfaceConfig().Range.To == -1)
         {
             return Math.Max(PreviewSpriteFrames.LoadedSpriteFrames.Count - 1, 0);
         }
 
-        return getCurrentAnimationConfig().Range.To;
+        return getCurrentAnimationInterfaceConfig().Range.To;
     }
 
     private void PreviewTimer_Tick(object? sender, object e)
@@ -797,7 +808,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
 
         _previewTickCount = 0;
-        _previewFrameIndex = (_previewFrameIndex + 1) % (GetCorrectRangeToValue() + 1 - getCurrentAnimationConfig().Range.From);
+        _previewFrameIndex = (_previewFrameIndex + 1) % (GetCorrectRangeToValue() + 1 - getCurrentAnimationInterfaceConfig().Range.From);
         UpdateAnimationPreviewFrame();
     }
 
@@ -819,8 +830,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         canvas.Clear();
 
-        float zoom = _subjectConfig.EditorCanvas.Zoom;
-        var pan = _subjectConfig.EditorCanvas.Pan;
+        float zoom = GetSubjectInterfaceConfig().EditorCanvas.Zoom;
+        var pan = GetSubjectInterfaceConfig().EditorCanvas.Pan;
         float axisX = width / 2f + pan.X;
         float axisY = height / 2f + pan.Y;
 
@@ -903,8 +914,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         canvas.Clear();
 
-        float zoom = _subjectConfig.PreviewCanvas.Zoom;
-        var pan = _subjectConfig.PreviewCanvas.Pan;
+        float zoom = GetSubjectInterfaceConfig().PreviewCanvas.Zoom;
+        var pan = GetSubjectInterfaceConfig().PreviewCanvas.Pan;
         float axisX = width / 2f + pan.X;
         float axisY = height / 2f + pan.Y;
 
@@ -915,7 +926,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
             return;
         }
 
-        int previewFrameIndex = Math.Clamp(_previewFrameIndex + getCurrentAnimationConfig().Range.From, getCurrentAnimationConfig().Range.From, GetCorrectRangeToValue());
+        int previewFrameIndex = Math.Clamp(_previewFrameIndex + getCurrentAnimationInterfaceConfig().Range.From, getCurrentAnimationInterfaceConfig().Range.From, GetCorrectRangeToValue());
      
      
         
@@ -1023,8 +1034,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void FromNumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
-        getCurrentAnimationConfig().Range.From = double.IsNaN(FromNumberBox.Value) ? 0 : (int)FromNumberBox.Value;
-        ToNumberBox.Minimum = getCurrentAnimationConfig().Range.From;
+        getCurrentAnimationInterfaceConfig().Range.From = double.IsNaN(FromNumberBox.Value) ? 0 : (int)FromNumberBox.Value;
+        ToNumberBox.Minimum = getCurrentAnimationInterfaceConfig().Range.From;
     }
 
     private void ToNumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
@@ -1033,12 +1044,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
         var max = Math.Max(PreviewSpriteFrames.LoadedSpriteFrames.Count - 1, 0);
         if (double.IsNaN(number) || number == max)
         {
-            getCurrentAnimationConfig().Range.To = -1;
+            getCurrentAnimationInterfaceConfig().Range.To = -1;
             FromNumberBox.Maximum = max;
             return;
         }
 
-        getCurrentAnimationConfig().Range.To = (int)number;
+        getCurrentAnimationInterfaceConfig().Range.To = (int)number;
         FromNumberBox.Maximum = number;
     }
 

@@ -1,4 +1,5 @@
-﻿using SkiaSharp;
+﻿using FramesToMMSpriteResources.DataConfig;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,53 +36,15 @@ namespace FramesToMMSpriteResources
         [JsonPropertyName("sheet")]
         public SheetConfig Sheet = new();
 
-        [JsonPropertyName("editor_canvas")]
-        public CanvasConfig EditorCanvas = new();
-
-        [JsonPropertyName("preview_canvas")]
-        public CanvasConfig PreviewCanvas = new();
-
-
-
-        [JsonPropertyName("preview_size")]
-        public Vector2? PreviewSize = null;
-
-
-
-
         [JsonIgnore]
         public Dictionary<string, AnimationConfig>? AnimationConfigs = [];
 
-        public SubjectConfig() { }
-
-        public SubjectConfig(int resizeToPercent, string? backgroundColor, int colorTreshold, bool removeBackground, bool cropSprites, SheetConfig sheet, Dictionary<string, AnimationConfig>? animationConfigs)
-        {
-            this.ResizeToPercent = resizeToPercent;
-            this.BackgroundColor = backgroundColor;
-            this.ColorTreshold = colorTreshold;
-            this.RemoveBackground = removeBackground;
-            this.CropSprites = cropSprites;
-            Sheet = sheet;
-            AnimationConfigs = animationConfigs;
+        public SubjectConfig() {
+            InterfaceConfig = new SubjectInterfaceConfig();
         }
     }
 
-    public class CanvasConfig
-    {
-        [JsonPropertyName("pan")]
-        public Vector2 Pan { get; set; } = Vector2.Zero;
-
-        [JsonPropertyName("zoom")]
-        public float Zoom { get; set; } = 1;
-
-        public CanvasConfig() { }
-
-        public CanvasConfig(Vector2 pan, float zoom)
-        {
-            Pan = pan;
-            Zoom = zoom;
-        }
-    }
+  
     public class SheetConfig
     {
         [JsonPropertyName("width")]

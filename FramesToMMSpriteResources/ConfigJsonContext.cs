@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FramesToMMSpriteResources.DataConfig;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,9 +17,12 @@ namespace FramesToMMSpriteResources;
     )]
     [JsonSerializable(typeof(ProgramConfig))]
     [JsonSerializable(typeof(SubjectConfig))]
+    [JsonSerializable(typeof(SubjectInterfaceConfig))]
     [JsonSerializable(typeof(SheetConfig))]
     [JsonSerializable(typeof(GameThemeConfig))]
     [JsonSerializable(typeof(AnimationConfig))]
+    [JsonSerializable(typeof(AnimationInterfaceConfig))]
+    [JsonSerializable(typeof(InterfaceConfig))]
     [JsonSerializable(typeof(ParentConfig))]
     internal partial class ConfigJsonContext : JsonSerializerContext
     {
