@@ -7,6 +7,9 @@ namespace FramesToMMSpriteResources
         [JsonPropertyName("offset")]
         public IntVector2 Offset = new IntVector2(0,0);
 
+        [JsonPropertyName("multiply_delay_by")]
+        public int MultipyDelayBy = 1;
+
         [JsonIgnore]
         public string Name;
 

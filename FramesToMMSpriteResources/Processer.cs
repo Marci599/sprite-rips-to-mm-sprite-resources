@@ -1,5 +1,4 @@
-﻿using Microsoft.UI.Input;
-using SkiaSharp;
+﻿using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -9,7 +8,6 @@ using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace FramesToMMSpriteResources
 {
@@ -19,16 +17,18 @@ namespace FramesToMMSpriteResources
         public IntVector2 OriginalSize { get; }
         public IntVector2 TrimOffset { get; }
         public IntVector2 FrameOffset { get; }
+        public int MultiplyDelayBy { get; }
         public string AnimationName { get; }
         public JsonObject? OldFrameJson { get; }
+ 
 
-
-        public ProcessedSprite(SKBitmap image, IntVector2 originalSize, IntVector2 trimOffset, IntVector2 frameOffset, string animationName, JsonObject? oldFrameJson)
+        public ProcessedSprite(SKBitmap image, IntVector2 originalSize, IntVector2 trimOffset, IntVector2 frameOffset, int multiplyDelayBy, string animationName, JsonObject? oldFrameJson)
         {
             Image = image;
             OriginalSize = originalSize;
             TrimOffset = trimOffset;
             FrameOffset = frameOffset;
+            MultiplyDelayBy = multiplyDelayBy;
             AnimationName = animationName;
             OldFrameJson = oldFrameJson;
         }
@@ -167,6 +167,7 @@ namespace FramesToMMSpriteResources
                 
 
                 int spritesCount = 0;
+                int spritesCountMultiplied = 0;
                 string animationPath = Path.Combine(subjectPath, animationName);
 
                 var spritePaths = GetOrderedSpritePaths(animationPath, animationConfig);
@@ -181,7 +182,9 @@ namespace FramesToMMSpriteResources
                 Parallel.For(0, spritePaths.Length, parallelOptions, i =>
                 {
                     var spritePath = spritePaths[i];
-                    IntVector2 frameOffset = GetFrameOffset(animationConfig, i);
+                    FrameConfig frameConfig = animationConfig.FrameCongfigs[i];
+                    IntVector2 frameOffset = frameConfig.Offset;
+                    spritesCountMultiplied += frameConfig.MultipyDelayBy;
 
                     SKBitmap working = SKBitmap.Decode(spritePath)
                         ?? throw new InvalidOperationException($"Failed to decode sprite: {spritePath}");
@@ -238,7 +241,7 @@ namespace FramesToMMSpriteResources
 
                         JsonObject? oldJson = (list != null && i < list.Count) ? list[i] : null;
 
-                        localSprites[i] = new ProcessedSprite(working, originalSize, offset, frameOffset, animationName, oldJson);
+                        localSprites[i] = new ProcessedSprite(working, originalSize, offset, frameOffset, frameConfig.MultipyDelayBy, animationName, oldJson);
                         working = null;
                     }
                     finally
@@ -250,7 +253,7 @@ namespace FramesToMMSpriteResources
                 processedSprites.AddRange(localSprites);
                 spritesCount += localSprites.Length;
 
-                var frameRange = Enumerable.Range(frameIndex, spritesCount).ToList();
+                var frameRange = Enumerable.Range(frameIndex, spritesCountMultiplied).ToList();
                 animationsMeta.Add(new Dictionary<string, object>
                 {
                     ["name"] = animationName,
@@ -258,7 +261,7 @@ namespace FramesToMMSpriteResources
                     ["delay"] = animationConfig.Delay,
                     ["loopType"] = animationConfig.LoopType
                 });
-                frameIndex += spritesCount;
+                frameIndex += spritesCountMultiplied;
             }
 
             var layoutInfo = SelectLayout(processedSprites);
@@ -446,17 +449,22 @@ namespace FramesToMMSpriteResources
                     }
 
                     frameValues = new JsonObject { ["Offset"] = $"{originOffsetX} {originOffsetY}" };
+                    frameValues["Rect"] = $"{leftScaled} {topScaled} {rightScaled} {bottomScaled}";
+                    for (int j = 0; j < sprite.MultiplyDelayBy; j++)
+                        frames.Add(frameValues.DeepClone());
                 }
                 else
                 {
                     frameValues = sprite.OldFrameJson.DeepClone().AsObject();
+                    frameValues["Rect"] = $"{leftScaled} {topScaled} {rightScaled} {bottomScaled}";
+                    frames.Add(frameValues);
                 }
 
-                frameValues["Rect"] = $"{leftScaled} {topScaled} {rightScaled} {bottomScaled}";
-                frames.Add(frameValues);
+                
             }
 
             var named = new JsonArray();
+
             foreach (var anim in animations)
             {
                 var name = anim["name"].ToString();
@@ -696,17 +704,7 @@ namespace FramesToMMSpriteResources
                 .ToArray();
         }
 
-        private static IntVector2 GetFrameOffset(AnimationConfig animationConfig, int frameIndex)
-        {
-            if (animationConfig.FrameCongfigs != null &&
-                frameIndex >= 0 &&
-                frameIndex < animationConfig.FrameCongfigs.Count)
-            {
-                return animationConfig.FrameCongfigs[frameIndex].Offset;
-            }
 
-            return new IntVector2(0, 0);
-        }
 
         private static SKBitmap ResizeBitmap(SKBitmap source, int newW, int newH, SKSamplingOptions samplingOptions)
         {

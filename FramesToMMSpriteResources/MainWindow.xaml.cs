@@ -1603,8 +1603,10 @@ namespace FramesToMMSpriteResources
                     AlignOnXAxis.IsChecked = animationInterfaceConfig.AlignOnXAxis;
                     AlignOnYAxis.IsChecked = animationInterfaceConfig.AlignOnYAxis;
 
+                
                     OffsetXTextBox.Value = frameConfig.Offset.X;
                     OffsetYTextBox.Value = frameConfig.Offset.Y;
+                    MultiplyNumberBox.Value = frameConfig.MultipyDelayBy;
 
                     FrameCoordinateEditorControl.SpritePositionMoved += SpriteOffset_ValueMoved;
 
@@ -1617,6 +1619,7 @@ namespace FramesToMMSpriteResources
 
                     OffsetXTextBox.ValueChanged += OffsetXTextBox_ValueChanged;
                     OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
+                    MultiplyNumberBox.ValueChanged += MultiplyNumberBox_ValueChanged;
 
                     if (_isWindowActive)
                     {
@@ -1662,6 +1665,7 @@ namespace FramesToMMSpriteResources
 
             OffsetXTextBox.ValueChanged -= OffsetXTextBox_ValueChanged;
             OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
+            MultiplyNumberBox.ValueChanged -= MultiplyNumberBox_ValueChanged;
         }
 
         FrameConfig GetCurrentFrameConfig()
@@ -1882,6 +1886,12 @@ namespace FramesToMMSpriteResources
 
             SpriteOffset_ValueChanged(new(double.IsNaN(sender.Value) ? 0 : (int)sender.Value, GetCurrentFrameConfig().Offset.Y));
             FrameCoordinateEditorControl.UpdateVisuals();
+
+        }
+
+        private void MultiplyNumberBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+        {
+            GetCurrentFrameConfig().MultipyDelayBy = double.IsNaN(sender.Value) ? 1 : (int)sender.Value;
 
         }
 

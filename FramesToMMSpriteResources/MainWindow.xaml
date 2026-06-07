@@ -365,16 +365,17 @@
                                     <StackPanel x:Name="FrameConfigPanel" Spacing="10"  Padding="12 20 20 20">
                                         <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
                                             <StackPanel Spacing="12">
-                                                <TextBlock Text="Offset" Style="{StaticResource SectionHeaderStyle}"/>
+                                                <TextBlock Text="Properties" Style="{StaticResource SectionHeaderStyle}"/>
                                                 <Rectangle Style="{StaticResource GroupDividerStyle}"/>
                                                 <Grid ColumnSpacing="10">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <NumberBox Grid.Column="0" x:Name="OffsetXTextBox" Header="X" PlaceholderText="0" Minimum="-999999" Maximum="999999"/>
-                                                    <NumberBox Grid.Column="1" x:Name="OffsetYTextBox" Header="Y" PlaceholderText="0" Minimum="-999999" Maximum="999999"/>
+                                                    <NumberBox Grid.Column="0" x:Name="OffsetXTextBox" Header="Offset X" PlaceholderText="0" Minimum="-999999" Maximum="999999"/>
+                                                    <NumberBox Grid.Column="1" x:Name="OffsetYTextBox" Header="Offset Y" PlaceholderText="0" Minimum="-999999" Maximum="999999"/>
                                                 </Grid>
+                                                <NumberBox Grid.Column="1" x:Name="MultiplyNumberBox" Header="Multiply delay by" PlaceholderText="1" Minimum="0" Maximum="999999"/>
                                             </StackPanel>
                                         </Border>
                                         <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
