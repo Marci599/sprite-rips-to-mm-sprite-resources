@@ -765,15 +765,20 @@ namespace FramesToMMSpriteResources
 
         private static (SKBitmap cropped, IntVector2 offset) TrimColor(SKBitmap src)
         {
+            // Compute full trim bounds based on pixel data
             var (left, top, right, bottom) = ColorHelper.RectTrimColor(src, subjectConfig, parsedBackgroundColor);
 
+            // If a specific side should NOT be cropped, restore that side to the original image edge
+            if (!subjectConfig.CropLeft) left = 0;
+            if (!subjectConfig.CropTop) top = 0;
+            if (!subjectConfig.CropRight) right = src.Width;
+            if (!subjectConfig.CropBottom) bottom = src.Height;
 
-
-         
-
+            // Align to even boundaries for HD assets after side adjustments
             if (gameThemeConfig.IsHd)
                 (left, top, right, bottom) = AlignEvenBox(left, top, right, bottom, new(src.Width, src.Height));
 
+            // If no cropping remains, return original
             if (left == 0 && top == 0 && right == src.Width && bottom == src.Height)
                 return (src, new IntVector2(0, 0));
 
