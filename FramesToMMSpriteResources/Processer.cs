@@ -216,7 +216,7 @@ namespace FramesToMMSpriteResources
                             SKBitmap imgAfterTrim = working;
                             
 
-                            if (subjectConfig.CropSprites)
+                            if (subjectConfig.CropLeft || subjectConfig.CropTop || subjectConfig.CropRight || subjectConfig.CropBottom)
                             {
                                 (imgAfterTrim, offset) = TrimColor(working);
                                 if (!ReferenceEquals(imgAfterTrim, working))

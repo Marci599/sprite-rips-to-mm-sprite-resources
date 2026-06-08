@@ -1338,7 +1338,10 @@ namespace FramesToMMSpriteResources
     
 
             RemoveBackgroundCheckBox.IsChecked = subjectConfig.RemoveBackground;
-            CropSpritesCheckBox.IsChecked = subjectConfig.CropSprites;
+            CropLeftCheckBox.IsChecked = subjectConfig.CropLeft;
+            CropTopCheckBox.IsChecked = subjectConfig.CropTop;
+            CropRightCheckBox.IsChecked = subjectConfig.CropRight;
+            CropBottomCheckBox.IsChecked = subjectConfig.CropBottom;
 
             ResizeTextBox.Text = subjectConfig.ResizeToPercent.ToString();
             SamplingComboBox.SelectedIndex = subjectConfig.FilterMode;
@@ -1352,7 +1355,10 @@ namespace FramesToMMSpriteResources
             UpdateColorPreview();
 
             RemoveBackgroundCheckBox.Click += ClickRemoveBackground;
-            CropSpritesCheckBox.Click += ClickCropSpritesCheckBox;
+            CropLeftCheckBox.Click += ClickCropLeftCheckBox;
+            CropTopCheckBox.Click += ClickCropTopCheckBox;
+            CropRightCheckBox.Click += ClickCropRightCheckBox;
+            CropBottomCheckBox.Click += ClickCropBottomCheckBox;
 
             ResizeTextBox.ValueChanged += ResizeTextBox_ValueChanged;
             SamplingComboBox.SelectionChanged += SamplingComboBox_SelectionChanged;
@@ -1362,6 +1368,8 @@ namespace FramesToMMSpriteResources
 
             SheetWidthTextBox.ValueChanged += SheetWidthTextBox_ValueChanged;
             SheetHeightTextBox.ValueChanged += SheetHeightTextBox_ValueChanged;
+
+            SetCheckedState();
         }
 
         async void DisplayAnimationCongifAsync(TreeViewNode node, bool animate = true, bool nowGenerated = false)
@@ -1541,7 +1549,7 @@ namespace FramesToMMSpriteResources
                         SKRectI rect = new(left, top, right, bottom);
 
                         bool isSame = (left == 0 && top == 0 && right == skb.Width && bottom == skb.Height);
-                        if ((subjectConfig.CropSprites || subjectConfig.RemoveBackground || backgroundSKColor.Alpha == 0) && !isSame)
+                        if ((subjectConfig.CropLeft || subjectConfig.CropTop || subjectConfig.CropRight || subjectConfig.CropBottom || subjectConfig.RemoveBackground || backgroundSKColor.Alpha == 0) && !isSame)
                         {  
                        
                             var width = right - left;
@@ -1633,7 +1641,10 @@ namespace FramesToMMSpriteResources
         {
             IsHdCheckBox.Click -= ClickIsHdCheckBox;
             RemoveBackgroundCheckBox.Click -= ClickRemoveBackground;
-            CropSpritesCheckBox.Click -= ClickCropSpritesCheckBox;
+            CropLeftCheckBox.Click -= ClickCropLeftCheckBox;
+            CropTopCheckBox.Click -= ClickCropTopCheckBox;
+            CropRightCheckBox.Click -= ClickCropRightCheckBox;
+            CropBottomCheckBox.Click -= ClickCropBottomCheckBox;
 
             ResizeTextBox.ValueChanged -= ResizeTextBox_ValueChanged;
             SamplingComboBox.SelectionChanged -= SamplingComboBox_SelectionChanged;
@@ -2063,11 +2074,175 @@ namespace FramesToMMSpriteResources
             }
         }
 
-        private void ClickCropSpritesCheckBox(object sender, RoutedEventArgs e)
+        private void ClickCropLeftCheckBox(object sender, RoutedEventArgs e)
         {
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
-                currentConfig.CropSprites = (sender as CheckBox)!.IsChecked!.Value;
+                currentConfig.CropLeft = (sender as CheckBox)!.IsChecked!.Value;
+            }
+            AnimationSpriteFramePath = new string[3];
+            SetCheckedState();
+        }
+
+
+        private void ClickCropTopCheckBox(object sender, RoutedEventArgs e)
+        {
+            foreach (SubjectConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.CropTop = (sender as CheckBox)!.IsChecked!.Value;
+            }
+            AnimationSpriteFramePath = new string[3];
+            SetCheckedState();
+        }
+
+        private void ClickCropRightCheckBox(object sender, RoutedEventArgs e)
+        {
+            foreach (SubjectConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.CropRight = (sender as CheckBox)!.IsChecked!.Value;
+            }
+            AnimationSpriteFramePath = new string[3];
+            SetCheckedState();
+        }
+
+
+        private void ClickCropBottomCheckBox(object sender, RoutedEventArgs e)
+        {
+            foreach (SubjectConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.CropBottom = (sender as CheckBox)!.IsChecked!.Value;
+            }
+            AnimationSpriteFramePath = new string[3];
+            SetCheckedState();
+        }
+
+        void SetEveryCrop(bool isChecked)
+        {
+            CropLeftCheckBox.IsChecked = CropTopCheckBox.IsChecked = CropRightCheckBox.IsChecked = CropBottomCheckBox.IsChecked = isChecked;
+            foreach (SubjectConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.CropLeft = isChecked;
+                currentConfig.CropTop = isChecked;
+                currentConfig.CropRight = isChecked;
+                currentConfig.CropBottom = isChecked;
+            }
+            AnimationSpriteFramePath = new string[3];
+        }
+
+
+        private void CropSpritesCheckBox_Click(object sender, RoutedEventArgs e)
+        {
+            var checkBox = (sender as CheckBox)!;
+            if (checkBox.IsChecked == null)
+            {
+                if (CropLeftCheckBox.IsChecked == true &&
+                    CropTopCheckBox.IsChecked == true &&
+                    CropRightCheckBox.IsChecked == true &&
+                    CropBottomCheckBox.IsChecked == true)
+                {
+                    CropSpritesCheckBox.IsChecked = false;
+                    
+                    SetEveryCrop(false);
+                }
+            }
+            else
+            {
+                if (checkBox.IsChecked == true)
+                {
+                    SetEveryCrop(true);
+                }
+                else
+                {
+                    SetEveryCrop(false);
+
+                }
+
+            }
+        }
+
+        private void SetCheckedState()
+        {
+
+        
+            if (CropLeftCheckBox.IsChecked == true &&
+                CropTopCheckBox.IsChecked == true &&
+                CropRightCheckBox.IsChecked == true &&
+                CropBottomCheckBox.IsChecked == true)
+            {
+                CropSpritesCheckBox.IsChecked = true;
+            }
+            else if (CropLeftCheckBox.IsChecked == false &&
+                CropTopCheckBox.IsChecked == false &&
+                CropRightCheckBox.IsChecked == false &&
+                CropBottomCheckBox.IsChecked == false)
+            {
+                CropSpritesCheckBox.IsChecked = false;
+            }
+            else
+            {
+     
+                CropSpritesCheckBox.IsChecked = null;
+            }
+            
+        }
+
+        private async void MirrorButton_Click(object sender, RoutedEventArgs e)
+        {
+            var node = TreeViewControl.SelectedNode;
+
+            var gameThemeName = (node.Parent.Parent.Content as TreeItem)!.Text;
+            var subjectName = (node.Parent.Content as TreeItem)!.Text;
+            var animationName = (node.Content as TreeItem)!.Text;
+
+            string gameThemePath = IsUsingGameThemes ? Path.Combine(WorkingPath, gameThemeName) : WorkingPath;
+            string animationPath = Path.Combine(gameThemePath, subjectName, animationName);
+
+            var animationConfig = ProgramConfig.GameThemeConfigs![gameThemeName].SubjectConfigs![subjectName].AnimationConfigs![animationName];
+
+            try
+            {
+                for (int i = 0; i < animationConfig.FrameCongfigs.Count; i++)
+                {
+                    var frameConfig = animationConfig.FrameCongfigs[i];
+                    string framePath = Path.Combine(animationPath, frameConfig.Name + ".png");
+                    if (!File.Exists(framePath))
+                        continue;
+
+                    byte[] fileBytes = File.ReadAllBytes(framePath);
+
+                    using var src = SKBitmap.Decode(fileBytes);
+                    if (src == null)
+                        continue;
+
+                    var flipped = new SKBitmap(src.Info.Width, src.Info.Height, src.ColorType, src.AlphaType);
+                    using (var canvas = new SKCanvas(flipped))
+                    {
+                        canvas.Scale(-1, 1);
+                        canvas.Translate(-src.Width, 0);
+                        canvas.DrawBitmap(src, 0, 0);
+                        canvas.Flush();
+                    }
+   
+                    using (var data = flipped.Encode(SKEncodedImageFormat.Png, 100))
+                    using (var outStream = File.Open(framePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                    {
+                        data.SaveTo(outStream);
+                    }
+
+
+                    
+                    flipped.Dispose();
+                    
+                }
+
+ 
+
+                SetInfoBar(InfoBarSeverity.Success, "Mirrored", $"Mirrored every frame in {animationName}");
+            
+            }
+            catch (Exception ex)
+            {
+                SetInfoBar(InfoBarSeverity.Error, "Mirror failed", ex.Message);
             }
             AnimationSpriteFramePath = new string[3];
         }
@@ -2770,5 +2945,7 @@ namespace FramesToMMSpriteResources
 
             return latestVersion > currentVersion;
         }
+
+
     }
 }

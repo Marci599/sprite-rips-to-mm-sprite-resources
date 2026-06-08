@@ -30,8 +30,17 @@ namespace FramesToMMSpriteResources
         [JsonPropertyName("remove_background")]
         public bool RemoveBackground = true;
 
-        [JsonPropertyName("crop_sprites")]
-        public bool CropSprites = true;
+        [JsonPropertyName("crop_left")]
+        public bool CropLeft = true;
+
+        [JsonPropertyName("crop_top")]
+        public bool CropTop = true;
+
+        [JsonPropertyName("crop_right")]
+        public bool CropRight = true;
+
+        [JsonPropertyName("crop_bottom")]
+        public bool CropBottom = true;
 
         [JsonPropertyName("sheet")]
         public SheetConfig Sheet = new();
