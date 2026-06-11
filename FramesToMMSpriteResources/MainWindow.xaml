@@ -168,7 +168,7 @@
                                             <!-- Color Group -->
                                             <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
                                                 <StackPanel Spacing="12">
-                                                    <TextBlock Text="Background color" Style="{StaticResource SectionHeaderStyle}"/>
+                                                    <TextBlock Text="Background" Style="{StaticResource SectionHeaderStyle}"/>
                                                     <Rectangle Style="{StaticResource GroupDividerStyle}"/>
                                                     <StackPanel Spacing="4">
                                                         <Grid>
@@ -357,14 +357,17 @@
 
 
                                     <CheckBox x:Name="ExcludeCheckBox" Content="Exclude from processing" MaxWidth="1000" HorizontalAlignment="Stretch"/>
-                                    <Button Grid.Column="2" Click="MirrorButton_Click" HorizontalAlignment="Left" Height="32" Margin="8 0 0 0">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <FontIcon Glyph="&#xE8AB;" FontSize="12"/>
-                                            <TextBlock Text="Mirror every frame"/>
-                                        
-                                        </StackPanel>
-                              
-                                    </Button>
+                                    <StackPanel MaxWidth="1000" HorizontalAlignment="Stretch">
+                                        <Button Grid.Column="2" Click="MirrorButton_Click" HorizontalAlignment="Left" Height="32">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <FontIcon Glyph="&#xE8AB;" FontSize="12"/>
+                                                <TextBlock Text="Mirror every frame"/>
+
+                                            </StackPanel>
+
+                                        </Button>
+                                    </StackPanel>
+                                    
                                 </StackPanel>
                             </ScrollViewer>
                         </Grid>

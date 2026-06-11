@@ -1964,7 +1964,7 @@ namespace FramesToMMSpriteResources
         {
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
-                currentConfig!.Offset = new Vector2((currentConfig).Offset!.Value.X, double.IsNaN(sender.Value) ? 0 : (int)sender.Value);
+                currentConfig!.Offset = new Vector2((currentConfig).Offset!.Value.X, double.IsNaN(sender.Value) ? 0 : (float)sender.Value);
             }         
         }
 
@@ -1972,7 +1972,7 @@ namespace FramesToMMSpriteResources
         {
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
-                currentConfig.Offset = new Vector2(double.IsNaN(sender.Value) ? 0 : (int)sender.Value, (currentConfig).Offset!.Value.Y);
+                currentConfig.Offset = new Vector2(double.IsNaN(sender.Value) ? 0 : (float)sender.Value, (currentConfig).Offset!.Value.Y);
             }
         }
 
