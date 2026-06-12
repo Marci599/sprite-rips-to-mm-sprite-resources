@@ -37,7 +37,7 @@ namespace FramesToMMSpriteResources
         public List<FrameConfig> FrameCongfigs;
 
         [JsonPropertyName("also_known_as")]
-        public SortedSet<string> AlsoKnownAs = new();
+        public SortedSet<string> AlsoKnownAs = [];
 
         public AnimationConfig() { }
     }

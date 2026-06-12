@@ -38,6 +38,8 @@ using Windows.Storage.Streams;
 //TODO: Also known as should be saved to the interface config
 //TODO: AT START THE ALSO KNOWN AS LIST ISN'T VISIBLE
 //TODO: ALSO KNOWN AS LIST DOESN'T WORK WITH MULTIEDITING
+//TODO: ADD RANGE OPTION TO ALSO KNOWN AS
+//TODO: WHEN IN INPUTFIELD, SHORTCUUTS SHOULDN'T WORK
 namespace FramesToMMSpriteResources
 {
     public enum ItemDepth
@@ -3055,11 +3057,14 @@ namespace FramesToMMSpriteResources
         {
             var animConf = GetCurrentAnimationConfig();
             AlsoKnownAsItems.Clear();
-          
-            foreach (var item in animConf.AlsoKnownAs)
+            if(animConf.AlsoKnownAs != null)
             {
-                AlsoKnownAsItems.Add(item);
+                foreach (var item in animConf.AlsoKnownAs)
+                {
+                    AlsoKnownAsItems.Add(item);
+                }
             }
+          
             
 
             DispatcherQueue.TryEnqueue(ClearAlsoKnownAsTextBox);
@@ -3094,11 +3099,27 @@ namespace FramesToMMSpriteResources
 
         private void AlsoKnownAsAddButton_Click(object sender, RoutedEventArgs e)
         {
-            
+
             string newItem = AlsoKnownAsTextBox.Text.Trim();
             var animConf = GetCurrentAnimationConfig();
+            if (animConf.AlsoKnownAs == null)
+            {
+                animConf.AlsoKnownAs = new SortedSet<string>();
+            }
             animConf.AlsoKnownAs.Add(newItem);
-            AlsoKnownAsItems.Add(newItem);
+
+            // Find the correct sorted position and insert
+            int insertIndex = 0;
+            for (int i = 0; i < AlsoKnownAsItems.Count; i++)
+            {
+                if (string.Compare(newItem, AlsoKnownAsItems[i], StringComparison.Ordinal) < 0)
+                {
+                    insertIndex = i;
+                    break;
+                }
+                insertIndex = i + 1;
+            }
+            AlsoKnownAsItems.Insert(insertIndex, newItem);
             AlsoKnownAsTextBox.Text = "";
         }
 
@@ -3152,13 +3173,26 @@ namespace FramesToMMSpriteResources
             animConf.AlsoKnownAs.Remove(oldValue);
             animConf.AlsoKnownAs.Add(newValue);
 
-        
+
             int index = AlsoKnownAsItems.IndexOf(oldValue);
             if (index >= 0)
             {
-                AlsoKnownAsItems[index] = newValue;
+                AlsoKnownAsItems.RemoveAt(index);
+
+                // Find the correct sorted position and insert
+                int insertIndex = 0;
+                for (int i = 0; i < AlsoKnownAsItems.Count; i++)
+                {
+                    if (string.Compare(newValue, AlsoKnownAsItems[i], StringComparison.Ordinal) < 0)
+                    {
+                        insertIndex = i;
+                        break;
+                    }
+                    insertIndex = i + 1;
+                }
+                AlsoKnownAsItems.Insert(insertIndex, newValue);
             }
-            
+
         }
 
         private void AlsoKnownAsEditTextBox_KeyDown(object sender, KeyRoutedEventArgs e)
@@ -3194,7 +3228,7 @@ namespace FramesToMMSpriteResources
             var subjConf = GetCurrentSubjectConfig();
             var animConf = subjConf.AnimationConfigs[(TreeViewControl.SelectedNode.Content as TreeItem)!.Text];
             string text = (sender as TextBox)!.Text;
-            AlsoKnownAsAddButton.IsEnabled = !string.IsNullOrWhiteSpace(text) && !animConf.AlsoKnownAs.Contains(text) && !subjConf.AnimationConfigs.ContainsKey(text);
+            AlsoKnownAsAddButton.IsEnabled = !string.IsNullOrWhiteSpace(text) && (animConf.AlsoKnownAs == null || !animConf.AlsoKnownAs.Contains(text)) && !subjConf.AnimationConfigs.ContainsKey(text);
 
         }
     }
