@@ -280,7 +280,9 @@
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
 
-
+                                        <StackPanel Spacing="10">
+                                            
+                                      
                                         <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
                                             <StackPanel Spacing="12">
                                                 <TextBlock Text="Properties" Style="{StaticResource SectionHeaderStyle}"/>
@@ -301,6 +303,20 @@
                                             </StackPanel>
                                         </Border>
 
+                                            
+                                            <CheckBox x:Name="ExcludeCheckBox" Content="Exclude from processing" MaxWidth="1000" HorizontalAlignment="Stretch"/>
+
+                                            <Button Grid.Column="2" Click="MirrorButton_Click" HorizontalAlignment="Left" Height="32">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <FontIcon Glyph="&#xE8AB;" FontSize="12"/>
+                                                    <TextBlock Text="Mirror every frame"/>
+
+                                                </StackPanel>
+
+                                            </Button>
+
+                            
+                                        </StackPanel>
                                         <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}">
                                             <StackPanel Spacing="12">
                                                 <TextBlock Text="Generating" Style="{StaticResource SectionHeaderStyle}"/>
@@ -327,7 +343,7 @@
                                                                 <TextBlock Text="Adjusts the offset of every frame after processing"  Style="{StaticResource HelperTextStyle}"/>
                                                             </StackPanel>
                                          
-                                                    
+
                                                             <StackPanel Spacing="4">
                                                         <TextBlock Text="Recover cropped offset on"/>
                                                         <Grid ColumnSpacing="8">
@@ -341,11 +357,39 @@
                                                                 <TextBlock Text="If enabled, the offsets will be adjusted to account for any cropping that was done"
                                                                 Style="{StaticResource HelperTextStyle}"/>
                                                             </StackPanel>
+                                                <StackPanel Spacing="4">
+                                                    <Grid ColumnSpacing="-1">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBox x:Name="AlsoKnownAsTextBox" Header="Also known as" Grid.Column="0" PlaceholderText="Animation name" CornerRadius="4 0 0 4" TextChanged="AlsoKnownAsTextBox_TextChanged"/>
+                                                        <Button x:Name="AlsoKnownAsAddButton" Grid.Column="1" Padding="0" VerticalAlignment="Bottom" CornerRadius="0 4 4 0" Width="32" Height="32" IsEnabled="False">
+                                                            <FontIcon Glyph="&#xE710;" FontSize="14"/>
+                                                        </Button>
+                                                    </Grid>
+                                                    <ListView x:Name="AlsoKnownAsListView" SelectionMode="None" MaxHeight="150">
+                                                        <ListView.ItemTemplate>
+                                                            <DataTemplate x:DataType="x:String">
+                                                                <Grid ColumnSpacing="-1" Margin="16 0 -12 0">
+                                                                    <Grid.ColumnDefinitions>
+                                                                        <ColumnDefinition Width="*"/>
+                                                                        <ColumnDefinition Width="Auto"/>
+                                                                    </Grid.ColumnDefinitions>
+                                                                    <TextBox Grid.Column="0" Text="{x:Bind}" LostFocus="AlsoKnownAsEditTextBox_LostFocus" KeyDown="AlsoKnownAsEditTextBox_KeyDown" CornerRadius="4 0 0 4"/>
+                                                                    <Button Grid.Column="1" x:Name="RemoveButton" Height="32" Width="32" Padding="0" Click="AlsoKnownAsRemoveButton_Click" CornerRadius="0 4 4 0">
+                                                                        <FontIcon Glyph="&#xE74D;" FontSize="12"/>
+                                                                    </Button>
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ListView.ItemTemplate>
+                                                    </ListView>
+                                                </StackPanel>
                                                     <StackPanel Spacing="4">
                                                         <CheckBox x:Name="RegenerateCheckBox" Content="Regenerate frame properties"/>
                                                         <TextBlock Text="If disabled, offsets and sub-positions won't be overwritten"  Style="{StaticResource HelperTextStyle}"/>
                                                     </StackPanel>
-                                           
+
 
 
                                             </StackPanel>
@@ -356,17 +400,6 @@
                                     </Grid>
 
 
-                                    <CheckBox x:Name="ExcludeCheckBox" Content="Exclude from processing" MaxWidth="1000" HorizontalAlignment="Stretch"/>
-                                    <StackPanel MaxWidth="1000" HorizontalAlignment="Stretch">
-                                        <Button Grid.Column="2" Click="MirrorButton_Click" HorizontalAlignment="Left" Height="32">
-                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <FontIcon Glyph="&#xE8AB;" FontSize="12"/>
-                                                <TextBlock Text="Mirror every frame"/>
-
-                                            </StackPanel>
-
-                                        </Button>
-                                    </StackPanel>
                                     
                                 </StackPanel>
                             </ScrollViewer>

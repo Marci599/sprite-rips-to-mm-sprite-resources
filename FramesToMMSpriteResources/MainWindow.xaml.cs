@@ -34,6 +34,10 @@ using Windows.Storage.Streams;
 //TODO: WHEN THERE IS A NODE SAVED AS SELECTED, BUT THE FOLDER/SPRITE GETS REMOVED, PROGRAM CRASHES
 //TODO: MAKE THE PROGRAM REMEMBER PATHS, REMOVE GAME THEME MODE?
 //TODO: REMOVE UNUSED OFFSETS AFTER GENERATION
+//TODO: HITTING GENERATE AND THEN UNFOCUSING WINDOW RESULTS IN NOT UNLOADING THE FRAME EDITOR
+//TODO: Also known as should be saved to the interface config
+//TODO: AT START THE ALSO KNOWN AS LIST ISN'T VISIBLE
+//TODO: ALSO KNOWN AS LIST DOESN'T WORK WITH MULTIEDITING
 namespace FramesToMMSpriteResources
 {
     public enum ItemDepth
@@ -173,6 +177,8 @@ namespace FramesToMMSpriteResources
         public string[] AnimationSpriteFramePath = new string[3];
 
         public ObservableCollection<string> BreadcrumbItems { get; } = new();
+
+        public ObservableCollection<string> AlsoKnownAsItems { get; } = new();
 
         private readonly JsonSerializerOptions jsonOptions = new()
         {
@@ -1422,6 +1428,42 @@ namespace FramesToMMSpriteResources
 
             AnimationOffsetXTextBox.ValueChanged += AnimationOffsetXTextBox_ValueChanged;
             AnimationOffsetYTextBox.ValueChanged += AnimationOffsetYTextBox_ValueChanged;
+
+    
+            PopulateAlsoKnownAsList();
+
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                var addButton = this.Content as Button;
+                var grid = this.Content as Grid;
+                if (grid != null)
+                {
+
+                    FindAndWireControls(grid);
+                }
+            });
+        }
+
+        private void FindAndWireControls(DependencyObject parent)
+        {
+            for (int i = 0; i < Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(parent, i);
+
+                if (child is Button button && button.Name == "AlsoKnownAsAddButton")
+                {
+                    button.Click += AlsoKnownAsAddButton_Click;
+                }
+                else if (child is ListView listView && listView.Name == "AlsoKnownAsListView")
+                {
+                    listView.ItemsSource = AlsoKnownAsItems;
+                }
+
+                if (child is DependencyObject depObj)
+                {
+                    FindAndWireControls(depObj);
+                }
+            }
         }
 
         CancellationTokenSource? cts= null;
@@ -1677,6 +1719,48 @@ namespace FramesToMMSpriteResources
             OffsetXTextBox.ValueChanged -= OffsetXTextBox_ValueChanged;
             OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
             MultiplyNumberBox.ValueChanged -= MultiplyNumberBox_ValueChanged;
+
+            UnwireAlsoKnownAsControls();
+
+        }
+
+        private void UnwireAlsoKnownAsControls()
+        {
+            var root = this.Content as DependencyObject;
+            if (root == null) return;
+
+            for (int i = 0; i < Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(root); i++)
+            {
+                var child = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(root, i);
+
+                if (child is Button button && button.Name == "AlsoKnownAsAddButton")
+                {
+                    button.Click -= AlsoKnownAsAddButton_Click;
+                }
+
+                if (child is DependencyObject depObj)
+                {
+                    UnwireAlsoKnownAsControls_Recursive(depObj);
+                }
+            }
+        }
+
+        private void UnwireAlsoKnownAsControls_Recursive(DependencyObject parent)
+        {
+            for (int i = 0; i < Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(parent, i);
+
+                if (child is Button button && button.Name == "AlsoKnownAsAddButton")
+                {
+                    button.Click -= AlsoKnownAsAddButton_Click;
+                }
+
+                if (child is DependencyObject depObj)
+                {
+                    UnwireAlsoKnownAsControls_Recursive(depObj);
+                }
+            }
         }
 
         FrameConfig GetCurrentFrameConfig()
@@ -1697,6 +1781,27 @@ namespace FramesToMMSpriteResources
 
             return ProgramConfig.GameThemeConfigs[gameThemeName].SubjectConfigs[subjectName].AnimationConfigs[animationName];
         }
+
+        AnimationConfig GetCurrentAnimationConfig()
+        {
+            var node = TreeViewControl.SelectedNode;
+            var gameThemeName = (node.Parent.Parent.Content as TreeItem)!.Text;
+            var subjectName = (node.Parent.Content as TreeItem)!.Text;
+            var animationName = (node.Content as TreeItem)!.Text;
+
+            return ProgramConfig.GameThemeConfigs[gameThemeName].SubjectConfigs[subjectName].AnimationConfigs[animationName];
+        }
+
+        SubjectConfig GetCurrentSubjectConfig()
+        {
+            var node = TreeViewControl.SelectedNode;
+            var gameThemeName = (node.Parent.Parent.Content as TreeItem)!.Text;
+            var subjectName = (node.Parent.Content as TreeItem)!.Text;
+
+
+            return ProgramConfig.GameThemeConfigs[gameThemeName].SubjectConfigs[subjectName];
+        }
+
 
         public void RefreshOffsetFieldVisually()
         {
@@ -2946,6 +3051,152 @@ namespace FramesToMMSpriteResources
             return latestVersion > currentVersion;
         }
 
+        private void PopulateAlsoKnownAsList()
+        {
+            var animConf = GetCurrentAnimationConfig();
+            AlsoKnownAsItems.Clear();
+          
+            foreach (var item in animConf.AlsoKnownAs)
+            {
+                AlsoKnownAsItems.Add(item);
+            }
+            
 
+            DispatcherQueue.TryEnqueue(ClearAlsoKnownAsTextBox);
+        }
+
+        private void ClearAlsoKnownAsTextBox()
+        {
+            var root = this.Content as DependencyObject;
+            if (root == null) return;
+
+            FindAndClearTextBox(root);
+        }
+
+        private void FindAndClearTextBox(DependencyObject parent)
+        {
+            for (int i = 0; i < Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(parent, i);
+
+                if (child is TextBox textBox && textBox.Name == "AlsoKnownAsTextBox")
+                {
+                    textBox.Text = "";
+                    return;
+                }
+
+                if (child is DependencyObject depObj)
+                {
+                    FindAndClearTextBox(depObj);
+                }
+            }
+        }
+
+        private void AlsoKnownAsAddButton_Click(object sender, RoutedEventArgs e)
+        {
+            
+            string newItem = AlsoKnownAsTextBox.Text.Trim();
+            var animConf = GetCurrentAnimationConfig();
+            animConf.AlsoKnownAs.Add(newItem);
+            AlsoKnownAsItems.Add(newItem);
+            AlsoKnownAsTextBox.Text = "";
+        }
+
+        private void AlsoKnownAsRemoveButton_Click(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            if (button?.DataContext is string item)
+            {
+                var animConf = GetCurrentAnimationConfig();
+           
+              
+                animConf.AlsoKnownAs.Remove(item);
+                AlsoKnownAsItems.Remove(item);
+                
+            }
+        }
+
+        private void AlsoKnownAsEditTextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            var editBox = sender as TextBox;
+            if (editBox == null) return;
+
+            string oldValue = editBox.DataContext as string ?? "";
+            string newValue = editBox.Text?.Trim() ?? "";
+
+    
+            if (string.IsNullOrEmpty(newValue))
+            {
+      
+                editBox.Text = oldValue;
+                return;
+            }
+
+            if (newValue == oldValue)
+            {
+         
+                return;
+            }
+
+            var animConf = GetCurrentAnimationConfig();
+
+
+            if (animConf.AlsoKnownAs.Contains(newValue))
+            {
+          
+                editBox.Text = oldValue;
+                return;
+            }
+
+          
+            animConf.AlsoKnownAs.Remove(oldValue);
+            animConf.AlsoKnownAs.Add(newValue);
+
+        
+            int index = AlsoKnownAsItems.IndexOf(oldValue);
+            if (index >= 0)
+            {
+                AlsoKnownAsItems[index] = newValue;
+            }
+            
+        }
+
+        private void AlsoKnownAsEditTextBox_KeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            if (e.Key == Windows.System.VirtualKey.Enter)
+            {
+                e.Handled = true;
+                var editBox = sender as TextBox;
+                if (editBox != null)
+                {
+            
+                    var button = (editBox.Parent as Grid)?.Children.OfType<Button>().FirstOrDefault();
+                    if (button != null)
+                    {
+                        button.Focus(FocusState.Programmatic);
+                    }
+                }
+            }
+            else if (e.Key == Windows.System.VirtualKey.Escape)
+            {
+                e.Handled = true;
+                var editBox = sender as TextBox;
+                if (editBox != null)
+                {
+       
+                    editBox.Text = editBox.DataContext as string ?? "";
+                }
+            }
+        }
+
+        private void AlsoKnownAsTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            var subjConf = GetCurrentSubjectConfig();
+            var animConf = subjConf.AnimationConfigs[(TreeViewControl.SelectedNode.Content as TreeItem)!.Text];
+            string text = (sender as TextBox)!.Text;
+            AlsoKnownAsAddButton.IsEnabled = !string.IsNullOrWhiteSpace(text) && !animConf.AlsoKnownAs.Contains(text) && !subjConf.AnimationConfigs.ContainsKey(text);
+
+        }
     }
 }
+
