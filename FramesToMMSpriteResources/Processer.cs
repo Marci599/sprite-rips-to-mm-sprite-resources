@@ -1,4 +1,5 @@
-﻿using SkiaSharp;
+﻿using FramesToMMSpriteResources.DataConfig;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -131,7 +132,7 @@ namespace FramesToMMSpriteResources
                 };
             }
 
-            foreach (var (animationName, animationConfig) in subjectConfig.AnimationConfigs)
+            foreach (var (animationName, animationConfig) in subjectConfig.AnimationConfigs!)
             {
                 List<JsonObject>? list = null;
                 if (named != null && !animationConfig.Regenerate)
@@ -261,6 +262,26 @@ namespace FramesToMMSpriteResources
                     ["delay"] = animationConfig.Delay,
                     ["loopType"] = animationConfig.LoopType
                 });
+                if(animationConfig.AlsoKnownAs != null)
+                {
+                    foreach ((string knownName, RangeConfig knownRange) in animationConfig.AlsoKnownAs)
+                    {
+                        int firstFrame = frameIndex + knownRange.From;
+                        int lastFrame = spritesCountMultiplied;
+                        if(knownRange.To != -1)
+                        {
+                            lastFrame = firstFrame + 1 + knownRange.To;
+                        }
+                        var knownFrameRange = Enumerable.Range(firstFrame, lastFrame).ToList();
+                        animationsMeta.Add(new Dictionary<string, object>
+                        {
+                            ["name"] = knownName,
+                            ["frames"] = knownFrameRange,
+                            ["delay"] = animationConfig.Delay,
+                            ["loopType"] = animationConfig.LoopType
+                        });
+                    }
+                }
                 frameIndex += spritesCountMultiplied;
             }
 

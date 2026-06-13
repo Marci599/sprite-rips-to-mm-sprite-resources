@@ -37,12 +37,10 @@ namespace FramesToMMSpriteResources
         public List<FrameConfig> FrameCongfigs;
 
         [JsonPropertyName("also_known_as")]
-        public SortedSet<string> AlsoKnownAs = [];
+        public Dictionary<string, RangeConfig> AlsoKnownAs = new();
 
         public AnimationConfig() { }
     }
-
-
 
     public class RecoverCroppedOffset
     {

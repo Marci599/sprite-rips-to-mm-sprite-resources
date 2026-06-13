@@ -32,6 +32,9 @@ namespace FramesToMMSpriteResources.DataConfig
         [JsonPropertyName("align_based_on")]
         public AlignBasedOn AlignBasedOn = AlignBasedOn.RawSpriteSie;
 
+        [JsonPropertyName("also_known_as")]
+        public string AlsoKnownAs = "";
+
         public AnimationInterfaceConfig() { }
     }
 

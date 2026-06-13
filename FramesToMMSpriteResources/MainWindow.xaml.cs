@@ -35,11 +35,7 @@ using Windows.Storage.Streams;
 //TODO: MAKE THE PROGRAM REMEMBER PATHS, REMOVE GAME THEME MODE?
 //TODO: REMOVE UNUSED OFFSETS AFTER GENERATION
 //TODO: HITTING GENERATE AND THEN UNFOCUSING WINDOW RESULTS IN NOT UNLOADING THE FRAME EDITOR
-//TODO: Also known as should be saved to the interface config
-//TODO: AT START THE ALSO KNOWN AS LIST ISN'T VISIBLE
-//TODO: ALSO KNOWN AS LIST DOESN'T WORK WITH MULTIEDITING
 //TODO: ADD RANGE OPTION TO ALSO KNOWN AS
-//TODO: WHEN IN INPUTFIELD, SHORTCUUTS SHOULDN'T WORK
 namespace FramesToMMSpriteResources
 {
     public enum ItemDepth
@@ -180,7 +176,7 @@ namespace FramesToMMSpriteResources
 
         public ObservableCollection<string> BreadcrumbItems { get; } = new();
 
-        public ObservableCollection<string> AlsoKnownAsItems { get; } = new();
+        public ObservableCollection<AlsoKnownAsEntry> AlsoKnownAsEntries { get; } = new();
 
         private readonly JsonSerializerOptions jsonOptions = new()
         {
@@ -1234,7 +1230,7 @@ namespace FramesToMMSpriteResources
             }
         }
 
-        void HandleSelection(TreeItem selectedNode, bool nowGenerated, List<String> newSelectedNodePath)
+        void HandleSelection(TreeItem selectedNode, bool nowGenerated, List<string> newSelectedNodePath)
         {
             bool inSamePath = ProgramConfig.SelectedNodePath!.SequenceEqual(newSelectedNodePath);
             if ((!inSamePath || !IsCtrlHeld) && !nowGenerated)
@@ -1419,6 +1415,8 @@ namespace FramesToMMSpriteResources
             AnimationOffsetXTextBox.Text = animationConfig.Offset.Value.X.ToString();
             AnimationOffsetYTextBox.Text = animationConfig.Offset.Value.Y.ToString();
 
+            AlsoKnownAsTextBox.Text = (animationConfig.InterfaceConfig as AnimationInterfaceConfig)!.AlsoKnownAs;
+
             RegenerateCheckBox.Click += ClickRegenerateCheckBox;
             ExcludeCheckBox.Click += ExcludeCheckBox_Click;
             RecoverXCheckBox.Click += ClickRecoverXCheckBox;
@@ -1431,42 +1429,17 @@ namespace FramesToMMSpriteResources
             AnimationOffsetXTextBox.ValueChanged += AnimationOffsetXTextBox_ValueChanged;
             AnimationOffsetYTextBox.ValueChanged += AnimationOffsetYTextBox_ValueChanged;
 
+            AlsoKnownAsTextBox.TextChanged += AlsoKnownAsTextBox_TextChanged;
+
     
             PopulateAlsoKnownAsList();
 
-            DispatcherQueue.TryEnqueue(() =>
-            {
-                var addButton = this.Content as Button;
-                var grid = this.Content as Grid;
-                if (grid != null)
-                {
-
-                    FindAndWireControls(grid);
-                }
-            });
+            AlsoKnownAsAddButton.Click += AlsoKnownAsAddButton_Click;
+            AlsoKnownAsListView.ItemsSource = AlsoKnownAsEntries;
+            AlsoKnownAsAddButton.IsEnabled = false;
         }
 
-        private void FindAndWireControls(DependencyObject parent)
-        {
-            for (int i = 0; i < Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
-            {
-                var child = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(parent, i);
 
-                if (child is Button button && button.Name == "AlsoKnownAsAddButton")
-                {
-                    button.Click += AlsoKnownAsAddButton_Click;
-                }
-                else if (child is ListView listView && listView.Name == "AlsoKnownAsListView")
-                {
-                    listView.ItemsSource = AlsoKnownAsItems;
-                }
-
-                if (child is DependencyObject depObj)
-                {
-                    FindAndWireControls(depObj);
-                }
-            }
-        }
 
         CancellationTokenSource? cts= null;
 
@@ -1722,47 +1695,10 @@ namespace FramesToMMSpriteResources
             OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
             MultiplyNumberBox.ValueChanged -= MultiplyNumberBox_ValueChanged;
 
-            UnwireAlsoKnownAsControls();
+            AlsoKnownAsTextBox.TextChanged -= AlsoKnownAsTextBox_TextChanged;
 
-        }
+            AlsoKnownAsAddButton.Click -= AlsoKnownAsAddButton_Click;
 
-        private void UnwireAlsoKnownAsControls()
-        {
-            var root = this.Content as DependencyObject;
-            if (root == null) return;
-
-            for (int i = 0; i < Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(root); i++)
-            {
-                var child = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(root, i);
-
-                if (child is Button button && button.Name == "AlsoKnownAsAddButton")
-                {
-                    button.Click -= AlsoKnownAsAddButton_Click;
-                }
-
-                if (child is DependencyObject depObj)
-                {
-                    UnwireAlsoKnownAsControls_Recursive(depObj);
-                }
-            }
-        }
-
-        private void UnwireAlsoKnownAsControls_Recursive(DependencyObject parent)
-        {
-            for (int i = 0; i < Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
-            {
-                var child = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(parent, i);
-
-                if (child is Button button && button.Name == "AlsoKnownAsAddButton")
-                {
-                    button.Click -= AlsoKnownAsAddButton_Click;
-                }
-
-                if (child is DependencyObject depObj)
-                {
-                    UnwireAlsoKnownAsControls_Recursive(depObj);
-                }
-            }
         }
 
         FrameConfig GetCurrentFrameConfig()
@@ -2179,6 +2115,26 @@ namespace FramesToMMSpriteResources
             {
                 currentConfig.Exclude = (sender as CheckBox)!.IsChecked!.Value;
             }
+        }
+
+        private void AlsoKnownAsTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            var subjConf = GetCurrentSubjectConfig();
+            string text = (sender as TextBox)!.Text;
+
+            bool isAllowedToAdd = !string.IsNullOrWhiteSpace(text);
+
+            foreach ((string animationName, AnimationConfig animationConfig) in subjConf.AnimationConfigs!)
+            {
+                if (animationName == text || (animationConfig.AlsoKnownAs != null && animationConfig.AlsoKnownAs.ContainsKey(text)))
+                    isAllowedToAdd = false;
+            }
+
+            AlsoKnownAsAddButton.IsEnabled = isAllowedToAdd;
+
+            var animConf = subjConf.AnimationConfigs[(TreeViewControl.SelectedNode.Content as TreeItem)!.Text];
+            (animConf.InterfaceConfig as AnimationInterfaceConfig)!.AlsoKnownAs = text;
+      
         }
 
         private void ClickCropLeftCheckBox(object sender, RoutedEventArgs e)
@@ -2885,6 +2841,11 @@ namespace FramesToMMSpriteResources
 
         private bool HandleTreeViewHotkeys(KeyRoutedEventArgs e)
         {
+            var focused = FocusManager.GetFocusedElement(Content.XamlRoot);
+
+            if (focused != null && focused is TextBox)
+                return false;
+
             TreeViewNode? selectedNode = TreeViewControl.SelectedNode;
             if (selectedNode == null)
             {
@@ -3056,85 +3017,73 @@ namespace FramesToMMSpriteResources
         private void PopulateAlsoKnownAsList()
         {
             var animConf = GetCurrentAnimationConfig();
-            AlsoKnownAsItems.Clear();
+            AlsoKnownAsEntries.Clear();
+            var defaultRange = (animConf.InterfaceConfig as AnimationInterfaceConfig)?.Range ?? new FramesToMMSpriteResources.DataConfig.RangeConfig();
             if(animConf.AlsoKnownAs != null)
             {
-                foreach (var item in animConf.AlsoKnownAs)
+                foreach (var kv in animConf.AlsoKnownAs.OrderBy(k => k.Key, StringComparer.Ordinal))
                 {
-                    AlsoKnownAsItems.Add(item);
+                    var range = kv.Value ?? new FramesToMMSpriteResources.DataConfig.RangeConfig(defaultRange.From, defaultRange.To);
+                    AlsoKnownAsEntries.Add(new AlsoKnownAsEntry(kv.Key, range));
                 }
             }
-          
-            
 
-            DispatcherQueue.TryEnqueue(ClearAlsoKnownAsTextBox);
+ 
         }
 
-        private void ClearAlsoKnownAsTextBox()
-        {
-            var root = this.Content as DependencyObject;
-            if (root == null) return;
 
-            FindAndClearTextBox(root);
-        }
-
-        private void FindAndClearTextBox(DependencyObject parent)
-        {
-            for (int i = 0; i < Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
-            {
-                var child = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(parent, i);
-
-                if (child is TextBox textBox && textBox.Name == "AlsoKnownAsTextBox")
-                {
-                    textBox.Text = "";
-                    return;
-                }
-
-                if (child is DependencyObject depObj)
-                {
-                    FindAndClearTextBox(depObj);
-                }
-            }
-        }
 
         private void AlsoKnownAsAddButton_Click(object sender, RoutedEventArgs e)
         {
-
             string newItem = AlsoKnownAsTextBox.Text.Trim();
+            if (string.IsNullOrEmpty(newItem)) return;
+
             var animConf = GetCurrentAnimationConfig();
             if (animConf.AlsoKnownAs == null)
             {
-                animConf.AlsoKnownAs = new SortedSet<string>();
+                animConf.AlsoKnownAs = new Dictionary<string, FramesToMMSpriteResources.DataConfig.RangeConfig>();
             }
-            animConf.AlsoKnownAs.Add(newItem);
 
-            // Find the correct sorted position and insert
+
+
+            // add to dictionary
+            animConf.AlsoKnownAs[newItem] = new();
+
+            // Find insert index in sorted order
             int insertIndex = 0;
-            for (int i = 0; i < AlsoKnownAsItems.Count; i++)
+            for (int i = 0; i < AlsoKnownAsEntries.Count; i++)
             {
-                if (string.Compare(newItem, AlsoKnownAsItems[i], StringComparison.Ordinal) < 0)
+                if (string.Compare(newItem, AlsoKnownAsEntries[i].Name, StringComparison.Ordinal) < 0)
                 {
                     insertIndex = i;
                     break;
                 }
                 insertIndex = i + 1;
             }
-            AlsoKnownAsItems.Insert(insertIndex, newItem);
+            AlsoKnownAsEntries.Insert(insertIndex, new AlsoKnownAsEntry(newItem, new()));
             AlsoKnownAsTextBox.Text = "";
         }
 
         private void AlsoKnownAsRemoveButton_Click(object sender, RoutedEventArgs e)
         {
             var button = sender as Button;
-            if (button?.DataContext is string item)
+            if (button?.DataContext is AlsoKnownAsEntry entry)
             {
                 var animConf = GetCurrentAnimationConfig();
-           
-              
-                animConf.AlsoKnownAs.Remove(item);
-                AlsoKnownAsItems.Remove(item);
-                
+                if (animConf.AlsoKnownAs != null)
+                {
+                    animConf.AlsoKnownAs.Remove(entry.Name);
+                }
+                AlsoKnownAsEntries.Remove(entry);
             }
+        }
+
+        private void AlsoKnownAsEditTextBox_GotFocus(object sender, RoutedEventArgs e)
+        {
+            var editBox = sender as TextBox;
+            if (editBox == null) return;
+ 
+            editBox.Tag = (editBox.DataContext as AlsoKnownAsEntry)?.Name ?? editBox.Text;
         }
 
         private void AlsoKnownAsEditTextBox_LostFocus(object sender, RoutedEventArgs e)
@@ -3142,57 +3091,58 @@ namespace FramesToMMSpriteResources
             var editBox = sender as TextBox;
             if (editBox == null) return;
 
-            string oldValue = editBox.DataContext as string ?? "";
+            var entry = editBox.DataContext as AlsoKnownAsEntry;
+            if (entry == null) return;
+
+            string oldValue = editBox.Tag as string ?? entry.Name;
             string newValue = editBox.Text?.Trim() ?? "";
 
-    
             if (string.IsNullOrEmpty(newValue))
             {
-      
+                // revert
                 editBox.Text = oldValue;
                 return;
             }
 
             if (newValue == oldValue)
             {
-         
                 return;
             }
 
             var animConf = GetCurrentAnimationConfig();
+            if (animConf.AlsoKnownAs == null) animConf.AlsoKnownAs = new Dictionary<string, FramesToMMSpriteResources.DataConfig.RangeConfig>();
 
-
-            if (animConf.AlsoKnownAs.Contains(newValue))
+            if (animConf.AlsoKnownAs.ContainsKey(newValue))
             {
-          
                 editBox.Text = oldValue;
                 return;
             }
 
-          
+            // Move range value in dictionary
+            var range = animConf.AlsoKnownAs.ContainsKey(oldValue) ? animConf.AlsoKnownAs[oldValue] : entry.Range;
             animConf.AlsoKnownAs.Remove(oldValue);
-            animConf.AlsoKnownAs.Add(newValue);
+            animConf.AlsoKnownAs[newValue] = range;
 
-
-            int index = AlsoKnownAsItems.IndexOf(oldValue);
+            // Update entry object and resort list
+            int index = AlsoKnownAsEntries.IndexOf(entry);
             if (index >= 0)
             {
-                AlsoKnownAsItems.RemoveAt(index);
+                AlsoKnownAsEntries.RemoveAt(index);
 
-                // Find the correct sorted position and insert
                 int insertIndex = 0;
-                for (int i = 0; i < AlsoKnownAsItems.Count; i++)
+                for (int i = 0; i < AlsoKnownAsEntries.Count; i++)
                 {
-                    if (string.Compare(newValue, AlsoKnownAsItems[i], StringComparison.Ordinal) < 0)
+                    if (string.Compare(newValue, AlsoKnownAsEntries[i].Name, StringComparison.Ordinal) < 0)
                     {
                         insertIndex = i;
                         break;
                     }
                     insertIndex = i + 1;
                 }
-                AlsoKnownAsItems.Insert(insertIndex, newValue);
-            }
 
+                var newEntry = new AlsoKnownAsEntry(newValue, range);
+                AlsoKnownAsEntries.Insert(insertIndex, newEntry);
+            }
         }
 
         private void AlsoKnownAsEditTextBox_KeyDown(object sender, KeyRoutedEventArgs e)
@@ -3203,7 +3153,6 @@ namespace FramesToMMSpriteResources
                 var editBox = sender as TextBox;
                 if (editBox != null)
                 {
-            
                     var button = (editBox.Parent as Grid)?.Children.OfType<Button>().FirstOrDefault();
                     if (button != null)
                     {
@@ -3217,20 +3166,12 @@ namespace FramesToMMSpriteResources
                 var editBox = sender as TextBox;
                 if (editBox != null)
                 {
-       
-                    editBox.Text = editBox.DataContext as string ?? "";
+                    editBox.Text = editBox.Tag as string ?? (editBox.DataContext as AlsoKnownAsEntry)?.Name ?? "";
                 }
             }
         }
 
-        private void AlsoKnownAsTextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            var subjConf = GetCurrentSubjectConfig();
-            var animConf = subjConf.AnimationConfigs[(TreeViewControl.SelectedNode.Content as TreeItem)!.Text];
-            string text = (sender as TextBox)!.Text;
-            AlsoKnownAsAddButton.IsEnabled = !string.IsNullOrWhiteSpace(text) && (animConf.AlsoKnownAs == null || !animConf.AlsoKnownAs.Contains(text)) && !subjConf.AnimationConfigs.ContainsKey(text);
 
-        }
     }
 }
 
