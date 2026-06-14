@@ -176,7 +176,7 @@
                                                         <TextBlock Text="If already transparent, leave it blank" Style="{StaticResource HelperTextStyle}"/>
                                                     </StackPanel>
 
-                                                <NumberBox x:Name="ThresholdTextBox" PlaceholderText="100" Header="Threshold" Minimum="0" Maximum="999" SpinButtonPlacementMode="Compact"/>
+                                                <TextBox x:Name="ThresholdTextBox" PlaceholderText="100" Header="Threshold"/>
 
                                                 </StackPanel>
                                             </Border>
@@ -187,10 +187,10 @@
                                                 <TextBlock Text="Exporting" Style="{StaticResource SectionHeaderStyle}"/>
                                                 <Rectangle Style="{StaticResource GroupDividerStyle}"/>
 
-                                                <NumberBox x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width" Minimum="1" Maximum="999999" SpinButtonPlacementMode="Compact"/>
+                                                <TextBox x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width"/>
 
                                                 <StackPanel Spacing="4">
-                                                    <NumberBox x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height" Minimum="1" Maximum="999999" SpinButtonPlacementMode="Compact"/>
+                                                    <TextBox x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height"/>
                                                     <TextBlock Text="For automatic sizing, leave it blank" Style="{StaticResource HelperTextStyle}"/>
                                                 </StackPanel>
 
@@ -220,7 +220,7 @@
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
-                                                <NumberBox Grid.Column="0" x:Name="ResizeTextBox" PlaceholderText="100" Header="Resize to percent" Minimum="1" Maximum="999999" SpinButtonPlacementMode="Compact" />
+                                                <TextBox Grid.Column="0" x:Name="ResizeTextBox" PlaceholderText="100" Header="Resize to percent" />
                                                 <ComboBox Grid.Column="1" x:Name="SamplingComboBox" Header="Filter mode" HorizontalAlignment="Stretch">
                                                     <x:String>Nearest</x:String>
                                                     <x:String>Linear</x:String>
@@ -287,7 +287,7 @@
 
 
 
-                                                <NumberBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay" Minimum="-1" Maximum="999999" SpinButtonPlacementMode="Compact"/>
+                                                <TextBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay"/>
                                                 <ComboBox x:Name="LoopTypeComboBox" Header="Loop mode" HorizontalAlignment="Stretch">
                                                     <x:String>Default</x:String>
                                                     <x:String>Loop</x:String>
@@ -349,8 +349,8 @@
                                                                         <ColumnDefinition Width="*"/>
                                                                     </Grid.ColumnDefinitions>
 
-                                                        <NumberBox Grid.Column="0" x:Name="AnimationOffsetXTextBox" PlaceholderText="0" Header="Offset X" Maximum="999999" Minimum="-999999" SpinButtonPlacementMode="Compact"/>
-                                                        <NumberBox Grid.Column="1" x:Name="AnimationOffsetYTextBox" PlaceholderText="0" Header="Offset Y" Maximum="999999" Minimum="-999999" SpinButtonPlacementMode="Compact"/>
+                                                        <TextBox Grid.Column="0" x:Name="AnimationOffsetXTextBox" PlaceholderText="0" Header="Offset X"/>
+                                                        <TextBox Grid.Column="1" x:Name="AnimationOffsetYTextBox" PlaceholderText="0" Header="Offset Y"/>
 
                                                                 </Grid>
                                                                 <TextBlock Text="Adjusts the offset of every frame after processing"  Style="{StaticResource HelperTextStyle}"/>
@@ -400,10 +400,10 @@
                                                                         <ColumnDefinition Width="Auto"/>
                                                                     </Grid.ColumnDefinitions>
                                                                     <TextBox Grid.Column="0" Text="{Binding Name, Mode=TwoWay}" GotFocus="AlsoKnownAsEditTextBox_GotFocus" LostFocus="AlsoKnownAsEditTextBox_LostFocus" KeyDown="AlsoKnownAsEditTextBox_KeyDown" CornerRadius="4 0 0 4"/>
-                                                                    <NumberBox Grid.Column="1" Value="{Binding Range.From, Mode=TwoWay}" CornerRadius="0"
+                                                                    <TextBox Grid.Column="1" Text="{Binding Range.From, Mode=TwoWay}" CornerRadius="0"
                                                                         Width="45"
-                                                                        Minimum="0"
-                                                                        Maximum="999"
+                                                                       
+                                                                       
                                                                         PlaceholderText="0"/>
                                                                      <Border Grid.Column="2" Background="{ThemeResource SurfaceStrokeColorDefaultBrush}"
                                                                         Margin="0 -1 0 0"
@@ -414,10 +414,10 @@
                                                                         <TextBlock Text="-" VerticalAlignment="Center" Padding="0 0 0 3"/>
                                                                     </Border>
 
-                                                                    <NumberBox Grid.Column="3" Value="{Binding Range.To, Mode=TwoWay}" CornerRadius="0 4 4 0"
+                                                                    <TextBox Grid.Column="3" Text="{Binding Range.To, Mode=TwoWay}" CornerRadius="0 0 0 0"
                                                                         Width="45"           
-                                                                        Minimum="-1"
-                                                                        Maximum="999"
+                                                                       
+                                                                       
                                                                         PlaceholderText="-1"/>
                                                                     <Button Grid.Column="4" x:Name="RemoveButton" Height="32" Width="32" Padding="0" Click="AlsoKnownAsRemoveButton_Click" CornerRadius="0 4 4 0">
                                                                         <FontIcon Glyph="&#xE74D;" FontSize="12"/>
@@ -445,9 +445,9 @@
                         </Grid>
 
                         <!-- Frame Panel (hidden by default) -->
-                        <Grid x:Name="FramePanel" Visibility="Collapsed">
+                        <Grid x:Name="FramePanel" Visibility="Collapsed" Padding="20 0 0 0">
 
-                            <Grid Padding="20 0 0 0">
+             
 
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -458,7 +458,7 @@
                                     Margin="0 20 0 20"
                                     BorderThickness="1"             
                                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-                                <local:FrameCoordinateEditor x:Name="FrameCoordinateEditorControl" Grid.Column="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"/>
+                                    <local:FrameCoordinateEditor x:Name="FrameCoordinateEditorControl" Grid.Column="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"/>
                                 </Border>
                                 <ScrollView Grid.Column="1" CornerRadius="0">
                                     <StackPanel x:Name="FrameConfigPanel" Spacing="10"  Padding="12 20 20 20">
@@ -471,10 +471,10 @@
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <NumberBox Grid.Column="0" x:Name="OffsetXTextBox" Header="Offset X" PlaceholderText="0" Minimum="-999999" Maximum="999999"/>
-                                                    <NumberBox Grid.Column="1" x:Name="OffsetYTextBox" Header="Offset Y" PlaceholderText="0" Minimum="-999999" Maximum="999999"/>
+                                                    <TextBox Grid.Column="0" x:Name="OffsetXTextBox" Header="Offset X" PlaceholderText="0"/>
+                                                    <TextBox Grid.Column="1" x:Name="OffsetYTextBox" Header="Offset Y" PlaceholderText="0"/>
                                                 </Grid>
-                                                <NumberBox Grid.Column="1" x:Name="MultiplyNumberBox" Header="Multiply delay by" PlaceholderText="1" Minimum="0" Maximum="999999"/>
+                                                <TextBox Grid.Column="1" x:Name="MultiplyTextBox" Header="Multiply delay by" PlaceholderText="1"/>
                                             </StackPanel>
                                         </Border>
                                         <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
@@ -531,8 +531,8 @@
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="32"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <NumberBox Grid.Column="0" x:Name="DirectionNumberBox" Header="Direction" PlaceholderText="90" Minimum="-999999" Maximum="999999"/>
-                                                    <NumberBox Grid.Column="1" x:Name="SpeedNumberBox" Header="Speed" PlaceholderText="0" Minimum="-999999" Maximum="999999"/>
+                                                    <TextBox Grid.Column="0" x:Name="DirectionTextBox" Header="Direction" PlaceholderText="90"/>
+                                                    <TextBox Grid.Column="1" x:Name="SpeedTextBox" Header="Speed" PlaceholderText="0"/>
                                                     <Button Grid.Column="2" x:Name="RemoveMovementButton" VerticalAlignment="Bottom" Padding="9" Height="32" Click="RemoveMovementButton_Click">
                                                         <FontIcon Glyph="&#xE768;" FontSize="12"/>
                                                     </Button>
@@ -543,11 +543,9 @@
                                     </StackPanel>
                                 </ScrollView>
                             </Grid>
-                            <Border x:Name="FramesLoadingBorder" Background="{ThemeResource SmokeFillColorDefaultBrush}" AllowFocusOnInteraction="True" CornerRadius="20 0 0 0">
-                                <ProgressRing/>
-                            </Border>
+                        
                             
-                        </Grid>
+                       
 
 
                         <!-- HelpPanel -->
