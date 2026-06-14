@@ -67,6 +67,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
     ];
     private readonly DispatcherTimer _nudgeHoldTimer = new();
     private int _nudgeHoldTick;
+    private int _coordinateResizeRefreshVersion;
+    private int _previewResizeRefreshVersion;
     private const int NudgeHoldDelayTicks = 10;
     byte lightA, lightB;
 
@@ -339,6 +341,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private void CoordinateCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         UpdateVisuals();
+        ScheduleCoordinateCanvasResizeRefresh();
     }
 
     private void CoordinateCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
@@ -603,6 +606,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private void AnimationPreviewCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         UpdateAnimationPreviewFrame();
+        SchedulePreviewCanvasResizeRefresh();
         //SetMaxPreviewSize();
     }
 
@@ -731,6 +735,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         AnimationPreviewHostBorder.Width = width;
         AnimationPreviewHostBorder.Height = height;
         UpdateAnimationPreviewFrame();
+        SchedulePreviewCanvasResizeRefresh();
         e.Handled = true;
     }
 
@@ -837,6 +842,40 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private void UpdateAnimationPreviewFrame()
     {
         AnimationPreviewCanvas.Invalidate();
+    }
+
+    private void ScheduleCoordinateCanvasResizeRefresh()
+    {
+        int version = ++_coordinateResizeRefreshVersion;
+        ScheduleCanvasResizeRefresh(CoordinateCanvas.Invalidate, () => version == _coordinateResizeRefreshVersion);
+    }
+
+    private void SchedulePreviewCanvasResizeRefresh()
+    {
+        int version = ++_previewResizeRefreshVersion;
+        ScheduleCanvasResizeRefresh(AnimationPreviewCanvas.Invalidate, () => version == _previewResizeRefreshVersion);
+    }
+
+    private void ScheduleCanvasResizeRefresh(Action invalidateCanvas, Func<bool> isCurrentRefresh)
+    {
+        invalidateCanvas();
+
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (!isCurrentRefresh())
+            {
+                return;
+            }
+
+            invalidateCanvas();
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                if (isCurrentRefresh())
+                {
+                    invalidateCanvas();
+                }
+            });
+        });
     }
 
  
