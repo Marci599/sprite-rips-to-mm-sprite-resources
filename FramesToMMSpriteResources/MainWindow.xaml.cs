@@ -453,6 +453,7 @@ namespace FramesToMMSpriteResources
 
         private void WorkingPathTextBox_GotFocus(object sender, RoutedEventArgs e)
         {
+            SyncWorkingPathHistoryFromConfig();
             if (WorkingPathHistory.Count > 0)
             {
                 WorkingPathTextBox.IsSuggestionListOpen = true;
@@ -462,34 +463,49 @@ namespace FramesToMMSpriteResources
         private void SyncWorkingPathHistoryFromConfig()
         {
             WorkingPathHistory.Clear();
-            foreach (var path in GetValidWorkingPathHistory())
+            foreach (var path in GetValidWorkingPathHistory(WorkingPathTextBox.Text))
             {
                 WorkingPathHistory.Add(path);
             }
         }
 
-        private IEnumerable<string> GetValidWorkingPathHistory()
+        private IEnumerable<string> GetValidWorkingPathHistory(string? excludedPath = null)
         {
             return (ProgramConfig.WorkingPathHistory ?? [])
-                .Where(path => !string.IsNullOrWhiteSpace(path) && Directory.Exists(path))
+                .Where(path => IsValidWorkingPath(path) && !string.Equals(path, excludedPath, StringComparison.OrdinalIgnoreCase))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Take(10);
         }
 
-        private void AddWorkingPathToHistoryIfValid(string? path)
+        private bool IsValidWorkingPath(string? path)
         {
             if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+            {
+                return false;
+            }
+
+            try
+            {
+                var firstLevelFiles = Directory.GetFiles(path);
+                return !firstLevelFiles.Contains(Path.Combine(path, "FramesToMMSpriteResources.dll")) && AreSubjectsCorrect(path);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void AddWorkingPathToHistoryIfValid(string? path)
+        {
+            if (!IsValidWorkingPath(path))
             {
                 return;
             }
 
             ProgramConfig.WorkingPathHistory ??= [];
             ProgramConfig.WorkingPathHistory.RemoveAll(existing => string.Equals(existing, path, StringComparison.OrdinalIgnoreCase));
-            ProgramConfig.WorkingPathHistory.Insert(0, path);
-            ProgramConfig.WorkingPathHistory = ProgramConfig.WorkingPathHistory
-                .Where(existing => !string.IsNullOrWhiteSpace(existing) && Directory.Exists(existing))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Take(10)
+            ProgramConfig.WorkingPathHistory.Insert(0, path!);
+            ProgramConfig.WorkingPathHistory = GetValidWorkingPathHistory()
                 .ToList();
 
             SyncWorkingPathHistoryFromConfig();
@@ -1018,9 +1034,14 @@ namespace FramesToMMSpriteResources
 
         private static bool AreSubjectsCorrect()
         {
+            return AreSubjectsCorrect(WorkingPath);
+        }
+
+        private static bool AreSubjectsCorrect(string workingPath)
+        {
             try
             {
-                if(GetMaxSubdirectoryDepth(WorkingPath) == 2)
+                if(GetMaxSubdirectoryDepth(workingPath) == 2)
                 {
                     return true;
                 }

@@ -622,7 +622,13 @@
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="Auto"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <AutoSuggestBox x:Name="WorkingPathTextBox" Grid.Column="0" Header="Working directory path" CornerRadius="4 0 0 0" IsSpellCheckEnabled="False" ItemsSource="{x:Bind WorkingPathHistory, Mode=OneWay}" SuggestionChosen="WorkingPathTextBox_SuggestionChosen" GotFocus="WorkingPathTextBox_GotFocus"/>
+                                                    <AutoSuggestBox x:Name="WorkingPathTextBox" Grid.Column="0" Header="Working directory path" CornerRadius="4 0 0 0" ItemsSource="{x:Bind WorkingPathHistory, Mode=OneWay}" SuggestionChosen="WorkingPathTextBox_SuggestionChosen" GotFocus="WorkingPathTextBox_GotFocus">
+                                                        <AutoSuggestBox.TextBoxStyle>
+                                                            <Style TargetType="TextBox">
+                                                                <Setter Property="IsSpellCheckEnabled" Value="False"/>
+                                                            </Style>
+                                                        </AutoSuggestBox.TextBoxStyle>
+                                                    </AutoSuggestBox>
                                                     <Button x:Name="BrowseFolderButton" Style="{StaticResource AccentButtonStyle}" Grid.Column="1" VerticalAlignment="Bottom" Click="BrowseFolderButton_Click" CornerRadius="0 4 0 0">
                                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                                             <FontIcon Glyph="&#xE838;" FontSize="14"/>
