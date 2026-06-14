@@ -19,7 +19,7 @@ namespace FramesToMMSpriteResources;
     [JsonSerializable(typeof(SubjectConfig))]
     [JsonSerializable(typeof(SubjectInterfaceConfig))]
     [JsonSerializable(typeof(SheetConfig))]
-    [JsonSerializable(typeof(GameThemeConfig))]
+    [JsonSerializable(typeof(AssetConfig))]
     [JsonSerializable(typeof(AnimationConfig))]
     [JsonSerializable(typeof(AnimationInterfaceConfig))]
     [JsonSerializable(typeof(InterfaceConfig))]

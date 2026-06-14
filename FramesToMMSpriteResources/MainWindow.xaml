@@ -6,6 +6,9 @@
     xmlns:local="using:FramesToMMSpriteResources"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
+
+    
 
 
  
@@ -144,17 +147,6 @@
                     HorizontalContentAlignment="Stretch" 
                     VerticalContentAlignment="Stretch">
                     <Grid>
-                        <!-- GameTheme Panel (default visible) -->
-                        <Grid x:Name="GameThemePanel" Visibility="Collapsed">
-                            <ScrollViewer>
-                                <StackPanel Padding="20 14 20 20">
-                                    <StackPanel Spacing="4" MaxWidth="1000">
-                                        <CheckBox x:Name="IsHdCheckBox" Content="Is HD"/>
-                                        <TextBlock Text="If enabled @2x pngs will be generated and .sprites files will be adjusted for that"  Style="{StaticResource HelperTextStyle}"/>
-                                    </StackPanel>
-                                </StackPanel>
-                            </ScrollViewer>
-                        </Grid>
                         <!-- Subject Panel (default visible) -->
                         <Grid x:Name="SubjectPanel" Visibility="Collapsed">
                             <ScrollViewer>
@@ -624,43 +616,53 @@
 
                                             <Rectangle Style="{StaticResource GroupDividerStyle}"/>
 
-                                            <StackPanel Spacing="4">
+                                            <StackPanel Spacing="0">
                                                 <Grid ColumnSpacing="0">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="Auto"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <TextBox x:Name="WorkingPathTextBox" Grid.Column="0" Header="Working directory path" CornerRadius="4 0 0 4"/>
-                                                    <Button x:Name="BrowseFolderButton" Style="{StaticResource AccentButtonStyle}" Grid.Column="1" VerticalAlignment="Bottom" Click="BrowseFolderButton_Click" CornerRadius="0 4 4 0">
+                                                    <TextBox x:Name="WorkingPathTextBox" Grid.Column="0" Header="Working directory path" CornerRadius="4 0 0 0" IsSpellCheckEnabled="False"/>
+                                                    <Button x:Name="BrowseFolderButton" Style="{StaticResource AccentButtonStyle}" Grid.Column="1" VerticalAlignment="Bottom" Click="BrowseFolderButton_Click" CornerRadius="0 4 0 0">
                                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                                             <FontIcon Glyph="&#xE838;" FontSize="14"/>
                                                             <TextBlock Text="Browse"/>
                                                         </StackPanel>
                                                     </Button>
                                                 </Grid>
-                                                <TextBlock Text="Please provide a path where your folders and files will be located or are already located"  Style="{StaticResource HelperTextStyle}"/>
+                                                <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" MaxWidth="1000" Padding="16 8 16 16" CornerRadius="0 0 4 4" Margin="-1 0 -1 -1">
+                                                    <StackPanel Spacing="12">
+                                                        <TextBlock Text="Please provide a path where your folders and files will be located or are already located"  Style="{StaticResource HelperTextStyle}"/>
+                                                        <StackPanel Spacing="4" MaxWidth="1000">
+                                                            <CheckBox x:Name="IsHdCheckBox" Content="Is HD"/>
+                                                            <TextBlock Text="If enabled @2x pngs will be generated and .sprites files will be adjusted for that"  Style="{StaticResource HelperTextStyle}"/>
+                                                        </StackPanel>
+                                                        <Grid ColumnSpacing="0">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="Auto"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBox x:Name="GeneratePathTextBox" Grid.Column="0" Header="Generate path" PlaceholderText="Default" CornerRadius="4 0 0 4" IsSpellCheckEnabled="False"/>
+                                                            <Button x:Name="BrowseGenerateFolderButton" Style="{StaticResource AccentButtonStyle}" Grid.Column="1" VerticalAlignment="Bottom" Click="BrowseGenerateFolderButton_Click" CornerRadius="0 4 4 0">
+                                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                    <FontIcon Glyph="&#xE838;" FontSize="14"/>
+                                                                    <TextBlock Text="Browse"/>
+                                                                </StackPanel>
+                                                            </Button>
+                                                        </Grid>
+                                                    </StackPanel>
+                                                </Border>
+                                                
 
                                                 
                                             </StackPanel>
 
-                                            <Grid ColumnSpacing="0">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBox x:Name="GeneratePathTextBox" Grid.Column="0" Header="Generate path" PlaceholderText="Default" CornerRadius="4 0 0 4"/>
-                                                <Button x:Name="BrowseGenerateFolderButton" Style="{StaticResource AccentButtonStyle}" Grid.Column="1" VerticalAlignment="Bottom" Click="BrowseGenerateFolderButton_Click" CornerRadius="0 4 4 0">
-                                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <FontIcon Glyph="&#xE838;" FontSize="14"/>
-                                                        <TextBlock Text="Browse"/>
-                                                    </StackPanel>
-                                                </Button>
-                                            </Grid>
+                                            
                            
 
                                             <StackPanel Spacing="8">
                                                 <TextBlock Text="Manage program"/>
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <controls:WrapPanel Orientation="Horizontal" HorizontalSpacing="8" VerticalSpacing="8">
                                                     <Button x:Name="UninstallButton" Grid.Column="1" VerticalAlignment="Bottom" Click="UninstallButton_Click">
                                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                                             <FontIcon Glyph="&#xE74D;" FontSize="14"/>
@@ -670,12 +672,18 @@
                                                     <Button x:Name="ProgramDirectoryButton" Grid.Column="1" VerticalAlignment="Bottom" Click="ProgramDirectoryButton_Click">
                                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                                             <FontIcon Glyph="&#xE838;" FontSize="14"/>
-                                                            <TextBlock Text="Open Directory"/>
+                                                            <TextBlock Text="Open App Directory"/>
                                                         </StackPanel>
                                                     </Button>
-                                                </StackPanel>
-                                                
+                                                    <Button x:Name="ProgramSaveDirectoryButton" Grid.Column="1" VerticalAlignment="Bottom" Click="ProgramSaveDirectoryButton_Click">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <FontIcon Glyph="&#xE838;" FontSize="14"/>
+                                                            <TextBlock Text="Open Local App Data Directory"/>
+                                                        </StackPanel>
+                                                    </Button>
+                                                </controls:WrapPanel>
                                             </StackPanel>
+
                                         </StackPanel>
                                     </Border>
 

@@ -12,7 +12,6 @@ namespace FramesToMMSpriteResources
                 // Set your glyphs for each depth here
                 return depth switch
                 {
-                    ItemDepth.GameTheme => "\uE913",
                     ItemDepth.Subject => "\uF158",
                     ItemDepth.Animation => "\uE805",
                     ItemDepth.Frame => "\uE91B",

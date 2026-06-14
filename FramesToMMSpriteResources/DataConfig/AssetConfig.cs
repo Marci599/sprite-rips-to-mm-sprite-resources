@@ -8,14 +8,17 @@ using System.Threading.Tasks;
 
 namespace FramesToMMSpriteResources
 {
-    public class GameThemeConfig : ParentConfig
+    public class AssetConfig : ParentConfig
     {
         [JsonPropertyName("is_hd")]
         public bool IsHd = true;
 
+        [JsonPropertyName("generate_path")]
+        public string? GeneratePath;
+
         [JsonIgnore]
         public Dictionary<string, SubjectConfig>? SubjectConfigs = [];
 
-        public GameThemeConfig() { }
+        public AssetConfig() { }
     }
 }

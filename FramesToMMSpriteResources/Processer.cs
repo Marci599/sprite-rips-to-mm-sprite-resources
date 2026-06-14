@@ -60,17 +60,15 @@ namespace FramesToMMSpriteResources
     internal static class Processer
     {
         private static ProgramConfig programConfig = null!;
-        private static GameThemeConfig gameThemeConfig = null!;
         private static SubjectConfig subjectConfig = null!;
         private static (byte r, byte g, byte b, byte a)? parsedBackgroundColor;
 
         private static SKSamplingOptions _samplingOption;
 
-        public static async Task StartProcessAsync(string gameThemeName, string subjectName)
+        public static async Task StartProcessAsync(string subjectName)
         {
             programConfig = MainWindow.ProgramConfig;
-            gameThemeConfig = programConfig.GameThemeConfigs[gameThemeName];
-            subjectConfig = gameThemeConfig.SubjectConfigs[subjectName];
+            subjectConfig = programConfig.AssetConfig!.SubjectConfigs[subjectName];
             parsedBackgroundColor = null;
             if (subjectConfig.BackgroundColor != null)
             {
@@ -86,23 +84,15 @@ namespace FramesToMMSpriteResources
             string subPositions = string.Empty;
             string outputDir;
 
-            string subjectPath = MainWindow.IsUsingGameThemes
-              ? Path.Combine(MainWindow.WorkingPath, gameThemeName, subjectName)
-              : Path.Combine(MainWindow.WorkingPath, subjectName);
+   
 
-            if (!Path.Exists(programConfig.GeneratePath))
+            if (!Path.Exists(programConfig.AssetConfig!.GeneratePath))
             {
-                string gameThemePath = MainWindow.IsUsingGameThemes
-                ? Path.Combine(MainWindow.WorkingPath, gameThemeName)
-                : MainWindow.WorkingPath;
-
-                outputDir = Path.Combine(gameThemePath, "_generated");
+                outputDir = Path.Combine(MainWindow.WorkingPath, "_generated");
             }
             else
             {
-                outputDir = MainWindow.IsUsingGameThemes
-                  ? Path.Combine(programConfig.GeneratePath, gameThemeName, "Sprite")
-                  : programConfig.GeneratePath;
+                outputDir = programConfig.AssetConfig!.GeneratePath;
    
             }
 
@@ -169,7 +159,7 @@ namespace FramesToMMSpriteResources
 
                 int spritesCount = 0;
                 int spritesCountMultiplied = 0;
-                string animationPath = Path.Combine(subjectPath, animationName);
+                string animationPath = Path.Combine(MainWindow.WorkingPath, subjectName, animationName);
 
                 var spritePaths = GetOrderedSpritePaths(animationPath, animationConfig);
 
@@ -230,7 +220,7 @@ namespace FramesToMMSpriteResources
 
                         
 
-                        if (gameThemeConfig.IsHd)
+                        if (programConfig.AssetConfig!.IsHd)
                         {
                             var even = EnsureEvenDimensions(working);
                             if (!ReferenceEquals(even, working))
@@ -302,7 +292,7 @@ namespace FramesToMMSpriteResources
             var spritesheetPath = Path.Combine(outputDir, subjectName + extension);
             var spritesheetPath2x = spritesheetPath;
 
-            if (gameThemeConfig.IsHd)
+            if (programConfig.AssetConfig!.IsHd)
             {
                 int halfW = Math.Max(1, (sheetImage.Width + 1) / 2);
                 int halfH = Math.Max(1, (sheetImage.Height + 1) / 2);
@@ -402,7 +392,7 @@ namespace FramesToMMSpriteResources
                 double rightScaled = left + size.X;
                 double bottomScaled = top + size.Y;
 
-                if (gameThemeConfig.IsHd)
+                if (programConfig.AssetConfig!.IsHd)
                 {
                     leftScaled = RoundHalfUp(leftScaled * scaleX);
                     topScaled = RoundHalfUp(topScaled * scaleY);
@@ -424,7 +414,7 @@ namespace FramesToMMSpriteResources
                     int originalHeight = orig.Y;
                     int visibleWidth = (int)Math.Abs(rightScaled - leftScaled);
                     int visibleHeight = (int)Math.Abs(bottomScaled - topScaled);
-                    if (gameThemeConfig.IsHd)
+                    if (programConfig.AssetConfig!.IsHd)
                     {
                         visibleWidth *= 2;
                         visibleHeight *= 2;
@@ -458,7 +448,7 @@ namespace FramesToMMSpriteResources
                     originOffsetX += extra?.X ?? 0;
                     originOffsetY += extra?.Y ?? 0;
 
-                    if (gameThemeConfig.IsHd)
+                    if (programConfig.AssetConfig!.IsHd)
                     {
                         originOffsetX = ScaleHdOffset(originOffsetX);
                         originOffsetY = ScaleHdOffset(originOffsetY);
@@ -550,7 +540,7 @@ namespace FramesToMMSpriteResources
 
         private static (IntVector2 size, List<IntVector2?> positions) LayoutForWidth(List<ProcessedSprite> sprites, int widthLimit)
         {
-            int gap = gameThemeConfig.IsHd ? 2 : 1;
+            int gap = programConfig.AssetConfig!.IsHd ? 2 : 1;
             if (sprites.Count == 0)
                 return (new IntVector2(0, 0), new List<IntVector2?>());
 
@@ -597,7 +587,7 @@ namespace FramesToMMSpriteResources
                 if (rowIndex > 0)
                 {
                     sheetHeight += gap;
-                    if (gameThemeConfig.IsHd)
+                    if (programConfig.AssetConfig!.IsHd)
                         sheetHeight = EnsureEvenValue(sheetHeight);
                 }
                 sheetHeight += rows[rowIndex].height;
@@ -611,7 +601,7 @@ namespace FramesToMMSpriteResources
                 if (rowIndex > 0)
                 {
                     yOffset += gap;
-                    if (gameThemeConfig.IsHd)
+                    if (programConfig.AssetConfig!.IsHd)
                         yOffset = EnsureEvenValue(yOffset);
                 }
 
@@ -626,7 +616,7 @@ namespace FramesToMMSpriteResources
                     if (itemIndex < row.indices.Count - 1)
                     {
                         xOffset += gap;
-                        if (gameThemeConfig.IsHd)
+                        if (programConfig.AssetConfig!.IsHd)
                             xOffset = EnsureEvenValue(xOffset);
                     }
                 }
@@ -638,7 +628,7 @@ namespace FramesToMMSpriteResources
 
         private static (IntVector2 size, List<IntVector2?> positions) AutoLayout(List<ProcessedSprite> sprites)
         {
-            int gap = gameThemeConfig.IsHd ? 2 : 1;
+            int gap = programConfig.AssetConfig!.IsHd ? 2 : 1;
             if (sprites.Count == 0)
                 return (new IntVector2(0, 0), new List<IntVector2?>());
 
@@ -796,7 +786,7 @@ namespace FramesToMMSpriteResources
             if (!subjectConfig.CropBottom) bottom = src.Height;
 
             // Align to even boundaries for HD assets after side adjustments
-            if (gameThemeConfig.IsHd)
+            if (programConfig.AssetConfig!.IsHd)
                 (left, top, right, bottom) = AlignEvenBox(left, top, right, bottom, new(src.Width, src.Height));
 
             // If no cropping remains, return original
