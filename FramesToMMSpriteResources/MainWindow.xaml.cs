@@ -438,6 +438,11 @@ namespace FramesToMMSpriteResources
             SaveAllConfigs();
             ProgramConfig.WorkingPath = sender.Text;
             AddWorkingPathToHistoryIfValid(sender.Text);
+            SyncWorkingPathHistoryFromConfig();
+            if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput && WorkingPathHistory.Count > 0)
+            {
+                sender.IsSuggestionListOpen = true;
+            }
             SaveProgramConfig();
             FrameCoordinateEditorControl.UnloadAnimation();
             ReloadTreeViewAndConfigs();
