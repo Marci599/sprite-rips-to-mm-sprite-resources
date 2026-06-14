@@ -35,7 +35,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private readonly DispatcherTimer _previewTimer = new();
     public List<SpriteFrame> PreviewSpriteFrames = [];
     private int _previewFrameIndex;
-    private int _previewTickCount;
+    private long _lastPreviewStep = -1;
+    private readonly Stopwatch _previewStopwatch = new();
     private SubjectConfig _subjectConfig = new();
     private string? _animationConfigName = null;
     private const float MinPreviewZoom = 0.05f;
@@ -228,7 +229,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
   
  
         _previewFrameIndex = 0;
-        _previewTickCount = 0;
+        _lastPreviewStep = -1;
+        _previewStopwatch.Restart();
         _subjectConfig = subjectConfig;
         _animationConfigName = animationConfigName;
 
@@ -315,6 +317,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         else
         {
             _previewTimer.Stop();
+            _previewStopwatch.Stop();
         }
 
         UpdateAnimationPreviewFrame();
@@ -798,18 +801,37 @@ public sealed partial class FrameCoordinateEditor : UserControl
         if (PreviewSpriteFrames.Count == 0)
         {
             _previewTimer.Stop();
+            _previewStopwatch.Stop();
             return;
         }
 
-        _previewTickCount++;
-        if (_previewTickCount < getCurrentAnimationConfig().Delay)
+        int frameCount = GetPreviewFrameCount();
+        if (frameCount <= 0)
         {
             return;
         }
 
-        _previewTickCount = 0;
-        _previewFrameIndex = (_previewFrameIndex + 1) % (GetCorrectRangeToValue() + 1 - getCurrentAnimationInterfaceConfig().Range.From);
+        int delayInTicks = Math.Max(1, getCurrentAnimationConfig().Delay);
+        long previewStep = (long)(_previewStopwatch.Elapsed.TotalSeconds * 60.0 / delayInTicks);
+        if (previewStep == _lastPreviewStep)
+        {
+            return;
+        }
+
+        _lastPreviewStep = previewStep;
+        int nextFrameIndex = (int)(previewStep % frameCount);
+        if (nextFrameIndex == _previewFrameIndex)
+        {
+            return;
+        }
+
+        _previewFrameIndex = nextFrameIndex;
         UpdateAnimationPreviewFrame();
+    }
+
+    private int GetPreviewFrameCount()
+    {
+        return GetCorrectRangeToValue() + 1 - getCurrentAnimationInterfaceConfig().Range.From;
     }
 
     private void UpdateAnimationPreviewFrame()

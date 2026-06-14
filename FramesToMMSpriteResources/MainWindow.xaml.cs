@@ -173,6 +173,8 @@ namespace FramesToMMSpriteResources
 
         public ObservableCollection<string> BreadcrumbItems { get; } = new();
 
+        public ObservableCollection<string> WorkingPathHistory { get; } = new();
+
         public ObservableCollection<AlsoKnownAsEntry> AlsoKnownAsEntries { get; } = new();
 
         private readonly JsonSerializerOptions jsonOptions = new()
@@ -411,6 +413,7 @@ namespace FramesToMMSpriteResources
             _isActivated = true;
 
             ReduceFileSizeCheckBox.IsChecked = ProgramConfig.ReduceFileSize;
+            SyncWorkingPathHistoryFromConfig();
             WorkingPathTextBox.Text = ProgramConfig.WorkingPath;
 
 
@@ -430,12 +433,87 @@ namespace FramesToMMSpriteResources
             SyncKeyboardState();
         }
 
-        private async void WorkingPathTextBox_TextChanged(object sender, RoutedEventArgs e)
+        private async void WorkingPathTextBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
         {
             SaveAllConfigs();
-            ProgramConfig.WorkingPath = (sender as TextBox)!.Text;
+            ProgramConfig.WorkingPath = sender.Text;
+            AddWorkingPathToHistoryIfValid(sender.Text);
+            SyncWorkingPathHistoryFromConfig();
+            if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput && WorkingPathHistory.Count > 0)
+            {
+                sender.IsSuggestionListOpen = true;
+            }
+            SaveProgramConfig();
             FrameCoordinateEditorControl.UnloadAnimation();
             ReloadTreeViewAndConfigs();
+        }
+
+        private void WorkingPathTextBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
+        {
+            if (args.SelectedItem is string path)
+            {
+                sender.Text = path;
+            }
+        }
+
+        private void WorkingPathTextBox_GotFocus(object sender, RoutedEventArgs e)
+        {
+            SyncWorkingPathHistoryFromConfig();
+            if (WorkingPathHistory.Count > 0)
+            {
+                WorkingPathTextBox.IsSuggestionListOpen = true;
+            }
+        }
+
+        private void SyncWorkingPathHistoryFromConfig()
+        {
+            WorkingPathHistory.Clear();
+            foreach (var path in GetValidWorkingPathHistory(WorkingPathTextBox.Text))
+            {
+                WorkingPathHistory.Add(path);
+            }
+        }
+
+        private IEnumerable<string> GetValidWorkingPathHistory(string? excludedPath = null)
+        {
+            return (ProgramConfig.WorkingPathHistory ?? [])
+                .Where(path => IsValidWorkingPath(path) && !string.Equals(path, excludedPath, StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(10);
+        }
+
+        private bool IsValidWorkingPath(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+            {
+                return false;
+            }
+
+            try
+            {
+                var firstLevelFiles = Directory.GetFiles(path);
+                return !firstLevelFiles.Contains(Path.Combine(path, "FramesToMMSpriteResources.dll")) && AreSubjectsCorrect(path);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void AddWorkingPathToHistoryIfValid(string? path)
+        {
+            if (!IsValidWorkingPath(path))
+            {
+                return;
+            }
+
+            ProgramConfig.WorkingPathHistory ??= [];
+            ProgramConfig.WorkingPathHistory.RemoveAll(existing => string.Equals(existing, path, StringComparison.OrdinalIgnoreCase));
+            ProgramConfig.WorkingPathHistory.Insert(0, path!);
+            ProgramConfig.WorkingPathHistory = GetValidWorkingPathHistory()
+                .ToList();
+
+            SyncWorkingPathHistoryFromConfig();
         }
 
         private async void GeneratePathTextBox_TextChanged(object sender, RoutedEventArgs e)
@@ -592,6 +670,8 @@ namespace FramesToMMSpriteResources
             {
                 WorkingPath = ProgramConfig.WorkingPath;
             }
+
+            AddWorkingPathToHistoryIfValid(ProgramConfig.WorkingPath);
 
             if (!Directory.Exists(WorkingPath))
             {
@@ -959,9 +1039,14 @@ namespace FramesToMMSpriteResources
 
         private static bool AreSubjectsCorrect()
         {
+            return AreSubjectsCorrect(WorkingPath);
+        }
+
+        private static bool AreSubjectsCorrect(string workingPath)
+        {
             try
             {
-                if(GetMaxSubdirectoryDepth(WorkingPath) == 2)
+                if(GetMaxSubdirectoryDepth(workingPath) == 2)
                 {
                     return true;
                 }
