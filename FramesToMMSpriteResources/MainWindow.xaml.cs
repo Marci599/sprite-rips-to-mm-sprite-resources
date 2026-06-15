@@ -30,6 +30,7 @@ using Windows.Graphics.Imaging;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
+using Microsoft.UI.Dispatching;
 using CommunityToolkit.WinUI;
 
 //TODO: WHEN THERE IS A NODE SAVED AS SELECTED, BUT THE FOLDER/SPRITE GETS REMOVED, PROGRAM CRASHES
@@ -190,6 +191,13 @@ namespace FramesToMMSpriteResources
             }
         };
 
+        private StorageLibraryChangeTracker? _storageChangeTracker;
+        private StorageLibraryChangeReader? _storageChangeReader;
+        private DispatcherQueueTimer? _storageChangeTimer;
+        private string? _trackedWorkingPath;
+        private bool _isCheckingStorageChanges;
+        private bool _isReloadingFromStorageChanges;
+
         bool _isWindowActive = false;
         public bool IsWindowActive
         {
@@ -304,6 +312,7 @@ namespace FramesToMMSpriteResources
             ProgramConfig = LoadProgramConfig();
 
             SetUpTreeViewAndConfigs();
+            _ = ConfigureStorageChangeTrackingAsync();
 
             Activated -= MainWindow_Activated;
             Activated += MainWindow_Activated;
@@ -404,7 +413,7 @@ namespace FramesToMMSpriteResources
                     WorkingPathTextBox.TextChanged -= WorkingPathTextBox_TextChanged;
 
                     cts?.Cancel();
-                    SaveAllConfigs();
+                    StopStorageChangeTimer();
                 }
                 else
                 {
@@ -427,8 +436,7 @@ namespace FramesToMMSpriteResources
 
             if (_isActivated)
             {
-                ProgramConfig = LoadProgramConfig();
-                ReloadTreeViewAndConfigs();
+                _ = CheckForStorageChangesAsync();
             }
 
             _isActivated = true;
@@ -450,10 +458,16 @@ namespace FramesToMMSpriteResources
             IsPanelChangeInProgress = false;
 
             SyncKeyboardState();
+            StartStorageChangeTimer();
         }
 
         private async void WorkingPathTextBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
         {
+            if (_isReloadingFromStorageChanges)
+            {
+                return;
+            }
+
             SaveAllConfigs();
             ProgramConfig.WorkingPath = sender.Text;
             AddWorkingPathToHistoryIfValid(sender.Text);
@@ -465,6 +479,7 @@ namespace FramesToMMSpriteResources
             SaveProgramConfig();
             FrameCoordinateEditorControl.UnloadAnimation();
             ReloadTreeViewAndConfigs();
+            await ConfigureStorageChangeTrackingAsync();
         }
 
         private void WorkingPathTextBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
@@ -518,6 +533,141 @@ namespace FramesToMMSpriteResources
             }
         }
 
+
+        private async Task ConfigureStorageChangeTrackingAsync()
+        {
+            StopStorageChangeTimer();
+            _storageChangeTracker = null;
+            _storageChangeReader = null;
+            _trackedWorkingPath = null;
+
+            if (string.IsNullOrWhiteSpace(WorkingPath) || !Directory.Exists(WorkingPath))
+            {
+                return;
+            }
+
+            try
+            {
+                StorageFolder workingFolder = await StorageFolder.GetFolderFromPathAsync(WorkingPath);
+                _storageChangeTracker = workingFolder.TryGetChangeTracker();
+                if (_storageChangeTracker == null)
+                {
+                    return;
+                }
+
+                _storageChangeTracker.Enable();
+                _storageChangeReader = _storageChangeTracker.GetChangeReader();
+                _trackedWorkingPath = WorkingPath;
+                await AcceptCurrentStorageChangesAsync();
+                StartStorageChangeTimer();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Storage change tracking could not be enabled for {WorkingPath}: {ex.Message}");
+            }
+        }
+
+        private void StartStorageChangeTimer()
+        {
+            if (_storageChangeReader == null || !_isWindowActive)
+            {
+                return;
+            }
+
+            _storageChangeTimer ??= DispatcherQueue.CreateTimer();
+            _storageChangeTimer.Interval = TimeSpan.FromSeconds(2);
+            _storageChangeTimer.Tick -= StorageChangeTimer_Tick;
+            _storageChangeTimer.Tick += StorageChangeTimer_Tick;
+            _storageChangeTimer.Start();
+        }
+
+        private void StopStorageChangeTimer()
+        {
+            _storageChangeTimer?.Stop();
+        }
+
+        private void StorageChangeTimer_Tick(DispatcherQueueTimer sender, object args)
+        {
+            _ = CheckForStorageChangesAsync();
+        }
+
+        private async Task AcceptCurrentStorageChangesAsync()
+        {
+            if (_storageChangeReader == null)
+            {
+                return;
+            }
+
+            try
+            {
+                IReadOnlyList<StorageLibraryChange> changes = await _storageChangeReader.ReadBatchAsync();
+                if (changes.Count > 0)
+                {
+                    await _storageChangeReader.AcceptChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Storage changes could not be accepted: {ex.Message}");
+            }
+        }
+
+        private async Task CheckForStorageChangesAsync()
+        {
+            if (_isCheckingStorageChanges || _isReloadingFromStorageChanges || _storageChangeReader == null || _isGenerating)
+            {
+                return;
+            }
+
+            _isCheckingStorageChanges = true;
+            try
+            {
+                IReadOnlyList<StorageLibraryChange> changes = await _storageChangeReader.ReadBatchAsync();
+                if (changes.Count == 0)
+                {
+                    return;
+                }
+
+                await _storageChangeReader.AcceptChangesAsync();
+
+                if (!string.Equals(_trackedWorkingPath, WorkingPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    await ConfigureStorageChangeTrackingAsync();
+                    return;
+                }
+
+                ReloadFromStorageChanges();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Storage changes could not be read: {ex.Message}");
+                await ConfigureStorageChangeTrackingAsync();
+            }
+            finally
+            {
+                _isCheckingStorageChanges = false;
+            }
+        }
+
+        private void ReloadFromStorageChanges()
+        {
+            _isReloadingFromStorageChanges = true;
+            try
+            {
+                cts?.Cancel();
+                FrameCoordinateEditorControl.UnloadAnimation();
+                ProgramConfig = LoadProgramConfig();
+                ReloadTreeViewAndConfigs();
+                ReduceFileSizeCheckBox.IsChecked = ProgramConfig.ReduceFileSize;
+                SyncWorkingPathHistoryFromConfig();
+                WorkingPathTextBox.Text = ProgramConfig.WorkingPath;
+            }
+            finally
+            {
+                _isReloadingFromStorageChanges = false;
+            }
+        }
+
         private void AddWorkingPathToHistoryIfValid(string? path)
         {
             if (!IsValidWorkingPath(path))
@@ -552,7 +702,8 @@ namespace FramesToMMSpriteResources
             SaveProgramConfig();
             if (!_isHierarchyError)
                 SaveAsset();
-            
+
+            _ = AcceptCurrentStorageChangesAsync();
         }
 
         void SaveAsset()
@@ -2615,6 +2766,7 @@ namespace FramesToMMSpriteResources
    
     
             IsGenerating = false;
+            await CheckForStorageChangesAsync();
         }
 
         private async void BrowseFolderButton_Click(object sender, RoutedEventArgs e)
