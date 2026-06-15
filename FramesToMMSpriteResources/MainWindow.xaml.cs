@@ -135,7 +135,7 @@ namespace FramesToMMSpriteResources
 
         public static ProgramConfig ProgramConfig;
 
-        public static HashSet<object> _currentConfigs;
+        private HashSet<object> _currentConfigs;
 
         bool _isPanelChangeInProgress = false;
 
@@ -160,8 +160,8 @@ namespace FramesToMMSpriteResources
 
         bool _isHierarchyError = true;
 
-        private readonly int _fadeOutMs = 50;
-        private readonly int _fadeInMs = 100;
+        private const int _fadeOutMs = 50;
+        private const int _fadeInMs = 100;
 
         private static bool _isCtrlHeld = false;
         public static bool IsCtrlHeld => _isCtrlHeld;
@@ -180,7 +180,7 @@ namespace FramesToMMSpriteResources
         public ObservableCollection<AlsoKnownAsEntry> AlsoKnownAsEntries { get; } = new();
 
         private readonly JsonSerializerOptions jsonOptions = new()
-        {
+        { 
             PropertyNameCaseInsensitive = true,
             ReadCommentHandling = JsonCommentHandling.Skip,
             IncludeFields = true,
@@ -274,9 +274,7 @@ namespace FramesToMMSpriteResources
 
         void CheckForAllowProgramEditing()
         {
-            bool isEnabled = (!_isGenerating);
-
-            ControlEnabler.IsEnabled = isEnabled;
+            ControlEnabler.IsEnabled = !_isGenerating;
             CheckForAllowNavigating();
             CheckForAllowGenerating();
             CheckForAllowFrameEditing();
@@ -295,32 +293,21 @@ namespace FramesToMMSpriteResources
 
             OverlappedPresenter presenter = OverlappedPresenter.Create();
             presenter.PreferredMinimumWidth = 735;
-            presenter.PreferredMinimumHeight = 500;
+            presenter.PreferredMinimumHeight = 400;
 
             AppWindow.SetPresenter(presenter);
-
-       
 
             ProgramConfig = LoadProgramConfig();
 
             SetUpTreeViewAndConfigs();
 
-            Activated -= MainWindow_Activated;
             Activated += MainWindow_Activated;
 
             HeaderBreadcrumbBar.ItemsSource = BreadcrumbItems;
-
-            HeaderBreadcrumbBar.ItemClicked -= BreadcrumbBar_ItemClicked;
             HeaderBreadcrumbBar.ItemClicked += BreadcrumbBar_ItemClicked;
-
-
-
 
             ProgramNameTextBlock.Text += GetCurrentVersion(); 
         
-            CheckForUpdateIfNeeded();
-
-            AppWindow.Closing -= AppWindow_Closing;
             AppWindow.Closing += AppWindow_Closing;
 
             if (Content is UIElement root)
@@ -330,40 +317,7 @@ namespace FramesToMMSpriteResources
                     handledEventsToo: true);
             }
 
-
-        }
-
-
-        private void MainWindow_PointerPressed(object sender, PointerRoutedEventArgs e)
-        {
-            if (_waitingForSecondaryActivation)
-            {
-
-                ActivateProgram();
-                _ableToRelaod = true;
-            }
-                
-        }
-
-
-        private void AppWindow_Closing(AppWindow sender, AppWindowClosingEventArgs args)
-        {       
-            args.Cancel = true;
-   
-            _ = DispatcherQueue.TryEnqueue(async () =>
-            {
-
-                SetInfoBar(InfoBarSeverity.Informational, "Saving", "The program will close soon");
-
-
-      
-               
-
-                
-                SaveAllConfigs();
-                this.Close();
-
-            });
+            CheckForUpdateIfNeeded();
         }
 
         bool _ableToRelaod = true;
@@ -371,12 +325,10 @@ namespace FramesToMMSpriteResources
 
         private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
         {
-
             if (args.WindowActivationState != WindowActivationState.Deactivated)
             {
                 if (!_ableToRelaod)
                 {
-
                     _waitingForSecondaryActivation = true;
                     return;
                 }
@@ -384,39 +336,37 @@ namespace FramesToMMSpriteResources
                 ActivateProgram();
             }
             else
-            {
-                
+            {           
                 _ableToRelaod = false;
                 
                 if (!_waitingForSecondaryActivation)
                 {
-                    _waitingForSecondaryActivation = false;
-           
+                    _waitingForSecondaryActivation = false;          
                     IsWindowActive = false;
+
                     ClearKeyboardState();
-                 
-        
-            
-                
+                                
                     FrameCoordinateEditorControl.UnloadAnimation();
 
-                    ReduceFileSizeCheckBox.Click -= ReduceFileSizeCheckBox_Click;
-                    WorkingPathTextBox.TextChanged -= WorkingPathTextBox_TextChanged;
-
                     cts?.Cancel();
+
                     SaveAllConfigs();
                 }
                 else
                 {
                     _waitingForSecondaryActivation = false;
- 
                 }
-                
-
-                
+                         
                 _ableToRelaod = true;
+            }
+        }
 
-
+        private void MainWindow_PointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            if (_waitingForSecondaryActivation)
+            {
+                ActivateProgram();
+                _ableToRelaod = true;
             }
         }
 
@@ -424,25 +374,21 @@ namespace FramesToMMSpriteResources
         {
             _waitingForSecondaryActivation = false;
             
-
             if (_isActivated)
             {
                 ProgramConfig = LoadProgramConfig();
                 ReloadTreeViewAndConfigs();
             }
-
             _isActivated = true;
 
-            ReduceFileSizeCheckBox.IsChecked = ProgramConfig.ReduceFileSize;
             SyncWorkingPathHistoryFromConfig();
-            WorkingPathTextBox.Text = ProgramConfig.WorkingPath;
-
-
 
             ReduceFileSizeCheckBox.Click -= ReduceFileSizeCheckBox_Click;
+            ReduceFileSizeCheckBox.IsChecked = ProgramConfig.ReduceFileSize;
             ReduceFileSizeCheckBox.Click += ReduceFileSizeCheckBox_Click;
 
             WorkingPathTextBox.TextChanged -= WorkingPathTextBox_TextChanged;
+            WorkingPathTextBox.Text = ProgramConfig.WorkingPath;
             WorkingPathTextBox.TextChanged += WorkingPathTextBox_TextChanged;
 
 
@@ -450,6 +396,17 @@ namespace FramesToMMSpriteResources
             IsPanelChangeInProgress = false;
 
             SyncKeyboardState();
+        }
+
+        private void AppWindow_Closing(AppWindow sender, AppWindowClosingEventArgs args)
+        {
+            args.Cancel = true;
+            _ = DispatcherQueue.TryEnqueue(async () =>
+            {
+                SetInfoBar(InfoBarSeverity.Informational, "Saving", "The program will close soon");
+                SaveAllConfigs();
+                Close();
+            });
         }
 
         private async void WorkingPathTextBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
@@ -462,7 +419,6 @@ namespace FramesToMMSpriteResources
             {
                 sender.IsSuggestionListOpen = true;
             }
-            SaveProgramConfig();
             FrameCoordinateEditorControl.UnloadAnimation();
             ReloadTreeViewAndConfigs();
         }
@@ -536,10 +492,7 @@ namespace FramesToMMSpriteResources
 
         private void GeneratePathTextBox_TextChanged(object sender, RoutedEventArgs e)
         {
-
             ProgramConfig.AssetConfig!.GeneratePath = (sender as TextBox)!.Text;
-
- 
         }
 
         private void ReduceFileSizeCheckBox_Click(object sender, RoutedEventArgs e)
@@ -551,36 +504,29 @@ namespace FramesToMMSpriteResources
         { 
             SaveProgramConfig();
             if (!_isHierarchyError)
-                SaveAsset();
-            
-        }
-
-        void SaveAsset()
-        {
-            SaveJson(Path.Combine(WorkingPath, CONFIG_FILENAME), ProgramConfig.AssetConfig!);
-            var subjectDirs = Directory.GetDirectories(WorkingPath);
-            foreach (var subjectDir in subjectDirs)
             {
-                string subjectName = Path.GetFileName(subjectDir);
-                if (subjectName != "_generated")
+                SaveJson(Path.Combine(WorkingPath, CONFIG_FILENAME), ProgramConfig.AssetConfig!);
+                var subjectDirs = Directory.GetDirectories(WorkingPath);
+                foreach (var subjectDir in subjectDirs)
                 {
-     
-
-                    SaveJson(Path.Combine(subjectDir, CONFIG_FILENAME), ProgramConfig.AssetConfig!.SubjectConfigs![subjectName]);
-                    SaveJson(Path.Combine(subjectDir, INTERFACE_CONFIG_FILENAME), ProgramConfig.AssetConfig!.SubjectConfigs![subjectName].InterfaceConfig);
-
-                    var animationDirs = Directory.GetDirectories(subjectDir);
-                    foreach (var animationDir in animationDirs)
+                    string subjectName = Path.GetFileName(subjectDir);
+                    if (subjectName != "_generated")
                     {
-                        string animationName = Path.GetFileName(animationDir);
-   
+                        SaveJson(Path.Combine(subjectDir, CONFIG_FILENAME), ProgramConfig.AssetConfig!.SubjectConfigs![subjectName]);
+                        SaveJson(Path.Combine(subjectDir, INTERFACE_CONFIG_FILENAME), ProgramConfig.AssetConfig!.SubjectConfigs![subjectName].InterfaceConfig);
 
-                        SaveJson(Path.Combine(animationDir, CONFIG_FILENAME), ProgramConfig.AssetConfig!.SubjectConfigs![subjectName].AnimationConfigs![animationName]);
-                        SaveJson(Path.Combine(animationDir, INTERFACE_CONFIG_FILENAME), ProgramConfig.AssetConfig!.SubjectConfigs![subjectName].AnimationConfigs![animationName].InterfaceConfig);
+                        var animationDirs = Directory.GetDirectories(subjectDir);
+                        foreach (var animationDir in animationDirs)
+                        {
+                            string animationName = Path.GetFileName(animationDir);
+
+                            SaveJson(Path.Combine(animationDir, CONFIG_FILENAME), ProgramConfig.AssetConfig!.SubjectConfigs![subjectName].AnimationConfigs![animationName]);
+                            SaveJson(Path.Combine(animationDir, INTERFACE_CONFIG_FILENAME), ProgramConfig.AssetConfig!.SubjectConfigs![subjectName].AnimationConfigs![animationName].InterfaceConfig);
+                        }
                     }
+
                 }
-                
-            }
+            }             
         }
 
         private void SaveJson(string filePath, object classToSave)
@@ -619,6 +565,8 @@ namespace FramesToMMSpriteResources
             }
         }
 
+        //TODO: CONTINUE CODE REVIEW FROM HERE
+
         private static string GetUserConfigDirectory()
         {
             var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FramesToSpriteResources");
@@ -642,12 +590,6 @@ namespace FramesToMMSpriteResources
             var configPath = Path.Combine(GetUserConfigDirectory(), CONFIG_FILENAME);
             SaveJson(configPath, ProgramConfig);
             //Debug.WriteLine(configPath);
-    
-        }
-
-        TreeItem GetSelectedTreeItem()
-        {
-            return (TreeViewControl.SelectedNode.Content as TreeItem)!;
         }
 
         void ReloadTreeViewAndConfigs()
@@ -660,7 +602,6 @@ namespace FramesToMMSpriteResources
 
         void SetUpTreeViewAndConfigs()
         {
-
             _isHierarchyError = false;
                               
             TreeViewControl.ItemInvoked -= TreeViewControl_ItemInvoked;
@@ -709,12 +650,8 @@ namespace FramesToMMSpriteResources
                 OpenSettingsAndHideGeneratePanelImmediately();
                 return;
             }
-
-
   
             var firstLevelFiles = Directory.GetFiles(WorkingPath);
-
-
           
             if (!firstLevelFiles.Contains(Path.Combine(WorkingPath, "FramesToMMSpriteResources.dll")) && AreSubjectsCorrect())
             {
@@ -745,7 +682,6 @@ namespace FramesToMMSpriteResources
             }
             else
             {
-
                 _isHierarchyError = true;
     
                 TreeViewPlaceHolderText.Text = "Cannot display hierarchy";
@@ -756,23 +692,18 @@ namespace FramesToMMSpriteResources
                 {
                     SetInfoBar(InfoBarSeverity.Error, "Wrong hierarchy or missing folders", "The way you've set your files and folders up is wrong...", false);
                 }
-            }
-            
-      
+            }            
         }
 
         void SetUpSubjectTreeViewAndConfigs()
-        {
-            
-
+        {         
             var subjectDirs = Directory.GetDirectories(WorkingPath);
 
             foreach (var subjectDir in subjectDirs)
             {
                 string subjectName = Path.GetFileName(subjectDir);
                 if (subjectName != "_generated")
-                {
-              
+                {        
                     SubjectConfig subjectConfig = LoadJson<SubjectConfig>(Path.Combine(subjectDir, CONFIG_FILENAME));
                     subjectConfig.InterfaceConfig = LoadJson<SubjectInterfaceConfig>(Path.Combine(subjectDir, INTERFACE_CONFIG_FILENAME));
 
@@ -783,16 +714,9 @@ namespace FramesToMMSpriteResources
                     foreach (var animationDir in animationDirs)
                     {
                         string animationName = Path.GetFileName(animationDir);
-
-
      
                         AnimationConfig animationConfig = LoadJson<AnimationConfig>(Path.Combine(animationDir, CONFIG_FILENAME));
-                        animationConfig.InterfaceConfig = LoadJson<AnimationInterfaceConfig>(Path.Combine(animationDir, INTERFACE_CONFIG_FILENAME));
-
-                        
-       
-
-               
+                        animationConfig.InterfaceConfig = LoadJson<AnimationInterfaceConfig>(Path.Combine(animationDir, INTERFACE_CONFIG_FILENAME));                           
                         
                         TreeItem treeItem;
                         treeItem = new(animationName, ItemDepth.Animation);                      
@@ -2839,7 +2763,7 @@ namespace FramesToMMSpriteResources
                 return false;
             }
 
-            bool ctrlHeld = e.KeyStatus.IsMenuKeyDown || _isCtrlHeld ||
+            bool ctrlHeld = e.KeyStatus.IsMenuKeyDown || IsCtrlHeld ||
                             e.Key == Windows.System.VirtualKey.Control ||
                             e.Key == Windows.System.VirtualKey.LeftControl ||
                             e.Key == Windows.System.VirtualKey.RightControl;
