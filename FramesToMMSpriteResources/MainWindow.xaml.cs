@@ -34,6 +34,7 @@ using CommunityToolkit.WinUI;
 
 //TODO: WHEN THERE IS A NODE SAVED AS SELECTED, BUT THE FOLDER/SPRITE GETS REMOVED, PROGRAM CRASHES
 //TODO: REMOVE UNUSED OFFSETS AFTER GENERATION
+//TODO: HANDLE NUMBER PARSING
 namespace FramesToMMSpriteResources
 {
     public enum ItemDepth
@@ -1093,47 +1094,48 @@ namespace FramesToMMSpriteResources
 
             var selectedNodesCount = ProgramConfig.SelectedNodes?.Count ?? 0;
 
-            if(selectedNodesCount > 1)    
+            bool isMultiSelectScenario =
+                selectedNodesCount > 1 ||
+                (selectedNodesCount == 1 && IsCtrlHeld && TreeViewControl.SelectedNode != node);
+
+            if (isMultiSelectScenario)
             {
-                if (IsCtrlHeld && node == TreeViewControl.SelectedNode)
+                if (TreeViewControl.SelectedNode == node)
                 {
-                    var nodeTreeItem = (node.Content as TreeItem)!;
+                    var nodeTreeItem = (TreeItem)node.Content!;
                     nodeTreeItem.IsSelected = false;
-                    ProgramConfig.SelectedNodes!.RemoveAt(ProgramConfig.SelectedNodes.Count -1);
-                    
-          
-                    foreach (TreeViewNode nodeInParent in node.Parent.Children)
-                    {
-                        if((nodeInParent.Content as TreeItem)!.Text == ProgramConfig.SelectedNodes.Last())
-                        {
-                            node = nodeInParent;
-                            break;
-                        }
-                    }
-                    WaitThenSelectNodeAsync(node);
+
+                    ProgramConfig.SelectedNodes!.RemoveAt(
+                        ProgramConfig.SelectedNodes.Count - 1);
+
+                    var lastSelected = ProgramConfig.SelectedNodes.Last();
+
+                    node = node.Parent.Children
+                        .Cast<TreeViewNode>()
+                        .First(n => ((TreeItem)n.Content!).Text == lastSelected);
                 }
 
                 TreeViewControl.SelectedNode = node;
                 ChangeConfigPanelIfNecessary(node, true);
+                WaitThenSelect(node);
+                return;
+            }
+
+            if (TreeViewControl.SelectedNode == node)
+            {
+                TreeViewControl.SelectedNode = null;
             }
             else
             {
-                if(TreeViewControl.SelectedNode != node)
-                {
-                    TreeViewControl.SelectedNode = node;
-                    ChangeConfigPanelIfNecessary(node, true);
-                }
-                else
-                {
-                    TreeViewControl.SelectedNode = null;
-                }
+                TreeViewControl.SelectedNode = node;
+                ChangeConfigPanelIfNecessary(node, true);
             }
 
         }
 
-        async void WaitThenSelectNodeAsync(TreeViewNode node)
+        async void WaitThenSelect(TreeViewNode node)
         {
-            await Task.Delay(1);
+            await Task.Yield();
             TreeViewControl.SelectedNode = node;
         }
 
@@ -1287,17 +1289,18 @@ namespace FramesToMMSpriteResources
 
             IsPanelChangeInProgress = true;
             UIElement panelToShow = HelpPanel;
-            DetachAllPanelEvents();
 
             ItemDepth depth = (node.Content as TreeItem)!.Depth;
+            AnimateGeneratePanel(show: true);
+            var selectedNode = (node.Content as TreeItem)!;
             switch (depth)
             {
                 case ItemDepth.Subject:
                     panelToShow = SubjectPanel;
-                    AnimateGeneratePanel(show: true);
+                   
                     var subjectName = (node.Content as TreeItem)!.Text;
 
-                    var selectedNode = (node.Content as TreeItem)!;
+             
 
                     HandleSelection(selectedNode, nowGenerated, []);
                     UpdateBreadcrumb(string.Join(", ", ProgramConfig.SelectedNodes!.OrderBy(s => s)));
@@ -1320,7 +1323,6 @@ namespace FramesToMMSpriteResources
                     }
                     else
                     {
-                        DetachAllPanelEvents();
                         panelToShow.Visibility = Visibility.Visible;
                     }
                     DisplaySubjectConfigAsync(subjectConfig);
@@ -1328,7 +1330,7 @@ namespace FramesToMMSpriteResources
 
                 case ItemDepth.Animation:
                     panelToShow = AnimationsPanel;
-                    AnimateGeneratePanel(show: true);
+    
                     subjectName = (node.Parent.Content as TreeItem)!.Text;
                     string animationName = (node.Content as TreeItem)!.Text;
 
@@ -1355,7 +1357,7 @@ namespace FramesToMMSpriteResources
                     }
                     else
                     {
-                        DetachAllPanelEvents();
+  
                         panelToShow.Visibility = Visibility.Visible;
                     }
                     DisplayAnimationCongifAsync(animationConfig);
@@ -1368,7 +1370,7 @@ namespace FramesToMMSpriteResources
                     string frameName = (node.Content as TreeItem)!.Text;
 
 
-                    AnimateGeneratePanel(show: true);
+         
                     selectedNode = (node.Content as TreeItem)!;
 
                     HandleSelection(selectedNode, nowGenerated, [subjectName, animationName]);
@@ -1385,7 +1387,7 @@ namespace FramesToMMSpriteResources
                     }
                     else
                     {
-                        DetachAllPanelEvents();
+               
                         panelToShow.Visibility = Visibility.Visible;
                     }
                     DisplayFrameCongifAsync(subjectName, animationName, frameName);               
@@ -1408,6 +1410,21 @@ namespace FramesToMMSpriteResources
 
         void DisplaySubjectConfigAsync(SubjectConfig subjectConfig)
         {
+            RemoveBackgroundCheckBox.Click -= ClickRemoveBackground;
+            CropLeftCheckBox.Click -= ClickCropLeftCheckBox;
+            CropTopCheckBox.Click -= ClickCropTopCheckBox;
+            CropRightCheckBox.Click -= ClickCropRightCheckBox;
+            CropBottomCheckBox.Click -= ClickCropBottomCheckBox;
+
+            ResizeTextBox.TextChanged -= ResizeTextBox_ValueChanged;
+            SamplingComboBox.SelectionChanged -= SamplingComboBox_SelectionChanged;
+            MipmapComboBox.SelectionChanged -= MipmapComboBox_SelectionChanged;
+            ColorTextBox.TextChanged -= ColorTextBox_TextChanged;
+            ThresholdTextBox.TextChanged -= ThresholdTextBox_ValueChanged;
+
+            SheetWidthTextBox.TextChanged -= SheetWidthTextBox_ValueChanged;
+            SheetHeightTextBox.TextChanged -= SheetHeightTextBox_ValueChanged;
+
             subjectConfig.Sheet ??= new SheetConfig();
     
 
@@ -1448,6 +1465,19 @@ namespace FramesToMMSpriteResources
 
         void DisplayAnimationCongifAsync(AnimationConfig animationConfig)
         {
+            RegenerateCheckBox.Click -= ClickRegenerateCheckBox;
+            ExcludeCheckBox.Click -= ExcludeCheckBox_Click;
+            RecoverXCheckBox.Click -= ClickRecoverXCheckBox;
+            RecoverYCheckBox.Click -= ClickRecoverYCheckBox;
+
+            DelayTextBox.TextChanged -= DelayTextBox_ValueChanged;
+            LoopTypeComboBox.SelectionChanged -= LoopTypeComboBox_SelectionChanged;
+            AnimationOffsetXTextBox.TextChanged -= AnimationOffsetXTextBox_ValueChanged;
+            AnimationOffsetYTextBox.TextChanged -= AnimationOffsetYTextBox_ValueChanged;
+
+            AlsoKnownAsTextBox.TextChanged -= AlsoKnownAsTextBox_TextChanged;
+            AlsoKnownAsAddButton.Click -= AlsoKnownAsAddButton_Click;
+
             animationConfig.RecoverCroppedOffset ??= new RecoverCroppedOffset();
             animationConfig.Offset ??= new Vector2(0, 0);
 
@@ -1471,18 +1501,14 @@ namespace FramesToMMSpriteResources
             RecoverYCheckBox.Click += ClickRecoverYCheckBox;
 
             DelayTextBox.TextChanged += DelayTextBox_ValueChanged;
-
             LoopTypeComboBox.SelectionChanged += LoopTypeComboBox_SelectionChanged;
-
             AnimationOffsetXTextBox.TextChanged += AnimationOffsetXTextBox_ValueChanged;
             AnimationOffsetYTextBox.TextChanged += AnimationOffsetYTextBox_ValueChanged;
 
-            AlsoKnownAsTextBox.TextChanged += AlsoKnownAsTextBox_TextChanged;
-            
-    
-            PopulateAlsoKnownAsList();
-
+            AlsoKnownAsTextBox.TextChanged += AlsoKnownAsTextBox_TextChanged;    
             AlsoKnownAsAddButton.Click += AlsoKnownAsAddButton_Click;
+
+            PopulateAlsoKnownAsList();
             AlsoKnownAsListView.ItemsSource = AlsoKnownAsEntries;
             AlsoKnownAsAddButton.IsEnabled = false;
         }
@@ -1492,8 +1518,21 @@ namespace FramesToMMSpriteResources
         CancellationTokenSource? cts= null;
 
         async void DisplayFrameCongifAsync(string subjectName, string animationName, string frameName)
-        {         
-           
+        {
+
+            FrameCoordinateEditorControl.SpritePositionMoved -= SpriteOffset_ValueMoved;
+
+            DirectionTextBox.TextChanged -= DirectionTextBox_ValueChanged;
+            SpeedTextBox.TextChanged -= SpeedTextBox_ValueChanged;
+
+            BasedOnRadioButtons.SelectionChanged -= BasedOnRadioButtons_SelectionChanged;
+            AlignOnXAxis.Click -= AlignOnXAxis_Click;
+            AlignOnYAxis.Click -= AlignOnYAxis_Click;
+
+            OffsetXTextBox.TextChanged -= OffsetXTextBox_ValueChanged;
+            OffsetYTextBox.TextChanged -= OffsetYTextBox_ValueChanged;
+            MultiplyTextBox.TextChanged -= MultiplyTextBox_ValueChanged;
+
             bool isFromFramePanel = (TreeViewControl.SelectedNode == null || (TreeViewControl.SelectedNode.Content as TreeItem)!.Depth == ItemDepth.Frame);
 
        
@@ -1673,52 +1712,6 @@ namespace FramesToMMSpriteResources
             }
             
             
-        }
-
-        private void DetachAllPanelEvents()
-        {
-            RemoveBackgroundCheckBox.Click -= ClickRemoveBackground;
-            CropLeftCheckBox.Click -= ClickCropLeftCheckBox;
-            CropTopCheckBox.Click -= ClickCropTopCheckBox;
-            CropRightCheckBox.Click -= ClickCropRightCheckBox;
-            CropBottomCheckBox.Click -= ClickCropBottomCheckBox;
-
-            ResizeTextBox.TextChanged -= ResizeTextBox_ValueChanged;
-            SamplingComboBox.SelectionChanged -= SamplingComboBox_SelectionChanged;
-            MipmapComboBox.SelectionChanged -= MipmapComboBox_SelectionChanged;
-            ColorTextBox.TextChanged -= ColorTextBox_TextChanged;
-            ThresholdTextBox.TextChanged -= ThresholdTextBox_ValueChanged;
-
-            SheetWidthTextBox.TextChanged -= SheetWidthTextBox_ValueChanged;
-            SheetHeightTextBox.TextChanged -= SheetHeightTextBox_ValueChanged;
-
-            RegenerateCheckBox.Click -= ClickRegenerateCheckBox;
-            ExcludeCheckBox.Click -= ExcludeCheckBox_Click;
-            RecoverXCheckBox.Click -= ClickRecoverXCheckBox;
-            RecoverYCheckBox.Click -= ClickRecoverYCheckBox;
-
-            DelayTextBox.TextChanged -= DelayTextBox_ValueChanged;
-            LoopTypeComboBox.SelectionChanged -= LoopTypeComboBox_SelectionChanged;
-            AnimationOffsetXTextBox.TextChanged -= AnimationOffsetXTextBox_ValueChanged;
-            AnimationOffsetYTextBox.TextChanged -= AnimationOffsetYTextBox_ValueChanged;
-
-            FrameCoordinateEditorControl.SpritePositionMoved -= SpriteOffset_ValueMoved;
-
-            DirectionTextBox.TextChanged -= DirectionTextBox_ValueChanged;
-            SpeedTextBox.TextChanged -= SpeedTextBox_ValueChanged;
-
-            BasedOnRadioButtons.SelectionChanged -= BasedOnRadioButtons_SelectionChanged;
-            AlignOnXAxis.Click -= AlignOnXAxis_Click;
-            AlignOnYAxis.Click -= AlignOnYAxis_Click;
-
-            OffsetXTextBox.TextChanged -= OffsetXTextBox_ValueChanged;
-            OffsetYTextBox.TextChanged -= OffsetYTextBox_ValueChanged;
-            MultiplyTextBox.TextChanged -= MultiplyTextBox_ValueChanged;
-
-            AlsoKnownAsTextBox.TextChanged -= AlsoKnownAsTextBox_TextChanged;
-
-            AlsoKnownAsAddButton.Click -= AlsoKnownAsAddButton_Click;
-
         }
 
         FrameConfig GetCurrentFrameConfig()
