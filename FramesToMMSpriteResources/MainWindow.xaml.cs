@@ -565,8 +565,6 @@ namespace FramesToMMSpriteResources
             }
         }
 
-        //TODO: CONTINUE CODE REVIEW FROM HERE
-
         private static string GetUserConfigDirectory()
         {
             var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FramesToSpriteResources");
@@ -1248,6 +1246,11 @@ namespace FramesToMMSpriteResources
                     {
                         _currentConfigs.Add(ProgramConfig.AssetConfig!.SubjectConfigs![subjectName].AnimationConfigs![animationName].FrameCongfigs[int.Parse(selectedNodeName)]);
                     }
+
+                    subjectConfig = ProgramConfig.AssetConfig!.SubjectConfigs![subjectName];
+                    animationConfig = subjectConfig.AnimationConfigs![animationName];
+                    bool isFromFramePanel = (TreeViewControl.SelectedNode == null || (TreeViewControl.SelectedNode.Content as TreeItem)!.Depth == ItemDepth.Frame);
+                    int frameCount = TreeViewControl.SelectedNode!.Parent.Children.Count;
                     if (animate)
                     {
                         await Task.Delay(_fadeOutMs);
@@ -1258,7 +1261,7 @@ namespace FramesToMMSpriteResources
                
                         panelToShow.Visibility = Visibility.Visible;
                     }
-                    DisplayFrameCongifAsync(subjectName, animationName, frameName);               
+                    DisplayFrameCongifAsync(subjectName, animationName, frameName, isFromFramePanel, frameCount, subjectConfig, animationConfig);               
                     break;
 
                 default:
@@ -1374,9 +1377,8 @@ namespace FramesToMMSpriteResources
 
         CancellationTokenSource? cts= null;
 
-        async void DisplayFrameCongifAsync(string subjectName, string animationName, string frameName)
+        async void DisplayFrameCongifAsync(string subjectName, string animationName, string frameName, bool isFromFramePanel, int frameCount, SubjectConfig subjectConfig, AnimationConfig animationConfig)
         {
-            FrameCoordinateEditorControl.SpritePositionMoved -= SpriteOffset_ValueMoved;
 
             DirectionTextBox.TextChanged -= DirectionTextBox_ValueChanged;
             SpeedTextBox.TextChanged -= SpeedTextBox_ValueChanged;
@@ -1388,14 +1390,12 @@ namespace FramesToMMSpriteResources
             OffsetXTextBox.TextChanged -= OffsetXTextBox_ValueChanged;
             OffsetYTextBox.TextChanged -= OffsetYTextBox_ValueChanged;
             MultiplyTextBox.TextChanged -= MultiplyTextBox_ValueChanged;
-
-            //CHECK IF THIS IS CORRECT
-            bool isFromFramePanel = (TreeViewControl.SelectedNode == null || (TreeViewControl.SelectedNode.Content as TreeItem)!.Depth == ItemDepth.Frame);
        
             string[] newPath = [subjectName, animationName];
 
             bool subjectEquals = (AnimationSpriteFramePath[0] == newPath[0]);
             bool animationEquals = (subjectEquals && AnimationSpriteFramePath[1] == newPath[1]);
+            bool isCancelled = false;
             if (!animationEquals)
             {
                 if (!subjectEquals || (TreeViewControl.SelectedNode == null || !isFromFramePanel && animationName != AnimationSpriteFramePath[1]))
@@ -1405,10 +1405,10 @@ namespace FramesToMMSpriteResources
                 FrameCoordinateEditorControl.PreviewSpriteFrames = [];
                 AnimationSpriteFramePath = newPath;
                 cts?.Cancel();
+                isCancelled = true;
             }
 
-            var subjectConfig = ProgramConfig.AssetConfig!.SubjectConfigs![subjectName];
-            var animationConfig = subjectConfig.AnimationConfigs![animationName];
+
             int selectedIndex = int.Parse(frameName);
             var frameConfig = animationConfig.FrameCongfigs[selectedIndex];
 
@@ -1435,12 +1435,11 @@ namespace FramesToMMSpriteResources
             OffsetXTextBox.TextChanged += OffsetXTextBox_ValueChanged;
             OffsetYTextBox.TextChanged += OffsetYTextBox_ValueChanged;
             MultiplyTextBox.TextChanged += MultiplyTextBox_ValueChanged;
-
-            if (IsLoadingFrames) return;
+            if (IsLoadingFrames && !isCancelled) return;
             cts = new();
             try
             {
-                await LoadCoordinateEditorAsync(subjectName, animationName, subjectConfig, frameName, selectedIndex, frameConfig, cts.Token);
+                await LoadCoordinateEditorAsync(subjectName, animationName, subjectConfig, frameName, selectedIndex, frameConfig, frameCount, cts.Token);
             }
             catch
             {
@@ -1452,8 +1451,9 @@ namespace FramesToMMSpriteResources
             }
         }
 
-        async Task LoadCoordinateEditorAsync(string subjectName, string animationName, SubjectConfig subjectConfig, string frameName, int selectedIndex, FrameConfig frameConfig, CancellationToken ct)
+        async Task LoadCoordinateEditorAsync(string subjectName, string animationName, SubjectConfig subjectConfig, string frameName, int selectedIndex, FrameConfig frameConfig, int frameCount, CancellationToken ct)
         {
+            FrameCoordinateEditorControl.SpritePositionMoved -= SpriteOffset_ValueMoved;
             string animationPath = Path.Combine(WorkingPath, subjectName, animationName);
             var animationConfig = subjectConfig.AnimationConfigs![animationName];
             if (FrameCoordinateEditorControl.PreviewSpriteFrames.Count == 0)
@@ -1464,11 +1464,10 @@ namespace FramesToMMSpriteResources
 
                 ColorHelper.TryParse(subjectConfig.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
                 SKColor backgroundSKColor = new(r, g, b, a);
-
-                for (int i = 0; i < TreeViewControl.SelectedNode.Parent.Children.Count; i++)         
+          
+                for (int i = 0; i < frameCount; i++)         
                 {
                     FrameConfig frameConfigInLoop = animationConfig.FrameCongfigs[i];
-                    ct.ThrowIfCancellationRequested();
 
                     string framePath = Path.Combine(animationPath, $"{frameConfigInLoop.Name}.png");
 
@@ -1518,10 +1517,10 @@ namespace FramesToMMSpriteResources
                     if (spriteFrame == null)
                         throw new Exception($"Failed to decode image: {framePath}");
 
-                    tempAnimationSpriteFrames.Add(spriteFrame);                   
+                    tempAnimationSpriteFrames.Add(spriteFrame);
+                    ct.ThrowIfCancellationRequested();
                 }
 
-                ct.ThrowIfCancellationRequested();
 
                 var selectedNodeAfter = TreeViewControl.SelectedNode;
                 if (selectedNodeAfter != null)
