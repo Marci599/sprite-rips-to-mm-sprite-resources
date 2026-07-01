@@ -8,17 +8,16 @@ using System.Threading.Tasks;
 
 namespace FramesToMMSpriteResources
 {
-    public class AssetConfig : ParentConfig
+    public class AssetConfig
     {
         [JsonPropertyName("is_hd")]
         public bool IsHd = true;
 
-        [JsonPropertyName("generate_path")]
-        public string? GeneratePath;
-
         [JsonIgnore]
         public Dictionary<string, SubjectConfig>? SubjectConfigs = [];
 
+        [JsonIgnore]
+        public AssetInterfaceConfig InterfaceConfig = new();
         public AssetConfig() { }
     }
 }

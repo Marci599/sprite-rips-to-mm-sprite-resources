@@ -30,9 +30,6 @@ namespace FramesToMMSpriteResources
         [JsonPropertyName("recover_cropped_offset")]
         public RecoverCroppedOffset RecoverCroppedOffset = new();
 
-        [JsonPropertyName("generated_frame_count")]
-        public int GeneratedFrameCount = -1;
-
         [JsonPropertyName("frame_configs")]
         public List<FrameConfig> FrameCongfigs;
 
@@ -40,6 +37,11 @@ namespace FramesToMMSpriteResources
         public Dictionary<string, RangeConfig> AlsoKnownAs = new();
 
         public AnimationConfig() { }
+
+        public AnimationInterfaceConfig GetInterfaceConfig()
+        {
+            return (InterfaceConfig as AnimationInterfaceConfig)!;
+    }
     }
 
     public class RecoverCroppedOffset

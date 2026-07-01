@@ -634,7 +634,7 @@
                                                         </StackPanel>
                                                     </Button>
                                                 </Grid>
-                                                <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" MaxWidth="1000" Padding="16 8 16 16" CornerRadius="0 0 4 4" Margin="-1 0 -1 -1">
+                                                <Border x:Name="AssetConfigBorder" Grid.Row="0" Style="{StaticResource CardBorderStyle}" MaxWidth="1000" Padding="16 8 16 16" CornerRadius="0 0 4 4" Margin="-1 0 -1 -1">
                                                     <StackPanel Spacing="12">
                                                         <TextBlock Text="Please provide a path where your folders and files will be located or are already located"  Style="{StaticResource HelperTextStyle}"/>
                                                         <StackPanel Spacing="4" MaxWidth="1000">

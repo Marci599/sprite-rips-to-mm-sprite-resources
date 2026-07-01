@@ -3,6 +3,7 @@ using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -67,6 +68,8 @@ namespace FramesToMMSpriteResources
 
         public static async Task StartProcessAsync(string subjectName)
         {
+
+
             programConfig = MainWindow.ProgramConfig;
             subjectConfig = programConfig.AssetConfig!.SubjectConfigs[subjectName];
             parsedBackgroundColor = null;
@@ -86,13 +89,13 @@ namespace FramesToMMSpriteResources
 
    
 
-            if (!Path.Exists(programConfig.AssetConfig!.GeneratePath))
+            if (!Path.Exists(programConfig.AssetConfig!.InterfaceConfig.GeneratePath))
             {
                 outputDir = Path.Combine(MainWindow.WorkingPath, "_generated");
             }
             else
             {
-                outputDir = programConfig.AssetConfig!.GeneratePath;
+                outputDir = programConfig.AssetConfig!.InterfaceConfig.GeneratePath;
    
             }
 
@@ -154,7 +157,7 @@ namespace FramesToMMSpriteResources
                     }
                 }
                 
-                animationConfig.GeneratedFrameCount = -1;
+                //animationConfig.GeneratedFrameCount = -1;
                 
 
                 int spritesCount = 0;

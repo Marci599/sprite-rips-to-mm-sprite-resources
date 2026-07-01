@@ -1,4 +1,5 @@
-﻿using FramesToMMSpriteResources.DataConfig;
+﻿using CommunityToolkit.WinUI;
+using FramesToMMSpriteResources.DataConfig;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -14,6 +15,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Media;
@@ -30,7 +32,6 @@ using Windows.Graphics.Imaging;
 using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
-using CommunityToolkit.WinUI;
 
 //TODO: WHEN THERE IS A NODE SAVED AS SELECTED, BUT THE FOLDER/SPRITE GETS REMOVED, PROGRAM CRASHES
 //TODO: REMOVE UNUSED OFFSETS AFTER GENERATION
@@ -284,6 +285,7 @@ namespace FramesToMMSpriteResources
         [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(TreeItem))]
         public MainWindow()
         {
+            CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
             InitializeComponent();
 
             AppWindow.Resize(new Windows.Graphics.SizeInt32(1000, 625));
@@ -492,7 +494,7 @@ namespace FramesToMMSpriteResources
 
         private void GeneratePathTextBox_TextChanged(object sender, RoutedEventArgs e)
         {
-            ProgramConfig.AssetConfig!.GeneratePath = (sender as TextBox)!.Text;
+            ProgramConfig.AssetConfig!.InterfaceConfig.GeneratePath = (sender as TextBox)!.Text;
         }
 
         private void ReduceFileSizeCheckBox_Click(object sender, RoutedEventArgs e)
@@ -506,6 +508,7 @@ namespace FramesToMMSpriteResources
             if (!_isHierarchyError)
             {
                 SaveJson(Path.Combine(WorkingPath, CONFIG_FILENAME), ProgramConfig.AssetConfig!);
+                SaveJson(Path.Combine(WorkingPath, INTERFACE_CONFIG_FILENAME), ProgramConfig.AssetConfig!.InterfaceConfig);
                 var subjectDirs = Directory.GetDirectories(WorkingPath);
                 foreach (var subjectDir in subjectDirs)
                 {
@@ -614,9 +617,9 @@ namespace FramesToMMSpriteResources
             TreeViewControl.Collapsed -= TreeViewControl_Collapsed;
             TreeViewControl.Collapsed += TreeViewControl_Collapsed;
 
-            IsHdCheckBox.IsEnabled = false;
-            GeneratePathTextBox.IsEnabled = false;
-            BrowseGenerateFolderButton.IsEnabled = false;
+            AssetConfigBorder.Visibility = Visibility.Collapsed;
+            WorkingPathTextBox.CornerRadius = new CornerRadius(4, 0, 0, 4);
+            BrowseFolderButton.CornerRadius = new CornerRadius(0, 4, 4, 0);
             GeneratePathTextBox.TextChanged -= GeneratePathTextBox_TextChanged;
             IsHdCheckBox.Click -= ClickIsHdCheckBox;
 
@@ -682,14 +685,15 @@ namespace FramesToMMSpriteResources
 
         void SetUpSubjectTreeViewAndConfigs()
         {
-            IsHdCheckBox.IsEnabled = true;
-            GeneratePathTextBox.IsEnabled = true;
-            BrowseGenerateFolderButton.IsEnabled = true;
+            AssetConfigBorder.Visibility = Visibility.Visible;
+            WorkingPathTextBox.CornerRadius = new CornerRadius(4, 0, 0, 0);
+            BrowseFolderButton.CornerRadius = new CornerRadius(0, 4, 0, 0);
             ProgramConfig.AssetConfig = LoadJson<AssetConfig>(Path.Combine(WorkingPath, CONFIG_FILENAME));
+            ProgramConfig.AssetConfig.InterfaceConfig = LoadJson<AssetInterfaceConfig>(Path.Combine(WorkingPath, INTERFACE_CONFIG_FILENAME));
 
             ProgramConfig.SelectedNodePath ??= [];
 
-            GeneratePathTextBox.Text = ProgramConfig.AssetConfig!.GeneratePath;
+            GeneratePathTextBox.Text = ProgramConfig.AssetConfig!.InterfaceConfig.GeneratePath;
             IsHdCheckBox.IsChecked = ProgramConfig.AssetConfig!.IsHd;
             GeneratePathTextBox.TextChanged += GeneratePathTextBox_TextChanged;
             IsHdCheckBox.Click += ClickIsHdCheckBox;
@@ -760,12 +764,12 @@ namespace FramesToMMSpriteResources
                             frameIndex++;                           
                         }
 
-                        if (animationConfig.GeneratedFrameCount == -1)
+                        if (animationConfig.GetInterfaceConfig().GeneratedFrameCount == -1)
                         {
-                            animationConfig.GeneratedFrameCount = frameIndex;
+                            animationConfig.GetInterfaceConfig().GeneratedFrameCount = frameIndex;
                         }
 
-                        if (animationConfig.GeneratedFrameCount == frameIndex)
+                        if (animationConfig.GetInterfaceConfig().GeneratedFrameCount == frameIndex)
                         {
                             (animationTreeItem.Content as TreeItem)!.Count = frameIndex;
                             (animationTreeItem.Content as TreeItem)!.CountText = frameIndex.ToString();
@@ -2369,13 +2373,13 @@ namespace FramesToMMSpriteResources
             {
                 await Task.Run(async () => await Processer.StartProcessAsync(subjectName));
                 stopwatch.Stop();
-                if (string.IsNullOrWhiteSpace(ProgramConfig.AssetConfig!.GeneratePath))
+                if (string.IsNullOrWhiteSpace(ProgramConfig.AssetConfig!.InterfaceConfig.GeneratePath))
                 {
                     SetInfoBar(InfoBarSeverity.Success, "Successfully generated", $"You can find the spritesheet in _generated ({stopwatch.ElapsedMilliseconds}ms)");
                 }
                 else
                 {
-                    SetInfoBar(InfoBarSeverity.Success, "Successfully generated", $"You can find the spritesheet in {ProgramConfig.AssetConfig!.GeneratePath} ({stopwatch.ElapsedMilliseconds}ms)");
+                    SetInfoBar(InfoBarSeverity.Success, "Successfully generated", $"You can find the spritesheet in {ProgramConfig.AssetConfig!.InterfaceConfig.GeneratePath} ({stopwatch.ElapsedMilliseconds}ms)");
                 }  
             }
             catch (Exception er)

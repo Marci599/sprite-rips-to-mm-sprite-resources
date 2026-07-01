@@ -13,6 +13,8 @@ namespace FramesToMMSpriteResources.DataConfig
         CroppedSpriteSize = 1
     }
 
+
+
     public class AnimationInterfaceConfig : InterfaceConfig
     {
         [JsonPropertyName("align_on_x_axis")]
@@ -35,6 +37,8 @@ namespace FramesToMMSpriteResources.DataConfig
         [JsonPropertyName("also_known_as")]
         public string AlsoKnownAs = "";
 
+        [JsonPropertyName("generated_frame_count")]
+        public int GeneratedFrameCount = -1;
         public AnimationInterfaceConfig() { }
     }
 
