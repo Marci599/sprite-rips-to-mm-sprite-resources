@@ -700,6 +700,8 @@ namespace FramesToMMSpriteResources
 
         private static string[] GetOrderedSpritePaths(string animationPath, AnimationConfig animationConfig)
         {
+            string[] paths;
+
             if (animationConfig.FrameCongfigs != null && animationConfig.FrameCongfigs.Count > 0)
             {
                 var orderedPaths = animationConfig.FrameCongfigs
@@ -709,13 +711,30 @@ namespace FramesToMMSpriteResources
                     .ToArray();
 
                 if (orderedPaths.Length > 0)
-                    return orderedPaths;
+                    paths = orderedPaths;
+                else
+                    paths = Directory.GetFiles(animationPath)
+                        .Where(p => string.Equals(Path.GetExtension(p), ".png", StringComparison.OrdinalIgnoreCase))
+                        .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+                        .ToArray();
+            }
+            else
+            {
+                paths = Directory.GetFiles(animationPath)
+                    .Where(p => string.Equals(Path.GetExtension(p), ".png", StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
             }
 
-            return Directory.GetFiles(animationPath)
-                .Where(p => string.Equals(Path.GetExtension(p), ".png", StringComparison.OrdinalIgnoreCase))
-                .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
+            // Apply skip filter: if Skip = 1, take every 2nd file (0, 2, 4, 6...); if Skip = 2, take every 3rd (0, 3, 6...)
+            if (animationConfig.Skip > 0)
+            {
+                paths = paths
+                    .Where((_, index) => index % (animationConfig.Skip + 1) == 0)
+                    .ToArray();
+            }
+
+            return paths;
         }
 
 

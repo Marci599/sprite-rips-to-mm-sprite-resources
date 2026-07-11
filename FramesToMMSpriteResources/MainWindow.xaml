@@ -337,12 +337,13 @@
                                                 <Rectangle Style="{StaticResource GroupDividerStyle}"/>
 
 
-                                        
 
-                                                
-                                             
-                                                    
-                                                            <StackPanel Spacing="4">
+
+                                                <TextBox Grid.Column="0" x:Name="SkipTextBox" PlaceholderText="0" Header="Skip frame amount of"/>
+                                                <TextBlock Margin="0 -8 0 0" Text="Skips entered amount of frames and draws the next, then skips again. Can increase speed or reduce framerate."  Style="{StaticResource HelperTextStyle}"/>
+
+
+                                                <StackPanel Spacing="4">
                                                                 <Grid ColumnSpacing="8">
                                                                     <Grid.ColumnDefinitions>
                                                                         <ColumnDefinition Width="*"/>

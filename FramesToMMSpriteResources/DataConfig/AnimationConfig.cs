@@ -24,6 +24,9 @@ namespace FramesToMMSpriteResources
         [JsonPropertyName("loop_type")]
         public int LoopType = 0;
 
+        [JsonPropertyName("skip")]
+        public int Skip = 0;
+
         [JsonPropertyName("offset")]
         public Vector2? Offset;
 

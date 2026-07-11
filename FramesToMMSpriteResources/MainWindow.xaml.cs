@@ -1338,6 +1338,8 @@ namespace FramesToMMSpriteResources
 
             DelayTextBox.TextChanged -= DelayTextBox_ValueChanged;
             LoopTypeComboBox.SelectionChanged -= LoopTypeComboBox_SelectionChanged;
+            SkipTextBox.TextChanged -= SkipTextBox_ValueChanged;
+
             AnimationOffsetXTextBox.TextChanged -= AnimationOffsetXTextBox_ValueChanged;
             AnimationOffsetYTextBox.TextChanged -= AnimationOffsetYTextBox_ValueChanged;
 
@@ -1356,6 +1358,8 @@ namespace FramesToMMSpriteResources
 
             LoopTypeComboBox.SelectedIndex = animationConfig.LoopType;
 
+            SkipTextBox.Text = animationConfig.Skip.ToString();
+
             AnimationOffsetXTextBox.Text = animationConfig.Offset.Value.X.ToString();
             AnimationOffsetYTextBox.Text = animationConfig.Offset.Value.Y.ToString();
 
@@ -1368,6 +1372,9 @@ namespace FramesToMMSpriteResources
 
             DelayTextBox.TextChanged += DelayTextBox_ValueChanged;
             LoopTypeComboBox.SelectionChanged += LoopTypeComboBox_SelectionChanged;
+
+            SkipTextBox.TextChanged += SkipTextBox_ValueChanged;
+
             AnimationOffsetXTextBox.TextChanged += AnimationOffsetXTextBox_ValueChanged;
             AnimationOffsetYTextBox.TextChanged += AnimationOffsetYTextBox_ValueChanged;
 
@@ -1840,6 +1847,15 @@ namespace FramesToMMSpriteResources
             {
                 currentConfig!.Offset = new Vector2((currentConfig).Offset!.Value.X, string.IsNullOrWhiteSpace(text) ? 0 : float.Parse(text));
             }         
+        }
+
+        private void SkipTextBox_ValueChanged(object sender, RoutedEventArgs args)
+        {
+            string text = (sender as TextBox)!.Text;
+            foreach (AnimationConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.Skip = int.Parse(text);
+            }
         }
 
         private void AnimationOffsetXTextBox_ValueChanged(object sender, RoutedEventArgs args)
