@@ -212,7 +212,7 @@
 
 
 
-
+                                         
                                             <CheckBox x:Name="RemoveBackgroundCheckBox" Content="Remove background"/>
                                             <Grid ColumnSpacing="10">
                                                 <Grid.ColumnDefinitions>
@@ -275,11 +275,11 @@
                                         <Grid RowSpacing="10">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="Auto"/>
                                                 <RowDefinition Height="*"/>
+                                           
                                             </Grid.RowDefinitions>
 
-                                            <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}">
+                                        <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}">
                                             <StackPanel Spacing="12">
                                                 <TextBlock Text="Properties" Style="{StaticResource SectionHeaderStyle}"/>
 
@@ -298,36 +298,26 @@
 
                                             </StackPanel>
                                         </Border>
-                                            <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
-                                                <StackPanel Spacing="12">
-                                                    <TextBlock Text="Processing overwrite" Style="{StaticResource SectionHeaderStyle}"/>
+                                          
 
-                                                    <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                                                    <CheckBox x:Name="ExcludeCheckBox" Content="Exclude from processing" MaxWidth="1000" HorizontalAlignment="Stretch"/>
+                                        <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+                                            <StackPanel Spacing="12">
+                                                <TextBlock Text="Bulk editing" Style="{StaticResource SectionHeaderStyle}"/>
 
-                                  
-
-                                                </StackPanel>
-                                            </Border>
-
-                                            <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}">
-                                                <StackPanel Spacing="12">
-                                                    <TextBlock Text="Bulk editing" Style="{StaticResource SectionHeaderStyle}"/>
-
-                                                    <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+                                                <Rectangle Style="{StaticResource GroupDividerStyle}"/>
                                                     
 
-                                                    <Button Click="MirrorButton_Click" HorizontalAlignment="Left" Height="32">
-                                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                                            <FontIcon Glyph="&#xE8AB;" FontSize="12"/>
-                                                            <TextBlock Text="Mirror every frame"/>
+                                                <Button Click="MirrorButton_Click" HorizontalAlignment="Left" Height="32">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <FontIcon Glyph="&#xE8AB;" FontSize="12"/>
+                                                        <TextBlock Text="Mirror horizontally"/>
 
-                                                        </StackPanel>
+                                                    </StackPanel>
 
-                                                    </Button>
+                                                </Button>
 
-                                                </StackPanel>
-                                            </Border>
+                                            </StackPanel>
+                                        </Border>
 
                                         </Grid>
                                         <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}">
@@ -439,8 +429,15 @@
 
                                     </Grid>
 
+                                    <Expander HorizontalAlignment="Stretch" MinHeight="0">
+                                        <Expander.Header>
+                                            <TextBlock Text="Processing overwrite" Style="{StaticResource SectionHeaderStyle}" Padding="0 8 0 12"/>
+                                        </Expander.Header>
+                                        <Expander.Content>
+                                            <StackPanel/>
+                                        </Expander.Content>
+                                    </Expander>
 
-                                    
                                 </StackPanel>
                             </ScrollViewer>
                         </Grid>
