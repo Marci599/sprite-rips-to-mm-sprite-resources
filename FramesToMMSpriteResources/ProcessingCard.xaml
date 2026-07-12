@@ -1,0 +1,80 @@
+<UserControl
+    x:Class="FramesToMMSpriteResources.ProcessingCard"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    
+        <StackPanel Spacing="12">
+           
+
+            <Grid ColumnSpacing="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Spacing="4">
+                    <Grid >
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="32"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="ColorTextBox" Grid.Column="0" PlaceholderText="#00000000" Header="Background color" CornerRadius="4 0 0 4"/>
+                        <Border x:Name="ColorPreviewBorder" Grid.Column="1" BorderThickness="1" Background="White" CornerRadius="0 4 4 0" Height="32" VerticalAlignment="Bottom"/>
+
+                    </Grid>
+
+                    <TextBlock Text="If already transparent, leave it blank" Style="{StaticResource HelperTextStyle}" />
+                </StackPanel>
+
+                <TextBox Grid.Column="1" x:Name="ThresholdTextBox" PlaceholderText="100" Header="Threshold" VerticalAlignment="Top"/>
+            </Grid>
+   
+            
+            <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+
+
+            <CheckBox x:Name="RemoveBackgroundCheckBox" Content="Remove background"/>
+            <Grid ColumnSpacing="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" x:Name="ResizeTextBox" PlaceholderText="100" Header="Resize to percent" />
+                <ComboBox Grid.Column="1" x:Name="SamplingComboBox" Header="Filter mode" HorizontalAlignment="Stretch">
+                    <x:String>Nearest</x:String>
+                    <x:String>Linear</x:String>
+                </ComboBox>
+                <ComboBox Grid.Column="2" x:Name="MipmapComboBox" Header="Mipmap mode" HorizontalAlignment="Stretch">
+                    <x:String>None</x:String>
+                    <x:String>Nearest</x:String>
+                    <x:String>Linear</x:String>
+                </ComboBox>
+            </Grid>
+
+            <StackPanel Spacing="4">
+                <CheckBox x:Name="CropSpritesCheckBox" Content="Crop sprites" IsThreeState="True"/>
+                <Grid Margin="24 0 0 0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="75"/>
+                        <ColumnDefinition Width="75"/>
+                        <ColumnDefinition Width="75"/>
+                        <ColumnDefinition Width="75"/>
+
+
+
+                    </Grid.ColumnDefinitions>
+                    <CheckBox Grid.Column="0" x:Name="CropLeftCheckBox" Content="Left"/>
+                    <CheckBox Grid.Column="1" x:Name="CropTopCheckBox" Content="Top"/>
+                    <CheckBox Grid.Column="2" x:Name="CropRightCheckBox" Content="Right"/>
+                    <CheckBox Grid.Column="3" x:Name="CropBottomCheckBox" Content="Bottom"/>
+                </Grid>
+                <TextBlock Text="Cropping reduces file size"  Style="{StaticResource HelperTextStyle}"/>
+                <TextBlock Text="Cropping is based on the bg color and threshold"  Style="{StaticResource HelperTextStyle}"/>
+            </StackPanel>
+
+
+        </StackPanel>
+
+
+</UserControl>

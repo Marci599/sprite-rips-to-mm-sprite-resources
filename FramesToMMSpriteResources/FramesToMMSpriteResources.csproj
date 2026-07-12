@@ -16,6 +16,7 @@
     <LangVersion>13.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Page Remove="ColorPanel.xaml" />
     <Page Remove="Controls\CardGroup.xaml" />
     <Page Remove="Styles.xaml" />
   </ItemGroup>
@@ -56,6 +57,9 @@
     <PackageReference Include="System.Windows.Extensions" Version="10.0.7" />
   </ItemGroup>
   <ItemGroup>
+    <None Update="ColorPanel.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </None>
     <None Update="Controls\CardGroup.xaml">
       <Generator>MSBuild:Compile</Generator>
     </None>

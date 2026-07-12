@@ -15,8 +15,7 @@ namespace FramesToMMSpriteResources
         [JsonPropertyName("regenerate")]
         public bool Regenerate = true;
 
-        [JsonPropertyName("exclude")]
-        public bool Exclude = false;
+  
 
         [JsonPropertyName("delay")]
         public int Delay = 1;
@@ -38,6 +37,9 @@ namespace FramesToMMSpriteResources
 
         [JsonPropertyName("also_known_as")]
         public Dictionary<string, RangeConfig> AlsoKnownAs = new();
+
+        [JsonPropertyName("processing_overwrite")]
+        public ProcessingConfig? ProcessingOverwrite = null;
 
         public AnimationConfig() { }
 

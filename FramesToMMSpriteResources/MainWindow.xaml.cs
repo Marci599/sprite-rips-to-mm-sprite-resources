@@ -308,6 +308,12 @@ namespace FramesToMMSpriteResources
             HeaderBreadcrumbBar.ItemsSource = BreadcrumbItems;
             HeaderBreadcrumbBar.ItemClicked += BreadcrumbBar_ItemClicked;
 
+            ProcessingCardControl.GetCropSpritesCheckBox.Click -= CropSpritesCheckBox_Click;
+            ProcessingCardControl.GetCropSpritesCheckBox.Click += CropSpritesCheckBox_Click;
+
+            ProcessingOverwriteCardControl.GetCropSpritesCheckBox.Click -= CropSpritesOverwriteCheckBox_Click;
+            ProcessingOverwriteCardControl.GetCropSpritesCheckBox.Click += CropSpritesOverwriteCheckBox_Click;
+
             ProgramNameTextBlock.Text += GetCurrentVersion(); 
         
             AppWindow.Closing += AppWindow_Closing;
@@ -707,6 +713,16 @@ namespace FramesToMMSpriteResources
                 {        
                     SubjectConfig subjectConfig = LoadJson<SubjectConfig>(Path.Combine(subjectDir, CONFIG_FILENAME));
                     subjectConfig.InterfaceConfig = LoadJson<SubjectInterfaceConfig>(Path.Combine(subjectDir, INTERFACE_CONFIG_FILENAME));
+                    subjectConfig.Processing.BackgroundColor = subjectConfig.BackgroundColor;
+                    subjectConfig.Processing.ColorTreshold = subjectConfig.ColorTreshold;
+                    subjectConfig.Processing.RemoveBackground = subjectConfig.RemoveBackground;
+                    subjectConfig.Processing.ResizeToPercent = subjectConfig.ResizeToPercent;
+                    subjectConfig.Processing.FilterMode = subjectConfig.FilterMode;
+                    subjectConfig.Processing.MipmapMode = subjectConfig.MipmapMode;
+                    subjectConfig.Processing.CropLeft = subjectConfig.CropLeft;
+                    subjectConfig.Processing.CropTop = subjectConfig.CropTop;
+                    subjectConfig.Processing.CropRight = subjectConfig.CropTop;
+                    subjectConfig.Processing.CropBottom = subjectConfig.CropBottom;
 
                     var subjectTreeItem = new TreeViewNode { Content = new TreeItem(subjectName, ItemDepth.Subject), IsExpanded = subjectConfig.InterfaceConfig.IsExpanded };
 
@@ -1221,6 +1237,7 @@ namespace FramesToMMSpriteResources
                     }
 
                     var animationConfig = ProgramConfig.AssetConfig!.SubjectConfigs![subjectName].AnimationConfigs![animationName];
+                    subjectConfig = ProgramConfig.AssetConfig!.SubjectConfigs![subjectName];
                     if (animate)
                     {
                         await Task.Delay(_fadeOutMs);
@@ -1231,7 +1248,7 @@ namespace FramesToMMSpriteResources
   
                         panelToShow.Visibility = Visibility.Visible;
                     }
-                    DisplayAnimationCongifAsync(animationConfig);
+                    DisplayAnimationCongifAsync(subjectConfig, animationConfig);
                     break;
 
                 case ItemDepth.Frame:
@@ -1277,51 +1294,52 @@ namespace FramesToMMSpriteResources
 
         void DisplaySubjectConfigAsync(SubjectConfig subjectConfig)
         {
-            RemoveBackgroundCheckBox.Click -= ClickRemoveBackground;
-            CropLeftCheckBox.Click -= ClickCropLeftCheckBox;
-            CropTopCheckBox.Click -= ClickCropTopCheckBox;
-            CropRightCheckBox.Click -= ClickCropRightCheckBox;
-            CropBottomCheckBox.Click -= ClickCropBottomCheckBox;
+            ProcessingCardControl.GetRemoveBackgroundCheckBox.Click -= ClickRemoveBackground;
+            ProcessingCardControl.GetCropLeftCheckBox.Click -= ClickCropLeftCheckBox;
+            ProcessingCardControl.GetCropTopCheckBox.Click -= ClickCropTopCheckBox;
+            ProcessingCardControl.GetCropRightCheckBox.Click -= ClickCropRightCheckBox;
+            ProcessingCardControl.GetCropBottomCheckBox.Click -= ClickCropBottomCheckBox;
 
-            ResizeTextBox.TextChanged -= ResizeTextBox_ValueChanged;
-            SamplingComboBox.SelectionChanged -= SamplingComboBox_SelectionChanged;
-            MipmapComboBox.SelectionChanged -= MipmapComboBox_SelectionChanged;
-            ColorTextBox.TextChanged -= ColorTextBox_TextChanged;
-            ThresholdTextBox.TextChanged -= ThresholdTextBox_ValueChanged;
+            ProcessingCardControl.GetResizeTextBox.TextChanged -= ResizeTextBox_ValueChanged;
+            ProcessingCardControl.GetSamplingComboBox.SelectionChanged -= SamplingComboBox_SelectionChanged;
+            ProcessingCardControl.GetMipmapComboBox.SelectionChanged -= MipmapComboBox_SelectionChanged;
+            ProcessingCardControl.GetColorTextBox.TextChanged -= ColorTextBox_TextChanged;
+            ProcessingCardControl.GetThresholdTextBox.TextChanged -= ThresholdTextBox_ValueChanged;
 
             SheetWidthTextBox.TextChanged -= SheetWidthTextBox_ValueChanged;
             SheetHeightTextBox.TextChanged -= SheetHeightTextBox_ValueChanged;
 
-            subjectConfig.Sheet ??= new SheetConfig();
-    
-            RemoveBackgroundCheckBox.IsChecked = subjectConfig.RemoveBackground;
-            CropLeftCheckBox.IsChecked = subjectConfig.CropLeft;
-            CropTopCheckBox.IsChecked = subjectConfig.CropTop;
-            CropRightCheckBox.IsChecked = subjectConfig.CropRight;
-            CropBottomCheckBox.IsChecked = subjectConfig.CropBottom;
+            subjectConfig.Export ??= new SubjectExportConfig();
+            subjectConfig.Processing ??= new ProcessingConfig();
 
-            ResizeTextBox.Text = subjectConfig.ResizeToPercent.ToString();
-            SamplingComboBox.SelectedIndex = subjectConfig.FilterMode;
-            MipmapComboBox.SelectedIndex = subjectConfig.MipmapMode;
-            ColorTextBox.Text = subjectConfig.BackgroundColor;
-            ThresholdTextBox.Text = subjectConfig.ColorTreshold.ToString();
-            SheetWidthTextBox.Text = subjectConfig.Sheet.Width.ToString();
-            SheetHeightTextBox.Text = subjectConfig.Sheet.Height.ToString();
-      
-            ColorTextBox.Text = subjectConfig.BackgroundColor ?? "";
-            UpdateColorPreview();
+            ProcessingCardControl.GetRemoveBackgroundCheckBox.IsChecked = subjectConfig.Processing.RemoveBackground;
+            ProcessingCardControl.GetCropLeftCheckBox.IsChecked = subjectConfig.Processing.CropLeft;
+            ProcessingCardControl.GetCropTopCheckBox.IsChecked = subjectConfig.Processing.CropTop;
+            ProcessingCardControl.GetCropRightCheckBox.IsChecked = subjectConfig.Processing.CropRight;
+            ProcessingCardControl.GetCropBottomCheckBox.IsChecked = subjectConfig.Processing.CropBottom;
 
-            RemoveBackgroundCheckBox.Click += ClickRemoveBackground;
-            CropLeftCheckBox.Click += ClickCropLeftCheckBox;
-            CropTopCheckBox.Click += ClickCropTopCheckBox;
-            CropRightCheckBox.Click += ClickCropRightCheckBox;
-            CropBottomCheckBox.Click += ClickCropBottomCheckBox;
+            ProcessingCardControl.GetResizeTextBox.Text = subjectConfig.Processing.ResizeToPercent.ToString();
+            ProcessingCardControl.GetSamplingComboBox.SelectedIndex = subjectConfig.Processing.FilterMode;
+            ProcessingCardControl.GetMipmapComboBox.SelectedIndex = subjectConfig.Processing.MipmapMode;
 
-            ResizeTextBox.TextChanged += ResizeTextBox_ValueChanged;
-            SamplingComboBox.SelectionChanged += SamplingComboBox_SelectionChanged;
-            MipmapComboBox.SelectionChanged += MipmapComboBox_SelectionChanged;
-            ColorTextBox.TextChanged += ColorTextBox_TextChanged;
-            ThresholdTextBox.TextChanged += ThresholdTextBox_ValueChanged;
+            ProcessingCardControl.GetThresholdTextBox.Text = subjectConfig.Processing.ColorTreshold.ToString();
+            SheetWidthTextBox.Text = subjectConfig.Export.Width.ToString();
+            SheetHeightTextBox.Text = subjectConfig.Export.Height.ToString();
+
+            ProcessingCardControl.GetColorTextBox.Text = subjectConfig.Processing.BackgroundColor ?? "";
+            ProcessingCardControl.UpdateColorPreview();
+
+            ProcessingCardControl.GetRemoveBackgroundCheckBox.Click += ClickRemoveBackground;
+            ProcessingCardControl.GetCropLeftCheckBox.Click += ClickCropLeftCheckBox;
+            ProcessingCardControl.GetCropTopCheckBox.Click += ClickCropTopCheckBox;
+            ProcessingCardControl.GetCropRightCheckBox.Click += ClickCropRightCheckBox;
+            ProcessingCardControl.GetCropBottomCheckBox.Click += ClickCropBottomCheckBox;
+
+            ProcessingCardControl.GetResizeTextBox.TextChanged += ResizeTextBox_ValueChanged;
+            ProcessingCardControl.GetSamplingComboBox.SelectionChanged += SamplingComboBox_SelectionChanged;
+            ProcessingCardControl.GetMipmapComboBox.SelectionChanged += MipmapComboBox_SelectionChanged;
+            ProcessingCardControl.GetColorTextBox.TextChanged += ColorTextBox_TextChanged;
+            ProcessingCardControl.GetThresholdTextBox.TextChanged += ThresholdTextBox_ValueChanged;
 
             SheetWidthTextBox.TextChanged += SheetWidthTextBox_ValueChanged;
             SheetHeightTextBox.TextChanged += SheetHeightTextBox_ValueChanged;
@@ -1329,10 +1347,10 @@ namespace FramesToMMSpriteResources
             SetCheckedState();
         }
 
-        void DisplayAnimationCongifAsync(AnimationConfig animationConfig)
+        void DisplayAnimationCongifAsync(SubjectConfig subjectConfig, AnimationConfig animationConfig)
         {
             RegenerateCheckBox.Click -= ClickRegenerateCheckBox;
-            ExcludeCheckBox.Click -= ExcludeCheckBox_Click;
+    
             RecoverXCheckBox.Click -= ClickRecoverXCheckBox;
             RecoverYCheckBox.Click -= ClickRecoverYCheckBox;
 
@@ -1350,7 +1368,7 @@ namespace FramesToMMSpriteResources
             animationConfig.Offset ??= new Vector2(0, 0);
 
             RegenerateCheckBox.IsChecked = animationConfig.Regenerate;
-            ExcludeCheckBox.IsChecked = animationConfig.Exclude;
+      
             RecoverXCheckBox.IsChecked = animationConfig.RecoverCroppedOffset.X;
             RecoverYCheckBox.IsChecked = animationConfig.RecoverCroppedOffset.Y;
 
@@ -1366,7 +1384,7 @@ namespace FramesToMMSpriteResources
             AlsoKnownAsTextBox.Text = (animationConfig.InterfaceConfig as AnimationInterfaceConfig)!.AlsoKnownAs;
 
             RegenerateCheckBox.Click += ClickRegenerateCheckBox;
-            ExcludeCheckBox.Click += ExcludeCheckBox_Click;
+          
             RecoverXCheckBox.Click += ClickRecoverXCheckBox;
             RecoverYCheckBox.Click += ClickRecoverYCheckBox;
 
@@ -1384,6 +1402,71 @@ namespace FramesToMMSpriteResources
             PopulateAlsoKnownAsList();
             AlsoKnownAsListView.ItemsSource = AlsoKnownAsEntries;
             AlsoKnownAsAddButton.IsEnabled = false;
+
+
+
+            ProcessingConfig configToSetFrom;
+
+            if (animationConfig.ProcessingOverwrite != null)
+            {
+                configToSetFrom = animationConfig.ProcessingOverwrite;
+                RemoveOverwriteButton.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                configToSetFrom = subjectConfig.Processing;
+                RemoveOverwriteButton.Visibility = Visibility.Collapsed;
+            }
+
+            UpdateOverwriteUI(configToSetFrom);
+        }
+
+        void UpdateOverwriteUI(ProcessingConfig configToSetFrom)
+        {
+
+            ProcessingOverwriteCardControl.GetRemoveBackgroundCheckBox.Click -= ClickOverwriteRemoveBackground;
+            ProcessingOverwriteCardControl.GetCropLeftCheckBox.Click -= ClickOverwriteCropLeftCheckBox;
+            ProcessingOverwriteCardControl.GetCropTopCheckBox.Click -= ClickOverwriteCropTopCheckBox;
+            ProcessingOverwriteCardControl.GetCropRightCheckBox.Click -= ClickOverwriteCropRightCheckBox;
+            ProcessingOverwriteCardControl.GetCropBottomCheckBox.Click -= ClickOverwriteCropBottomCheckBox;
+
+            ProcessingOverwriteCardControl.GetResizeTextBox.TextChanged -= ResizeOverwriteTextBox_ValueChanged;
+            ProcessingOverwriteCardControl.GetSamplingComboBox.SelectionChanged -= SamplingOverwriteComboBox_SelectionChanged;
+            ProcessingOverwriteCardControl.GetMipmapComboBox.SelectionChanged -= MipmapOverwriteComboBox_SelectionChanged;
+            ProcessingOverwriteCardControl.GetColorTextBox.TextChanged -= ColorOverwriteTextBox_TextChanged;
+            ProcessingOverwriteCardControl.GetThresholdTextBox.TextChanged -= ThresholdOverwriteTextBox_ValueChanged;
+
+            ProcessingOverwriteCardControl.GetColorTextBox.TextChanged -= ProcessingOverwriteCardControl.ColorTextBox_TextChanged;
+
+            ProcessingOverwriteCardControl.GetRemoveBackgroundCheckBox.IsChecked = configToSetFrom.RemoveBackground;
+            ProcessingOverwriteCardControl.GetCropLeftCheckBox.IsChecked = configToSetFrom.CropLeft;
+            ProcessingOverwriteCardControl.GetCropTopCheckBox.IsChecked = configToSetFrom.CropTop;
+            ProcessingOverwriteCardControl.GetCropRightCheckBox.IsChecked = configToSetFrom.CropRight;
+            ProcessingOverwriteCardControl.GetCropBottomCheckBox.IsChecked = configToSetFrom.CropBottom;
+
+            ProcessingOverwriteCardControl.GetResizeTextBox.Text = configToSetFrom.ResizeToPercent.ToString();
+            ProcessingOverwriteCardControl.GetSamplingComboBox.SelectedIndex = configToSetFrom.FilterMode;
+            ProcessingOverwriteCardControl.GetMipmapComboBox.SelectedIndex = configToSetFrom.MipmapMode;
+            ProcessingOverwriteCardControl.GetThresholdTextBox.Text = configToSetFrom.ColorTreshold.ToString();
+            ProcessingOverwriteCardControl.GetColorTextBox.Text = configToSetFrom.BackgroundColor ?? "";
+            ProcessingOverwriteCardControl.UpdateColorPreview();
+
+
+            ProcessingOverwriteCardControl.GetRemoveBackgroundCheckBox.Click += ClickOverwriteRemoveBackground;
+            ProcessingOverwriteCardControl.GetCropLeftCheckBox.Click += ClickOverwriteCropLeftCheckBox;
+            ProcessingOverwriteCardControl.GetCropTopCheckBox.Click += ClickOverwriteCropTopCheckBox;
+            ProcessingOverwriteCardControl.GetCropRightCheckBox.Click += ClickOverwriteCropRightCheckBox;
+            ProcessingOverwriteCardControl.GetCropBottomCheckBox.Click += ClickOverwriteCropBottomCheckBox;
+
+            ProcessingOverwriteCardControl.GetResizeTextBox.TextChanged += ResizeOverwriteTextBox_ValueChanged;
+            ProcessingOverwriteCardControl.GetSamplingComboBox.SelectionChanged += SamplingOverwriteComboBox_SelectionChanged;
+            ProcessingOverwriteCardControl.GetMipmapComboBox.SelectionChanged += MipmapOverwriteComboBox_SelectionChanged;
+            ProcessingOverwriteCardControl.GetColorTextBox.TextChanged += ColorOverwriteTextBox_TextChanged;
+            ProcessingOverwriteCardControl.GetThresholdTextBox.TextChanged += ThresholdOverwriteTextBox_ValueChanged;
+
+            ProcessingOverwriteCardControl.GetColorTextBox.TextChanged += ProcessingOverwriteCardControl.ColorTextBox_TextChanged;
+
+            SetOverwriteCheckedState();
         }
 
         CancellationTokenSource? cts= null;
@@ -1473,7 +1556,17 @@ namespace FramesToMMSpriteResources
 
                 List<SpriteFrame> tempAnimationSpriteFrames = new([]);
 
-                ColorHelper.TryParse(subjectConfig.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
+                ProcessingConfig processingConfig;
+                if(animationConfig.ProcessingOverwrite != null)
+                {
+                    processingConfig = animationConfig.ProcessingOverwrite;
+                }
+                else
+                {
+                    processingConfig = subjectConfig.Processing;
+                }
+
+                ColorHelper.TryParse(processingConfig.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
                 SKColor backgroundSKColor = new(r, g, b, a);
           
                 for (int i = 0; i < frameCount; i++)         
@@ -1500,14 +1593,14 @@ namespace FramesToMMSpriteResources
 
                         IntVector2 originalSize = new(skb.Width, skb.Height);
 
-                        if (backgroundSKColor.Alpha != 0 && subjectConfig.RemoveBackground && !animationConfig.Exclude)
-                            ColorHelper.RemoveColorWithThresholdInPlace(skb, backgroundSKColor.Red, backgroundSKColor.Green, backgroundSKColor.Blue, backgroundSKColor.Alpha, subjectConfig.ColorTreshold);
+                        if (backgroundSKColor.Alpha != 0 && processingConfig.RemoveBackground)
+                            ColorHelper.RemoveColorWithThresholdInPlace(skb, backgroundSKColor.Red, backgroundSKColor.Green, backgroundSKColor.Blue, backgroundSKColor.Alpha, processingConfig.ColorTreshold);
 
                         var (left, top, right, bottom) = ColorHelper.RectTrimColor(skb, subjectConfig, (backgroundSKColor.Red, backgroundSKColor.Green, backgroundSKColor.Blue, backgroundSKColor.Alpha));
                         SKRectI rect = new(left, top, right, bottom);
 
                         bool isSame = (left == 0 && top == 0 && right == skb.Width && bottom == skb.Height);
-                        if ((subjectConfig.CropLeft || subjectConfig.CropTop || subjectConfig.CropRight || subjectConfig.CropBottom || subjectConfig.RemoveBackground || backgroundSKColor.Alpha == 0) && !isSame)
+                        if ((processingConfig.CropLeft || processingConfig.CropTop || processingConfig.CropRight || processingConfig.CropBottom || processingConfig.RemoveBackground || backgroundSKColor.Alpha == 0) && !isSame)
                         {                  
                             var width = right - left;
                             var height = bottom - top;
@@ -1580,6 +1673,13 @@ namespace FramesToMMSpriteResources
             var subjectName = (node.Parent.Content as TreeItem)!.Text;
             var animationName = (node.Content as TreeItem)!.Text;
             return ProgramConfig.AssetConfig!.SubjectConfigs![subjectName].AnimationConfigs![animationName];
+        }
+
+        SubjectConfig GetCurrentAnimationSubjectConfig()
+        {
+            var node = TreeViewControl.SelectedNode;
+            var subjectName = (node.Parent.Content as TreeItem)!.Text;
+            return ProgramConfig.AssetConfig!.SubjectConfigs![subjectName];
         }
 
         SubjectConfig GetCurrentSubjectConfig()
@@ -1889,7 +1989,7 @@ namespace FramesToMMSpriteResources
             string text = (sender as TextBox)!.Text;
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
-                currentConfig.Sheet.Height = string.IsNullOrWhiteSpace(text) ? null : int.Parse(text);
+                currentConfig.Export.Height = string.IsNullOrWhiteSpace(text) ? null : int.Parse(text);
             }
         }
 
@@ -1898,8 +1998,19 @@ namespace FramesToMMSpriteResources
             string text = (sender as TextBox)!.Text;
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
-                currentConfig.Sheet.Width = string.IsNullOrWhiteSpace(text) ? null : int.Parse(text);
+                currentConfig.Export.Width = string.IsNullOrWhiteSpace(text) ? null : int.Parse(text);
             }
+        }
+
+        private void ColorTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+
+            string backgroundColor = (sender as TextBox)!.Text;
+            foreach (SubjectConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.Processing.BackgroundColor = backgroundColor;
+            }
+            AnimationSpriteFramePath = new string[3];
         }
 
         private void ThresholdTextBox_ValueChanged(object sender, RoutedEventArgs args)
@@ -1908,7 +2019,17 @@ namespace FramesToMMSpriteResources
             int threshold = string.IsNullOrWhiteSpace(text) ? 100 : int.Parse(text);
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
-                currentConfig.ColorTreshold = threshold;
+                currentConfig.Processing.ColorTreshold = threshold;
+            }
+            AnimationSpriteFramePath = new string[3];
+        }
+
+        private void ClickRemoveBackground(object sender, RoutedEventArgs e)
+        {
+            bool removeBackground = (sender as CheckBox)!.IsChecked!.Value;
+            foreach (SubjectConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.Processing.RemoveBackground = removeBackground;
             }
             AnimationSpriteFramePath = new string[3];
         }
@@ -1918,7 +2039,7 @@ namespace FramesToMMSpriteResources
             string text = (sender as TextBox)!.Text;
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
-                currentConfig.ResizeToPercent = string.IsNullOrWhiteSpace(text) ? 100 : float.Parse(text);
+                currentConfig.Processing.ResizeToPercent = string.IsNullOrWhiteSpace(text) ? 100 : float.Parse(text);
             }
         }
 
@@ -1926,7 +2047,7 @@ namespace FramesToMMSpriteResources
         {
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
-                currentConfig.FilterMode = (sender as ComboBox)!.SelectedIndex;
+                currentConfig.Processing.FilterMode = (sender as ComboBox)!.SelectedIndex;
             }
         }
 
@@ -1934,9 +2055,51 @@ namespace FramesToMMSpriteResources
         {
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
-                currentConfig.MipmapMode = (sender as ComboBox)!.SelectedIndex;
+                currentConfig.Processing.MipmapMode = (sender as ComboBox)!.SelectedIndex;
             }
         }
+
+        private void ClickCropLeftCheckBox(object sender, RoutedEventArgs e)
+        {
+            foreach (SubjectConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.Processing.CropLeft = (sender as CheckBox)!.IsChecked!.Value;
+            }
+            AnimationSpriteFramePath = new string[3];
+            SetCheckedState();
+        }
+
+        private void ClickCropTopCheckBox(object sender, RoutedEventArgs e)
+        {
+            foreach (SubjectConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.Processing.CropTop = (sender as CheckBox)!.IsChecked!.Value;
+            }
+            AnimationSpriteFramePath = new string[3];
+            SetCheckedState();
+        }
+
+        private void ClickCropRightCheckBox(object sender, RoutedEventArgs e)
+        {
+            foreach (SubjectConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.Processing.CropRight = (sender as CheckBox)!.IsChecked!.Value;
+            }
+            AnimationSpriteFramePath = new string[3];
+            SetCheckedState();
+        }
+
+        private void ClickCropBottomCheckBox(object sender, RoutedEventArgs e)
+        {
+            foreach (SubjectConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.Processing.CropBottom = (sender as CheckBox)!.IsChecked!.Value;
+            }
+            AnimationSpriteFramePath = new string[3];
+            SetCheckedState();
+        }
+
+
 
         private void ClickRecoverYCheckBox(object sender, RoutedEventArgs e)
         {
@@ -1962,13 +2125,6 @@ namespace FramesToMMSpriteResources
             }
         }
 
-        private void ExcludeCheckBox_Click(object sender, RoutedEventArgs e)
-        {
-            foreach (AnimationConfig currentConfig in _currentConfigs)
-            {
-                currentConfig.Exclude = (sender as CheckBox)!.IsChecked!.Value;
-            }
-        }
 
         private void AlsoKnownAsTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
@@ -1988,57 +2144,151 @@ namespace FramesToMMSpriteResources
             (animConf.InterfaceConfig as AnimationInterfaceConfig)!.AlsoKnownAs = text;  
         }
 
-        private void ClickCropLeftCheckBox(object sender, RoutedEventArgs e)
+    
+
+        private void ColorOverwriteTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            foreach (SubjectConfig currentConfig in _currentConfigs)
+
+            string backgroundColor = (sender as TextBox)!.Text;
+            foreach (AnimationConfig currentConfig in _currentConfigs)
             {
-                currentConfig.CropLeft = (sender as CheckBox)!.IsChecked!.Value;
+                currentConfig.ProcessingOverwrite ??= (ProcessingConfig)GetCurrentAnimationSubjectConfig().Processing.Clone();
+                currentConfig.ProcessingOverwrite.BackgroundColor = backgroundColor??"";
             }
             AnimationSpriteFramePath = new string[3];
-            SetCheckedState();
+            RemoveOverwriteButton.Visibility = Visibility.Visible;
         }
 
-        private void ClickCropTopCheckBox(object sender, RoutedEventArgs e)
+        private void ThresholdOverwriteTextBox_ValueChanged(object sender, RoutedEventArgs args)
         {
-            foreach (SubjectConfig currentConfig in _currentConfigs)
+            string text = (sender as TextBox)!.Text;
+            int threshold = string.IsNullOrWhiteSpace(text) ? 100 : int.Parse(text);
+            foreach (AnimationConfig currentConfig in _currentConfigs)
             {
-                currentConfig.CropTop = (sender as CheckBox)!.IsChecked!.Value;
+                currentConfig.ProcessingOverwrite ??= (ProcessingConfig)GetCurrentAnimationSubjectConfig().Processing.Clone();
+                currentConfig.ProcessingOverwrite.ColorTreshold = threshold;
             }
             AnimationSpriteFramePath = new string[3];
-            SetCheckedState();
+            RemoveOverwriteButton.Visibility = Visibility.Visible;
         }
 
-        private void ClickCropRightCheckBox(object sender, RoutedEventArgs e)
+        private void ClickOverwriteRemoveBackground(object sender, RoutedEventArgs e)
         {
-            foreach (SubjectConfig currentConfig in _currentConfigs)
+            bool removeBackground = (sender as CheckBox)!.IsChecked!.Value;
+            foreach (AnimationConfig currentConfig in _currentConfigs)
             {
-                currentConfig.CropRight = (sender as CheckBox)!.IsChecked!.Value;
+                currentConfig.ProcessingOverwrite ??= (ProcessingConfig)GetCurrentAnimationSubjectConfig().Processing.Clone();
+                currentConfig.ProcessingOverwrite.RemoveBackground = removeBackground;
             }
             AnimationSpriteFramePath = new string[3];
-            SetCheckedState();
+            RemoveOverwriteButton.Visibility = Visibility.Visible;
         }
 
-        private void ClickCropBottomCheckBox(object sender, RoutedEventArgs e)
+        private void ResizeOverwriteTextBox_ValueChanged(object sender, RoutedEventArgs args)
         {
-            foreach (SubjectConfig currentConfig in _currentConfigs)
+            string text = (sender as TextBox)!.Text;
+            foreach (AnimationConfig currentConfig in _currentConfigs)
             {
-                currentConfig.CropBottom = (sender as CheckBox)!.IsChecked!.Value;
+                currentConfig.ProcessingOverwrite ??= (ProcessingConfig)GetCurrentAnimationSubjectConfig().Processing.Clone();
+                currentConfig.ProcessingOverwrite.ResizeToPercent = string.IsNullOrWhiteSpace(text) ? 100 : float.Parse(text);
+            }
+            RemoveOverwriteButton.Visibility = Visibility.Visible;
+        }
+
+        private void SamplingOverwriteComboBox_SelectionChanged(object sender, RoutedEventArgs e)
+        {
+            foreach (AnimationConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.ProcessingOverwrite ??= (ProcessingConfig)GetCurrentAnimationSubjectConfig().Processing.Clone();
+                currentConfig.ProcessingOverwrite.FilterMode = (sender as ComboBox)!.SelectedIndex;
+            }
+            RemoveOverwriteButton.Visibility = Visibility.Visible;
+        }
+
+        private void MipmapOverwriteComboBox_SelectionChanged(object sender, RoutedEventArgs e)
+        {
+            foreach (AnimationConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.ProcessingOverwrite ??= (ProcessingConfig)GetCurrentAnimationSubjectConfig().Processing.Clone();
+                currentConfig.ProcessingOverwrite.MipmapMode = (sender as ComboBox)!.SelectedIndex;
+            }
+            RemoveOverwriteButton.Visibility = Visibility.Visible;
+        }
+
+        private void ClickOverwriteCropLeftCheckBox(object sender, RoutedEventArgs e)
+        {
+            foreach (AnimationConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.ProcessingOverwrite ??= (ProcessingConfig)GetCurrentAnimationSubjectConfig().Processing.Clone();
+                currentConfig.ProcessingOverwrite.CropLeft = (sender as CheckBox)!.IsChecked!.Value;
             }
             AnimationSpriteFramePath = new string[3];
-            SetCheckedState();
+            SetOverwriteCheckedState();
+            RemoveOverwriteButton.Visibility = Visibility.Visible;
+        }
+
+        private void ClickOverwriteCropTopCheckBox(object sender, RoutedEventArgs e)
+        {
+            foreach (AnimationConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.ProcessingOverwrite ??= (ProcessingConfig)GetCurrentAnimationSubjectConfig().Processing.Clone();
+                currentConfig.ProcessingOverwrite.CropTop = (sender as CheckBox)!.IsChecked!.Value;
+            }
+            AnimationSpriteFramePath = new string[3];
+            SetOverwriteCheckedState();
+            RemoveOverwriteButton.Visibility = Visibility.Visible;
+        }
+
+        private void ClickOverwriteCropRightCheckBox(object sender, RoutedEventArgs e)
+        {
+            foreach (AnimationConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.ProcessingOverwrite ??= (ProcessingConfig)GetCurrentAnimationSubjectConfig().Processing.Clone();
+                currentConfig.ProcessingOverwrite.CropRight = (sender as CheckBox)!.IsChecked!.Value;
+            }
+            AnimationSpriteFramePath = new string[3];
+            SetOverwriteCheckedState();
+            RemoveOverwriteButton.Visibility = Visibility.Visible;
+        }
+
+        private void ClickOverwriteCropBottomCheckBox(object sender, RoutedEventArgs e)
+        {
+            foreach (AnimationConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.ProcessingOverwrite ??= (ProcessingConfig)GetCurrentAnimationSubjectConfig().Processing.Clone();
+                currentConfig.ProcessingOverwrite.CropBottom = (sender as CheckBox)!.IsChecked!.Value;
+            }
+            AnimationSpriteFramePath = new string[3];
+            SetOverwriteCheckedState();
+            RemoveOverwriteButton.Visibility = Visibility.Visible;
         }
 
         void SetEveryCrop(bool isChecked)
         {
-            CropLeftCheckBox.IsChecked = CropTopCheckBox.IsChecked = CropRightCheckBox.IsChecked = CropBottomCheckBox.IsChecked = isChecked;
+            ProcessingCardControl.GetCropLeftCheckBox.IsChecked = ProcessingCardControl.GetCropTopCheckBox.IsChecked = ProcessingCardControl.GetCropRightCheckBox.IsChecked = ProcessingCardControl.GetCropBottomCheckBox.IsChecked = isChecked;
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
-                currentConfig.CropLeft = isChecked;
-                currentConfig.CropTop = isChecked;
-                currentConfig.CropRight = isChecked;
-                currentConfig.CropBottom = isChecked;
+                currentConfig.Processing.CropLeft = isChecked;
+                currentConfig.Processing.CropTop = isChecked;
+                currentConfig.Processing.CropRight = isChecked;
+                currentConfig.Processing.CropBottom = isChecked;
             }
             AnimationSpriteFramePath = new string[3];
+        }
+
+        void SetEveryOverwriteCrop(bool isChecked)
+        {
+            ProcessingOverwriteCardControl.GetCropLeftCheckBox.IsChecked = ProcessingOverwriteCardControl.GetCropTopCheckBox.IsChecked = ProcessingOverwriteCardControl.GetCropRightCheckBox.IsChecked = ProcessingOverwriteCardControl.GetCropBottomCheckBox.IsChecked = isChecked;
+            foreach (AnimationConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.ProcessingOverwrite ??= (ProcessingConfig)GetCurrentAnimationSubjectConfig().Processing.Clone();
+                currentConfig.ProcessingOverwrite.CropLeft = isChecked;
+                currentConfig.ProcessingOverwrite.CropTop = isChecked;
+                currentConfig.ProcessingOverwrite.CropRight = isChecked;
+                currentConfig.ProcessingOverwrite.CropBottom = isChecked;
+            }
+            AnimationSpriteFramePath = new string[3];
+            RemoveOverwriteButton.Visibility = Visibility.Visible;
         }
 
         private void CropSpritesCheckBox_Click(object sender, RoutedEventArgs e)
@@ -2046,12 +2296,12 @@ namespace FramesToMMSpriteResources
             var checkBox = (sender as CheckBox)!;
             if (checkBox.IsChecked == null)
             {
-                if (CropLeftCheckBox.IsChecked == true &&
-                    CropTopCheckBox.IsChecked == true &&
-                    CropRightCheckBox.IsChecked == true &&
-                    CropBottomCheckBox.IsChecked == true)
+                if (ProcessingCardControl.GetCropLeftCheckBox.IsChecked == true &&
+                    ProcessingCardControl.GetCropTopCheckBox.IsChecked == true &&
+                    ProcessingCardControl.GetCropRightCheckBox.IsChecked == true &&
+                    ProcessingCardControl.GetCropBottomCheckBox.IsChecked == true)
                 {
-                    CropSpritesCheckBox.IsChecked = false;              
+                    ProcessingCardControl.GetCropSpritesCheckBox.IsChecked = false;
                     SetEveryCrop(false);
                 }
             }
@@ -2068,26 +2318,89 @@ namespace FramesToMMSpriteResources
             }
         }
 
-        private void SetCheckedState()
-        {     
-            if (CropLeftCheckBox.IsChecked == true &&
-                CropTopCheckBox.IsChecked == true &&
-                CropRightCheckBox.IsChecked == true &&
-                CropBottomCheckBox.IsChecked == true)
+        private void CropSpritesOverwriteCheckBox_Click(object sender, RoutedEventArgs e)
+        {
+            var checkBox = (sender as CheckBox)!;
+            if (checkBox.IsChecked == null)
             {
-                CropSpritesCheckBox.IsChecked = true;
-            }
-            else if (CropLeftCheckBox.IsChecked == false &&
-                CropTopCheckBox.IsChecked == false &&
-                CropRightCheckBox.IsChecked == false &&
-                CropBottomCheckBox.IsChecked == false)
-            {
-                CropSpritesCheckBox.IsChecked = false;
+                if (ProcessingOverwriteCardControl.GetCropLeftCheckBox.IsChecked == true &&
+                    ProcessingOverwriteCardControl.GetCropTopCheckBox.IsChecked == true &&
+                    ProcessingOverwriteCardControl.GetCropRightCheckBox.IsChecked == true &&
+                    ProcessingOverwriteCardControl.GetCropBottomCheckBox.IsChecked == true)
+                {
+                    ProcessingOverwriteCardControl.GetCropSpritesCheckBox.IsChecked = false;
+                    SetEveryOverwriteCrop(false);
+                }
             }
             else
-            {   
-                CropSpritesCheckBox.IsChecked = null;
+            {
+                if (checkBox.IsChecked == true)
+                {
+                    SetEveryOverwriteCrop(true);
+                }
+                else
+                {
+                    SetEveryOverwriteCrop(false);
+                }
+            }
+        }
+
+        private void SetCheckedState()
+        {     
+            if (ProcessingCardControl.GetCropLeftCheckBox.IsChecked == true &&
+                ProcessingCardControl.GetCropTopCheckBox.IsChecked == true &&
+                ProcessingCardControl.GetCropRightCheckBox.IsChecked == true &&
+                ProcessingCardControl.GetCropBottomCheckBox.IsChecked == true)
+            {
+                ProcessingCardControl.GetCropSpritesCheckBox.IsChecked = true;
+            }
+            else if (ProcessingCardControl.GetCropLeftCheckBox.IsChecked == false &&
+                ProcessingCardControl.GetCropTopCheckBox.IsChecked == false &&
+                ProcessingCardControl.GetCropRightCheckBox.IsChecked == false &&
+                ProcessingCardControl.GetCropBottomCheckBox.IsChecked == false)
+            {
+                ProcessingCardControl.GetCropSpritesCheckBox.IsChecked = false;
+            }
+            else
+            {
+                ProcessingCardControl.GetCropSpritesCheckBox.IsChecked = null;
             }         
+        }
+
+        private void SetOverwriteCheckedState()
+        {
+            if (ProcessingOverwriteCardControl.GetCropLeftCheckBox.IsChecked == true &&
+                ProcessingOverwriteCardControl.GetCropTopCheckBox.IsChecked == true &&
+                ProcessingOverwriteCardControl.GetCropRightCheckBox.IsChecked == true &&
+                ProcessingOverwriteCardControl.GetCropBottomCheckBox.IsChecked == true)
+            {
+                ProcessingOverwriteCardControl.GetCropSpritesCheckBox.IsChecked = true;
+            }
+            else if (ProcessingOverwriteCardControl.GetCropLeftCheckBox.IsChecked == false &&
+                ProcessingOverwriteCardControl.GetCropTopCheckBox.IsChecked == false &&
+                ProcessingOverwriteCardControl.GetCropRightCheckBox.IsChecked == false &&
+                ProcessingOverwriteCardControl.GetCropBottomCheckBox.IsChecked == false)
+            {
+                ProcessingOverwriteCardControl.GetCropSpritesCheckBox.IsChecked = false;
+            }
+            else
+            {
+                ProcessingOverwriteCardControl.GetCropSpritesCheckBox.IsChecked = null;
+            }
+        }
+
+        private void RemoveOverwriteButton_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (AnimationConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.ProcessingOverwrite = null;
+            }
+            AnimationSpriteFramePath = new string[3];
+
+            RemoveOverwriteButton.Visibility = Visibility.Collapsed;
+        
+            UpdateOverwriteUI(GetCurrentAnimationSubjectConfig().Processing);
+    
         }
 
         private void MirrorButton_Click(object sender, RoutedEventArgs e)
@@ -2139,49 +2452,12 @@ namespace FramesToMMSpriteResources
             AnimationSpriteFramePath = new string[3];
         }
 
-        private void ClickRemoveBackground(object sender, RoutedEventArgs e)
-        {
-            bool removeBackground = (sender as CheckBox)!.IsChecked!.Value;
-            foreach (SubjectConfig currentConfig in _currentConfigs)
-            {
-                currentConfig.RemoveBackground = removeBackground;
-            }
-            AnimationSpriteFramePath = new string[3];
-        }
-
         private void ClickIsHdCheckBox(object sender, RoutedEventArgs e)
         {
-            ProgramConfig.AssetConfig!.IsHd = (sender as CheckBox)!.IsChecked!.Value;           
+            ProgramConfig.AssetConfig!.IsHd = (sender as CheckBox)!.IsChecked!.Value;
         }
 
-        private void ColorTextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            UpdateColorPreview();
-            string backgroundColor = (sender as TextBox)!.Text;
-            foreach (SubjectConfig currentConfig in _currentConfigs)
-            {
-                currentConfig.BackgroundColor = backgroundColor;
-            }
-            AnimationSpriteFramePath = new string[3];
-        }
-
-        private void UpdateColorPreview()
-        {
-            bool valid = TryNormalizeHexToColor(ColorTextBox.Text, out string normalizedHex, out Windows.UI.Color color);
-            if (valid)
-            {
-                ColorPreviewBorder.Background = new SolidColorBrush(color);
-                var brush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
-                ColorPreviewBorder.BorderBrush = brush;
-            }
-            else
-            {
-                ColorPreviewBorder.Background = new SolidColorBrush();
-                var brush = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
-                ColorPreviewBorder.BorderBrush = brush;
-            }
-        }
-
+       
         private void TreeViewControl_Expanding(TreeView sender, TreeViewExpandingEventArgs args)
         {
             TreeViewNode node = args.Node;
@@ -2325,54 +2601,9 @@ namespace FramesToMMSpriteResources
             ReloadTreeViewAndConfigs();
         }
 
-        private static bool TryNormalizeHexToColor(string? input, out string normalizedHex, out Windows.UI.Color color)
-        {
-            normalizedHex = string.Empty;
-            color = new Windows.UI.Color();
 
-            if (string.IsNullOrWhiteSpace(input))
-                return true;
 
-            string s = input.Trim();
-            if (s.StartsWith('#'))
-                s = s[1..];
-
-            s = s.ToUpperInvariant();
-
-            if (!ColorRegex().IsMatch(s))
-                return false;
-
-            if (s.Length == 6)
-            {
-                if (uint.TryParse(s, System.Globalization.NumberStyles.HexNumber, null, out uint rgb))
-                {
-                    byte r = (byte)((rgb >> 16) & 0xFF);
-                    byte g = (byte)((rgb >> 8) & 0xFF);
-                    byte b = (byte)(rgb & 0xFF);
-                    color = Windows.UI.Color.FromArgb(255, r, g, b);
-                    normalizedHex = "#" + s;
-                    return true;
-                }
-            }
-            else if (s.Length == 8)
-            {
-                if (uint.TryParse(s, System.Globalization.NumberStyles.HexNumber, null, out uint rgba))
-                {
-                    byte r = (byte)((rgba >> 24) & 0xFF);
-                    byte g = (byte)((rgba >> 16) & 0xFF);
-                    byte b = (byte)((rgba >> 8) & 0xFF);
-                    byte a = (byte)(rgba & 0xFF);
-                    color = Windows.UI.Color.FromArgb(a, r, g, b);
-                    normalizedHex = "#" + s;
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        [System.Text.RegularExpressions.GeneratedRegex(@"\A[0-9A-F]+\z")]
-        private static partial System.Text.RegularExpressions.Regex ColorRegex();
+ 
 
         private async void GenerateButton_Click(object sender, RoutedEventArgs e)
         {
@@ -2914,5 +3145,7 @@ namespace FramesToMMSpriteResources
             
             await Windows.System.Launcher.LaunchUriAsync(new Uri("file:///" + GetUserConfigDirectory().Replace('\\', '/')));
         }
+
+
     }
 }

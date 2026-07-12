@@ -121,9 +121,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     }
 
-    public Border GetFramesLoadingBorder {
-        get => FramesLoadingBorder;
-    }
+    public Border GetFramesLoadingBorder { get => FramesLoadingBorder; }
 
     private SubjectInterfaceConfig GetSubjectInterfaceConfig()
     {
@@ -874,7 +872,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
             return;
         }
 
-        ColorHelper.TryParse(_subjectConfig.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
+        ColorHelper.TryParse(_subjectConfig.Processing.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
 
         if (MainWindow.ProgramConfig.ShowPreviousFrameBehind)
         {

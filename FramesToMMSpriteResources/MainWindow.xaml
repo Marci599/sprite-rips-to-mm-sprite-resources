@@ -151,112 +151,50 @@
                         <Grid x:Name="SubjectPanel" Visibility="Collapsed">
                             <ScrollViewer>
                                 <StackPanel Padding="20 20 20 20" Spacing="10">
-                                    <Grid ColumnSpacing="10" MaxWidth="1000">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
+                                    
                                         
-                                            <!-- Color Group -->
-                                            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
-                                                <StackPanel Spacing="12">
-                                                    <TextBlock Text="Background" Style="{StaticResource SectionHeaderStyle}"/>
-                                                    <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                                                    <StackPanel Spacing="4">
-                                                        <Grid>
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="32"/>
-                                                            </Grid.ColumnDefinitions>
-                                                            <TextBox x:Name="ColorTextBox" Grid.Column="0" PlaceholderText="#00000000" Header="Color" CornerRadius="4 0 0 4"/>
-                                                            <Border x:Name="ColorPreviewBorder" Grid.Column="1" BorderThickness="1" Background="White" CornerRadius="0 4 4 0" Height="32" VerticalAlignment="Bottom"/>
+                                            
 
-                                                        </Grid>
-
-                                                        <TextBlock Text="If already transparent, leave it blank" Style="{StaticResource HelperTextStyle}"/>
-                                                    </StackPanel>
-
-                                                <TextBox x:Name="ThresholdTextBox" PlaceholderText="100" Header="Threshold"/>
-
-                                                </StackPanel>
-                                            </Border>
-
-                                        <!-- Sheet Dimensions Group -->
-                                        <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}" >
-                                            <StackPanel Spacing="12">
-                                                <TextBlock Text="Exporting" Style="{StaticResource SectionHeaderStyle}"/>
-                                                <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-
-                                                <TextBox x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width"/>
-
-                                                <StackPanel Spacing="4">
-                                                    <TextBox x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height"/>
-                                                    <TextBlock Text="For automatic sizing, leave it blank" Style="{StaticResource HelperTextStyle}"/>
-                                                </StackPanel>
-
-                                            </StackPanel>
-                                        </Border>
+                                        
 
                                         
 
                      
-                                    </Grid>
+                                
 
                                     <!-- Processing Group -->
-                                    <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
+                                    <Border Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
                                         <StackPanel Spacing="12">
                                             <TextBlock Text="Processing" Style="{StaticResource SectionHeaderStyle}"/>
 
                                             <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+                                            <local:ProcessingCard x:Name="ProcessingCardControl" Grid.Column="1"/>
+                                        </StackPanel>
+                                    
+                                    </Border>
 
+                                    <!-- Sheet Dimensions Group -->
+                                    <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
+                                        <StackPanel Spacing="12">
+                                            <TextBlock Text="Exporting" Style="{StaticResource SectionHeaderStyle}"/>
+                                            <Rectangle Style="{StaticResource GroupDividerStyle}"/>
 
-
-
-                                         
-                                            <CheckBox x:Name="RemoveBackgroundCheckBox" Content="Remove background"/>
                                             <Grid ColumnSpacing="10">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBox Grid.Column="0" x:Name="ResizeTextBox" PlaceholderText="100" Header="Resize to percent" />
-                                                <ComboBox Grid.Column="1" x:Name="SamplingComboBox" Header="Filter mode" HorizontalAlignment="Stretch">
-                                                    <x:String>Nearest</x:String>
-                                                    <x:String>Linear</x:String>
-                                                </ComboBox>
-                                                <ComboBox Grid.Column="2" x:Name="MipmapComboBox" Header="Mipmap mode" HorizontalAlignment="Stretch">
-                                                    <x:String>None</x:String>
-                                                    <x:String>Nearest</x:String>
-                                                    <x:String>Linear</x:String>
-                                                </ComboBox>
-                                            </Grid>
+                                                <TextBox Grid.Column="0" x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width" VerticalAlignment="Top"/>
 
-                                            <StackPanel Spacing="4">
-                                                <CheckBox x:Name="CropSpritesCheckBox" Click="CropSpritesCheckBox_Click" Content="Crop sprites" IsThreeState="True"/>
-                                                <Grid Margin="24 0 0 0">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="75"/>
-                                                        <ColumnDefinition Width="75"/>
-                                                        <ColumnDefinition Width="75"/>
-                                                        <ColumnDefinition Width="75"/>
-                                           
-                                   
-                               
-                                                    </Grid.ColumnDefinitions>
-                                                    <CheckBox Grid.Column="0" x:Name="CropLeftCheckBox" Content="Left"/>
-                                                    <CheckBox Grid.Column="1" x:Name="CropTopCheckBox" Content="Top"/>
-                                                    <CheckBox Grid.Column="2" x:Name="CropRightCheckBox" Content="Right"/>
-                                                    <CheckBox Grid.Column="3" x:Name="CropBottomCheckBox" Content="Bottom"/>
-                                                </Grid>
-                                                <TextBlock Text="Cropping reduces file size"  Style="{StaticResource HelperTextStyle}"/>
-                                                <TextBlock Text="Cropping is based on the bg color and threshold"  Style="{StaticResource HelperTextStyle}"/>
-                                            </StackPanel>
+                                               
+                                                <TextBox Grid.Column="1" x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height"/>
+                                                
                                             
+                                            </Grid>
+                                            <TextBlock Text="For automatic sizing, leave it blank" Style="{StaticResource HelperTextStyle}" Margin="0 -8 0 0"/>
 
                                         </StackPanel>
                                     </Border>
-
                                 </StackPanel>
                             </ScrollViewer>
                         </Grid>
@@ -329,7 +267,7 @@
 
 
 
-                                                <TextBox Grid.Column="0" x:Name="SkipTextBox" PlaceholderText="0" Header="Skip frame amount of"/>
+                                                <TextBox Grid.Column="0" x:Name="SkipTextBox" PlaceholderText="0" Header="Skip frame amount"/>
                                                 <TextBlock Margin="0 -8 0 0" Text="Skips entered amount of frames and draws the next, then skips again. Can increase speed or reduce framerate."  Style="{StaticResource HelperTextStyle}"/>
 
 
@@ -429,12 +367,29 @@
 
                                     </Grid>
 
-                                    <Expander HorizontalAlignment="Stretch" MinHeight="0">
+                                    <Expander HorizontalAlignment="Stretch" MinHeight="0" HorizontalContentAlignment="Stretch" Padding="16 8 16 16" MaxWidth="1000">
                                         <Expander.Header>
-                                            <TextBlock Text="Processing overwrite" Style="{StaticResource SectionHeaderStyle}" Padding="0 8 0 12"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                           
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="Processing override" Style="{StaticResource SectionHeaderStyle}" Padding="0 8 0 12"/>
+                                                <Button Grid.Column="1" x:Name="RemoveOverwriteButton" Visibility="Collapsed" Margin="0 0 -14 0" Click="RemoveOverwriteButton_Click">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <FontIcon Glyph="&#xE74D;" FontSize="12"/>
+                                                        <TextBlock Text="Remove override"/>
+                                                    </StackPanel>
+                                                </Button>
+                                            </Grid>
+                                            
                                         </Expander.Header>
                                         <Expander.Content>
-                                            <StackPanel/>
+                                            <StackPanel Spacing="10" IsTabStop="True" >
+                                        
+                                                <local:ProcessingCard x:Name="ProcessingOverwriteCardControl"/>
+                                            </StackPanel>
                                         </Expander.Content>
                                     </Expander>
 

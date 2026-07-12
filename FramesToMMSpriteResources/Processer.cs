@@ -64,7 +64,6 @@ namespace FramesToMMSpriteResources
         private static SubjectConfig subjectConfig = null!;
         private static (byte r, byte g, byte b, byte a)? parsedBackgroundColor;
 
-        private static SKSamplingOptions _samplingOption;
 
         public static async Task StartProcessAsync(string subjectName)
         {
@@ -73,9 +72,9 @@ namespace FramesToMMSpriteResources
             programConfig = MainWindow.ProgramConfig;
             subjectConfig = programConfig.AssetConfig!.SubjectConfigs[subjectName];
             parsedBackgroundColor = null;
-            if (subjectConfig.BackgroundColor != null)
+            if (subjectConfig.Processing.BackgroundColor != null)
             {
-                ColorHelper.TryParse(subjectConfig.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
+                ColorHelper.TryParse(subjectConfig.Processing.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
                 parsedBackgroundColor = (r, g, b, a);
             }
 
@@ -100,8 +99,7 @@ namespace FramesToMMSpriteResources
             }
 
           
-            _samplingOption = new SKSamplingOptions((SKFilterMode)subjectConfig.FilterMode, (SKMipmapMode)subjectConfig.MipmapMode);
-        
+
             
 
             string spriteFilePath = Path.Combine(outputDir, subjectName + ".sprite");
@@ -187,39 +185,51 @@ namespace FramesToMMSpriteResources
                     IntVector2 offset = new(0, 0);
                     try
                     {
-                        if (!animationConfig.Exclude)
+                        ProcessingConfig processingConfig;
+                        (byte r, byte g, byte b, byte a)? currentParsedColor = null;
+                        if (animationConfig.ProcessingOverwrite != null)
                         {
-                            if (!string.IsNullOrEmpty(subjectConfig.BackgroundColor) && subjectConfig.RemoveBackground)
-                                RemoveColorWithThreshold(working);
+                            processingConfig = animationConfig.ProcessingOverwrite;
+                            ColorHelper.TryParse(animationConfig.ProcessingOverwrite.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
+                            currentParsedColor = (r, g, b, a);
+                        }
+                        else
+                        {
+                            processingConfig = subjectConfig.Processing;
+                            currentParsedColor = parsedBackgroundColor;
+                        }
+                        
+                        if (!string.IsNullOrEmpty(processingConfig.BackgroundColor) && processingConfig.RemoveBackground && currentParsedColor != null)
+                                RemoveColorWithThreshold(working, processingConfig, currentParsedColor.Value);
 
-                            if (subjectConfig.ResizeToPercent != 100 && subjectConfig.ResizeToPercent > 0)
+                        if (processingConfig.ResizeToPercent != 100 && processingConfig.ResizeToPercent > 0)
+                        {
+                            var scale = processingConfig.ResizeToPercent / 100.0;
+                            var resized = ResizeBitmapFromOrigin(working, frameOffset, scale, out IntVector2 resizedFrameOffset, new SKSamplingOptions((SKFilterMode)processingConfig.FilterMode, (SKMipmapMode)processingConfig.MipmapMode));
+                            if (!ReferenceEquals(resized, working))
                             {
-                                var scale = subjectConfig.ResizeToPercent / 100.0;
-                                var resized = ResizeBitmapFromOrigin(working, frameOffset, scale, out IntVector2 resizedFrameOffset);
-                                if (!ReferenceEquals(resized, working))
-                                {
-                                    working.Dispose();
-                                    working = resized;
-                                }
-                                frameOffset = resizedFrameOffset;
-                                originalSize = new IntVector2(working.Width, working.Height);
+                                working.Dispose();
+                                working = resized;
                             }
+                            frameOffset = resizedFrameOffset;
+                            originalSize = new IntVector2(working.Width, working.Height);
+                        }
 
                       
 
-                            SKBitmap imgAfterTrim = working;
+                        SKBitmap imgAfterTrim = working;
                             
 
-                            if (subjectConfig.CropLeft || subjectConfig.CropTop || subjectConfig.CropRight || subjectConfig.CropBottom)
+                        if (processingConfig.CropLeft || processingConfig.CropTop || processingConfig.CropRight || processingConfig.CropBottom)
+                        {
+                            (imgAfterTrim, offset) = TrimColor(working, processingConfig, currentParsedColor);
+                            if (!ReferenceEquals(imgAfterTrim, working))
                             {
-                                (imgAfterTrim, offset) = TrimColor(working);
-                                if (!ReferenceEquals(imgAfterTrim, working))
-                                {
-                                    working.Dispose();
-                                    working = imgAfterTrim;
-                                }
+                                working.Dispose();
+                                working = imgAfterTrim;
                             }
                         }
+                        
 
                         
 
@@ -522,22 +532,22 @@ namespace FramesToMMSpriteResources
         {
             if (sprites.Count == 0)
             {
-                IntVector2 canvasSize = new(subjectConfig.Sheet.Width ?? 0, subjectConfig.Sheet.Height ?? 0);
+                IntVector2 canvasSize = new(subjectConfig.Export.Width ?? 0, subjectConfig.Export.Height ?? 0);
                 return new LayoutInfo(canvasSize, canvasSize, new List<IntVector2?>());
             }
 
-            if (subjectConfig.Sheet.Width.HasValue)
+            if (subjectConfig.Export.Width.HasValue)
             {
-                var layout = LayoutForWidth(sprites, subjectConfig.Sheet.Width.Value);
-                if (subjectConfig.Sheet.Height.HasValue && layout.size.Y > subjectConfig.Sheet.Height.Value)
+                var layout = LayoutForWidth(sprites, subjectConfig.Export.Width.Value);
+                if (subjectConfig.Export.Height.HasValue && layout.size.Y > subjectConfig.Export.Height.Value)
                     throw new InvalidOperationException("Sprites do not fit within the requested sheet height.");
 
-                IntVector2 canvasSize = new(subjectConfig.Sheet.Width.Value, subjectConfig.Sheet.Height ?? layout.size.Y);
+                IntVector2 canvasSize = new(subjectConfig.Export.Width.Value, subjectConfig.Export.Height ?? layout.size.Y);
                 return new LayoutInfo(layout.size, canvasSize, layout.positions);
             }
 
             var auto = AutoLayout(sprites);
-            int canvasH = subjectConfig.Sheet.Height ?? auto.size.Y;
+            int canvasH = subjectConfig.Export.Height ?? auto.size.Y;
             return new LayoutInfo(auto.size, new IntVector2(auto.size.X, canvasH), auto.positions);
         }
 
@@ -665,12 +675,12 @@ namespace FramesToMMSpriteResources
                     continue;
                 }
 
-                if (subjectConfig.Sheet.Height.HasValue && layout.size.Y > subjectConfig.Sheet.Height.Value)
+                if (subjectConfig.Export.Height.HasValue && layout.size.Y > subjectConfig.Export.Height.Value)
                     continue;
 
                 double diff = Math.Abs(layout.size.X - layout.size.Y);
                 double area = (double)layout.size.X * Math.Max(layout.size.Y, 1);
-                double heightGap = subjectConfig.Sheet.Height.HasValue ? Math.Abs(subjectConfig.Sheet.Height.Value - layout.size.Y) : 0.0;
+                double heightGap = subjectConfig.Export.Height.HasValue ? Math.Abs(subjectConfig.Export.Height.Value - layout.size.Y) : 0.0;
                 var score = (heightGap, diff, area);
 
                 if (bestScore == null || score.CompareTo(bestScore.Value) < 0)
@@ -686,14 +696,12 @@ namespace FramesToMMSpriteResources
             return (bestLayout.size, bestLayout.positions);
         }
 
-        private static void RemoveColorWithThreshold(SKBitmap src)
+        private static void RemoveColorWithThreshold(SKBitmap src, ProcessingConfig processingConfig, (byte r, byte g, byte b, byte a) parsedBackgroundColor)
         {
-            if (parsedBackgroundColor == null)
-                return;
-
-            var (r, g, b, a) = parsedBackgroundColor.Value;
-            bool nearest = (subjectConfig.FilterMode == 0 && subjectConfig.MipmapMode == 0);
-            ColorHelper.RemoveColorWithThresholdInPlace(src, r, g, b, a, subjectConfig.ColorTreshold, !nearest);
+          
+            var (r, g, b, a) = parsedBackgroundColor;
+            bool nearest = (processingConfig.FilterMode == 0 && processingConfig.MipmapMode == 0);
+            ColorHelper.RemoveColorWithThresholdInPlace(src, r, g, b, a, processingConfig.ColorTreshold, !nearest);
         }
 
 
@@ -761,7 +769,7 @@ namespace FramesToMMSpriteResources
         }
 
 
-        private static SKBitmap ResizeBitmapFromOrigin(SKBitmap source, IntVector2 frameOffset, double scale, out IntVector2 resizedFrameOffset)
+        private static SKBitmap ResizeBitmapFromOrigin(SKBitmap source, IntVector2 frameOffset, double scale, out IntVector2 resizedFrameOffset, SKSamplingOptions samplingOption)
         {
             double left = frameOffset.X;
             double top = -frameOffset.Y;
@@ -791,27 +799,26 @@ namespace FramesToMMSpriteResources
                     (float)(top * scale - scaledTop),
                     (float)(right * scale - scaledLeft),
                     (float)(bottom * scale - scaledTop));
-                canvas.DrawImage(image, destRect, _samplingOption, paint);
+                canvas.DrawImage(image, destRect, samplingOption, paint);
             }
             return resized;
         }
 
-        private static (SKBitmap cropped, IntVector2 offset) TrimColor(SKBitmap src)
+        private static (SKBitmap cropped, IntVector2 offset) TrimColor(SKBitmap src, ProcessingConfig processingConfig, (byte r, byte g, byte b, byte a)? parsedBackgroundColor)
         {
-            // Compute full trim bounds based on pixel data
+  
             var (left, top, right, bottom) = ColorHelper.RectTrimColor(src, subjectConfig, parsedBackgroundColor);
 
-            // If a specific side should NOT be cropped, restore that side to the original image edge
-            if (!subjectConfig.CropLeft) left = 0;
-            if (!subjectConfig.CropTop) top = 0;
-            if (!subjectConfig.CropRight) right = src.Width;
-            if (!subjectConfig.CropBottom) bottom = src.Height;
+   
+            if (!processingConfig.CropLeft) left = 0;
+            if (!processingConfig.CropTop) top = 0;
+            if (!processingConfig.CropRight) right = src.Width;
+            if (!processingConfig.CropBottom) bottom = src.Height;
 
-            // Align to even boundaries for HD assets after side adjustments
             if (programConfig.AssetConfig!.IsHd)
                 (left, top, right, bottom) = AlignEvenBox(left, top, right, bottom, new(src.Width, src.Height));
 
-            // If no cropping remains, return original
+   
             if (left == 0 && top == 0 && right == src.Width && bottom == src.Height)
                 return (src, new IntVector2(0, 0));
 
