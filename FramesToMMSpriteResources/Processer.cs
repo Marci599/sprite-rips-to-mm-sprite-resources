@@ -807,7 +807,7 @@ namespace FramesToMMSpriteResources
         private static (SKBitmap cropped, IntVector2 offset) TrimColor(SKBitmap src, ProcessingConfig processingConfig, (byte r, byte g, byte b, byte a)? parsedBackgroundColor)
         {
   
-            var (left, top, right, bottom) = ColorHelper.RectTrimColor(src, subjectConfig, parsedBackgroundColor);
+            var (left, top, right, bottom) = ColorHelper.RectTrimColor(src, subjectConfig, parsedBackgroundColor, processingConfig);
 
    
             if (!processingConfig.CropLeft) left = 0;

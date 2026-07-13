@@ -37,19 +37,19 @@ namespace FramesToMMSpriteResources
             return cropped;
         }
 
-        public static (int left, int top, int right, int bottom) RectTrimColor(SKBitmap src, SubjectConfig subjectConfig, (byte r, byte g, byte b, byte a)? parsedBackgroundColor)
+        public static (int left, int top, int right, int bottom) RectTrimColor(SKBitmap src, SubjectConfig subjectConfig, (byte r, byte g, byte b, byte a)? parsedBackgroundColor, ProcessingConfig processingConfig)
         {
             IntVector2 size = new(src.Width, src.Height);
             var pixels = src.GetPixelSpan();
 
-            bool trimByAlpha = subjectConfig.Processing.BackgroundColor == null || parsedBackgroundColor!.Value.a == 0 || subjectConfig.Processing.RemoveBackground;
+            bool trimByAlpha = processingConfig.BackgroundColor == null || parsedBackgroundColor!.Value.a == 0 || processingConfig.RemoveBackground;
             int left = size.X;
             int top = size.Y;
             int right = -1;
             int bottom = -1;
             
 
-            double thr2 = subjectConfig.Processing.ColorTreshold * subjectConfig.Processing.ColorTreshold;
+            double thr2 = processingConfig.ColorTreshold * processingConfig.ColorTreshold;
             byte tr = parsedBackgroundColor?.r ?? 0;
             byte tg = parsedBackgroundColor?.g ?? 0;
             byte tb = parsedBackgroundColor?.b ?? 0;

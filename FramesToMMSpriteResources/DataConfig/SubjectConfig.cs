@@ -13,46 +13,6 @@ namespace FramesToMMSpriteResources
 {
     public class SubjectConfig : ParentConfig
     {
-        [Obsolete]
-        [JsonPropertyName("resize_to_percent")]
-        public float ResizeToPercent = 100;
-
-        [Obsolete]
-        [JsonPropertyName("sampling_mode")]
-        public int FilterMode = 0;
-
-        [Obsolete]
-        [JsonPropertyName("mipmap_mode")]
-        public int MipmapMode = 0;
-
-        [Obsolete]
-        [JsonPropertyName("background_color")]
-        public string? BackgroundColor;
-
-        [Obsolete]
-        [JsonPropertyName("color_threshold")]
-        public int ColorTreshold = 100;
-
-        [Obsolete]
-        [JsonPropertyName("remove_background")]
-        public bool RemoveBackground = true;
-
-        [Obsolete]
-        [JsonPropertyName("crop_left")]
-        public bool CropLeft = true;
-
-        [Obsolete]
-        [JsonPropertyName("crop_top")]
-        public bool CropTop = true;
-
-        [Obsolete]
-        [JsonPropertyName("crop_right")]
-        public bool CropRight = true;
-
-        [Obsolete]
-        [JsonPropertyName("crop_bottom")]
-        public bool CropBottom = true;
-
         [JsonPropertyName("processing")]
         public ProcessingConfig Processing = new();
 

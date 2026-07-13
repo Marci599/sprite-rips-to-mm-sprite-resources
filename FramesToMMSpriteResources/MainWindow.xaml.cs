@@ -713,16 +713,7 @@ namespace FramesToMMSpriteResources
                 {        
                     SubjectConfig subjectConfig = LoadJson<SubjectConfig>(Path.Combine(subjectDir, CONFIG_FILENAME));
                     subjectConfig.InterfaceConfig = LoadJson<SubjectInterfaceConfig>(Path.Combine(subjectDir, INTERFACE_CONFIG_FILENAME));
-                    subjectConfig.Processing.BackgroundColor = subjectConfig.BackgroundColor;
-                    subjectConfig.Processing.ColorTreshold = subjectConfig.ColorTreshold;
-                    subjectConfig.Processing.RemoveBackground = subjectConfig.RemoveBackground;
-                    subjectConfig.Processing.ResizeToPercent = subjectConfig.ResizeToPercent;
-                    subjectConfig.Processing.FilterMode = subjectConfig.FilterMode;
-                    subjectConfig.Processing.MipmapMode = subjectConfig.MipmapMode;
-                    subjectConfig.Processing.CropLeft = subjectConfig.CropLeft;
-                    subjectConfig.Processing.CropTop = subjectConfig.CropTop;
-                    subjectConfig.Processing.CropRight = subjectConfig.CropTop;
-                    subjectConfig.Processing.CropBottom = subjectConfig.CropBottom;
+      
 
                     var subjectTreeItem = new TreeViewNode { Content = new TreeItem(subjectName, ItemDepth.Subject), IsExpanded = subjectConfig.InterfaceConfig.IsExpanded };
 
@@ -1596,7 +1587,7 @@ namespace FramesToMMSpriteResources
                         if (backgroundSKColor.Alpha != 0 && processingConfig.RemoveBackground)
                             ColorHelper.RemoveColorWithThresholdInPlace(skb, backgroundSKColor.Red, backgroundSKColor.Green, backgroundSKColor.Blue, backgroundSKColor.Alpha, processingConfig.ColorTreshold);
 
-                        var (left, top, right, bottom) = ColorHelper.RectTrimColor(skb, subjectConfig, (backgroundSKColor.Red, backgroundSKColor.Green, backgroundSKColor.Blue, backgroundSKColor.Alpha));
+                        var (left, top, right, bottom) = ColorHelper.RectTrimColor(skb, subjectConfig, (backgroundSKColor.Red, backgroundSKColor.Green, backgroundSKColor.Blue, backgroundSKColor.Alpha), processingConfig);
                         SKRectI rect = new(left, top, right, bottom);
 
                         bool isSame = (left == 0 && top == 0 && right == skb.Width && bottom == skb.Height);
