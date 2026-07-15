@@ -13,6 +13,9 @@ namespace FramesToMMSpriteResources
 {
     public class SubjectConfig : ParentConfig
     {
+        [JsonPropertyName("note")]
+        public string Note;
+
         [JsonPropertyName("processing")]
         public ProcessingConfig Processing = new();
 

@@ -173,28 +173,51 @@
                                     
                                     </Border>
 
-                                    <!-- Sheet Dimensions Group -->
-                                    <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
-                                        <StackPanel Spacing="12">
-                                            <TextBlock Text="Exporting" Style="{StaticResource SectionHeaderStyle}"/>
-                                            <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-
-                                            <Grid ColumnSpacing="10">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBox Grid.Column="0" x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width" VerticalAlignment="Top"/>
-
-                                               
-                                                <TextBox Grid.Column="1" x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height"/>
-                                                
+                                    <Grid ColumnSpacing="10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
                                             
-                                            </Grid>
-                                            <TextBlock Text="For automatic sizing, leave it blank" Style="{StaticResource HelperTextStyle}" Margin="0 -8 0 0"/>
+                                        </Grid.ColumnDefinitions>
+                                        <!-- Sheet Dimensions Group -->
+                                        <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
+                                            <StackPanel Spacing="12">
+                                                <TextBlock Text="Exporting" Style="{StaticResource SectionHeaderStyle}"/>
+                                                <Rectangle Style="{StaticResource GroupDividerStyle}"/>
 
-                                        </StackPanel>
-                                    </Border>
+                                                <Grid ColumnSpacing="10">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBox Grid.Column="0" x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width" VerticalAlignment="Top"/>
+
+
+                                                    <TextBox Grid.Column="1" x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height"/>
+
+
+                                                </Grid>
+                                                <TextBlock Text="For automatic sizing, leave it blank" Style="{StaticResource HelperTextStyle}" Margin="0 -8 0 0"/>
+
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
+                                            <Grid RowSpacing="12">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="*"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Grid.Row="0" Text="Note" Style="{StaticResource SectionHeaderStyle}"/>
+                                                <Rectangle Grid.Row="1" Style="{StaticResource GroupDividerStyle}"/>
+
+
+                                                <TextBox x:Name="NoteTextBox" Grid.Row="2" Margin="-16 -13 -16 -16" CornerRadius="0" TextWrapping="Wrap" AcceptsReturn="True"/>
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+                                    
                                 </StackPanel>
                             </ScrollViewer>
                         </Grid>

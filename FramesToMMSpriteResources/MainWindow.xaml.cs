@@ -519,7 +519,7 @@ namespace FramesToMMSpriteResources
                 foreach (var subjectDir in subjectDirs)
                 {
                     string subjectName = Path.GetFileName(subjectDir);
-                    if (subjectName != "_generated")
+                    if (!subjectName.StartsWith("_"))
                     {
                         SaveJson(Path.Combine(subjectDir, CONFIG_FILENAME), ProgramConfig.AssetConfig!.SubjectConfigs![subjectName]);
                         SaveJson(Path.Combine(subjectDir, INTERFACE_CONFIG_FILENAME), ProgramConfig.AssetConfig!.SubjectConfigs![subjectName].InterfaceConfig);
@@ -529,8 +529,12 @@ namespace FramesToMMSpriteResources
                         {
                             string animationName = Path.GetFileName(animationDir);
 
-                            SaveJson(Path.Combine(animationDir, CONFIG_FILENAME), ProgramConfig.AssetConfig!.SubjectConfigs![subjectName].AnimationConfigs![animationName]);
-                            SaveJson(Path.Combine(animationDir, INTERFACE_CONFIG_FILENAME), ProgramConfig.AssetConfig!.SubjectConfigs![subjectName].AnimationConfigs![animationName].InterfaceConfig);
+                            if (!animationName.StartsWith("_"))
+                            {
+                                SaveJson(Path.Combine(animationDir, CONFIG_FILENAME), ProgramConfig.AssetConfig!.SubjectConfigs![subjectName].AnimationConfigs![animationName]);
+                                SaveJson(Path.Combine(animationDir, INTERFACE_CONFIG_FILENAME), ProgramConfig.AssetConfig!.SubjectConfigs![subjectName].AnimationConfigs![animationName].InterfaceConfig);
+
+                            }
                         }
                     }
 
@@ -709,7 +713,7 @@ namespace FramesToMMSpriteResources
             foreach (var subjectDir in subjectDirs)
             {
                 string subjectName = Path.GetFileName(subjectDir);
-                if (subjectName != "_generated")
+                if (!subjectName.StartsWith("_"))
                 {        
                     SubjectConfig subjectConfig = LoadJson<SubjectConfig>(Path.Combine(subjectDir, CONFIG_FILENAME));
                     subjectConfig.InterfaceConfig = LoadJson<SubjectInterfaceConfig>(Path.Combine(subjectDir, INTERFACE_CONFIG_FILENAME));
@@ -722,88 +726,91 @@ namespace FramesToMMSpriteResources
                     foreach (var animationDir in animationDirs)
                     {
                         string animationName = Path.GetFileName(animationDir);
-     
-                        AnimationConfig animationConfig = LoadJson<AnimationConfig>(Path.Combine(animationDir, CONFIG_FILENAME));
-                        animationConfig.InterfaceConfig = LoadJson<AnimationInterfaceConfig>(Path.Combine(animationDir, INTERFACE_CONFIG_FILENAME));                           
-                        
-                        TreeItem treeItem;
-                        treeItem = new(animationName, ItemDepth.Animation);                      
+                        if (!animationName.StartsWith("_"))
+                        {
+                            AnimationConfig animationConfig = LoadJson<AnimationConfig>(Path.Combine(animationDir, CONFIG_FILENAME));
+                            animationConfig.InterfaceConfig = LoadJson<AnimationInterfaceConfig>(Path.Combine(animationDir, INTERFACE_CONFIG_FILENAME));
 
-                        var animationTreeItem = new TreeViewNode { Content = treeItem, IsExpanded = animationConfig.InterfaceConfig.IsExpanded };
+                            TreeItem treeItem;
+                            treeItem = new(animationName, ItemDepth.Animation);
 
-                        int frameIndex = 0;
+                            var animationTreeItem = new TreeViewNode { Content = treeItem, IsExpanded = animationConfig.InterfaceConfig.IsExpanded };
 
-                        animationConfig.FrameCongfigs ??= [];
+                            int frameIndex = 0;
 
-                        var frameFiles = Directory.EnumerateFiles(animationDir, "*.png");
-                        foreach (var frameFile in frameFiles)
-                        {                  
-                            string fileName = Path.GetFileNameWithoutExtension(frameFile);
-                            if (frameIndex < animationConfig.FrameCongfigs.Count)
+                            animationConfig.FrameCongfigs ??= [];
+
+                            var frameFiles = Directory.EnumerateFiles(animationDir, "*.png");
+                            foreach (var frameFile in frameFiles)
                             {
-                                animationConfig.FrameCongfigs[frameIndex].Name = fileName;
+                                string fileName = Path.GetFileNameWithoutExtension(frameFile);
+                                if (frameIndex < animationConfig.FrameCongfigs.Count)
+                                {
+                                    animationConfig.FrameCongfigs[frameIndex].Name = fileName;
+                                }
+                                else
+                                {
+                                    animationConfig.FrameCongfigs.Add(new FrameConfig(fileName));
+                                }
+
+                                string frameName = frameIndex.ToString("D4");
+                                TreeItem frameTreeItem = new(frameName, ItemDepth.Frame);
+                                var frameTreeViewNode = new TreeViewNode { Content = frameTreeItem };
+
+                                animationTreeItem.Children.Add(frameTreeViewNode);
+
+                                if (ProgramConfig.SelectedNodes != null &&
+                                    ProgramConfig.SelectedNodePath!.Count == 2 &&
+
+                                    ProgramConfig.SelectedNodePath[0] == subjectName &&
+                                    ProgramConfig.SelectedNodePath[1] == animationName &&
+                                    ProgramConfig.SelectedNodes.Contains(frameName))
+                                {
+                                    (frameTreeViewNode.Content as TreeItem)!.IsSelected = true;
+
+                                    if (ProgramConfig.SelectedNodes.Last() == frameName)
+                                    {
+                                        TreeViewControl.SelectedNode = frameTreeViewNode;
+                                    }
+                                }
+                                frameIndex++;
+                            }
+
+                            if (animationConfig.GetInterfaceConfig().GeneratedFrameCount == -1)
+                            {
+                                animationConfig.GetInterfaceConfig().GeneratedFrameCount = frameIndex;
+                            }
+
+                            if (animationConfig.GetInterfaceConfig().GeneratedFrameCount == frameIndex)
+                            {
+                                (animationTreeItem.Content as TreeItem)!.Count = frameIndex;
+                                (animationTreeItem.Content as TreeItem)!.CountText = frameIndex.ToString();
+
                             }
                             else
                             {
-                                animationConfig.FrameCongfigs.Add(new FrameConfig(fileName));
+                                (animationTreeItem.Content as TreeItem)!.Count = frameIndex;
+                                (animationTreeItem.Content as TreeItem)!.CountText = /*$"{animationConfig.GeneratedFrameCount} → */frameIndex.ToString();
                             }
 
-                            string frameName = frameIndex.ToString("D4");
-                            TreeItem frameTreeItem = new(frameName, ItemDepth.Frame);
-                            var frameTreeViewNode = new TreeViewNode { Content = frameTreeItem };
-
-                            animationTreeItem.Children.Add(frameTreeViewNode);
+                            framesSum += frameIndex;
+                            subjectConfig.AnimationConfigs![animationName] = animationConfig;
+                            subjectTreeItem.Children.Add(animationTreeItem);
 
                             if (ProgramConfig.SelectedNodes != null &&
-                                ProgramConfig.SelectedNodePath!.Count == 2 &&
-                                    
+                                ProgramConfig.SelectedNodePath!.Count == 1 &&
                                 ProgramConfig.SelectedNodePath[0] == subjectName &&
-                                ProgramConfig.SelectedNodePath[1] == animationName &&
-                                ProgramConfig.SelectedNodes.Contains(frameName))
+                                ProgramConfig.SelectedNodes.Contains(animationName))
                             {
-                                (frameTreeViewNode.Content as TreeItem)!.IsSelected = true;
+                                (animationTreeItem.Content as TreeItem)!.IsSelected = true;
 
-                                if (ProgramConfig.SelectedNodes.Last() == frameName)
+                                if (ProgramConfig.SelectedNodes.Last() == animationName)
                                 {
-                                    TreeViewControl.SelectedNode = frameTreeViewNode;
+                                    TreeViewControl.SelectedNode = animationTreeItem;
                                 }
                             }
-                            frameIndex++;                           
                         }
-
-                        if (animationConfig.GetInterfaceConfig().GeneratedFrameCount == -1)
-                        {
-                            animationConfig.GetInterfaceConfig().GeneratedFrameCount = frameIndex;
-                        }
-
-                        if (animationConfig.GetInterfaceConfig().GeneratedFrameCount == frameIndex)
-                        {
-                            (animationTreeItem.Content as TreeItem)!.Count = frameIndex;
-                            (animationTreeItem.Content as TreeItem)!.CountText = frameIndex.ToString();
-          
-                        }
-                        else
-                        {
-                            (animationTreeItem.Content as TreeItem)!.Count = frameIndex;
-                            (animationTreeItem.Content as TreeItem)!.CountText = /*$"{animationConfig.GeneratedFrameCount} → */frameIndex.ToString();
-                        }
-
-                        framesSum += frameIndex;
-                        subjectConfig.AnimationConfigs![animationName] = animationConfig;
-                        subjectTreeItem.Children.Add(animationTreeItem);
-
-                        if (ProgramConfig.SelectedNodes != null &&
-                            ProgramConfig.SelectedNodePath!.Count == 1 &&
-                            ProgramConfig.SelectedNodePath[0] == subjectName &&
-                            ProgramConfig.SelectedNodes.Contains(animationName))
-                        {
-                            (animationTreeItem.Content as TreeItem)!.IsSelected = true;
-
-                            if (ProgramConfig.SelectedNodes.Last() == animationName)
-                            {
-                                TreeViewControl.SelectedNode = animationTreeItem;
-                            }
-                        }
+                        
                     }
 
                     (subjectTreeItem.Content as TreeItem)!.Count = framesSum;
@@ -1300,6 +1307,8 @@ namespace FramesToMMSpriteResources
             SheetWidthTextBox.TextChanged -= SheetWidthTextBox_ValueChanged;
             SheetHeightTextBox.TextChanged -= SheetHeightTextBox_ValueChanged;
 
+            NoteTextBox.TextChanged -= NoteTextBox_ValueChanged;
+
             subjectConfig.Export ??= new SubjectExportConfig();
             subjectConfig.Processing ??= new ProcessingConfig();
 
@@ -1316,6 +1325,8 @@ namespace FramesToMMSpriteResources
             ProcessingCardControl.GetThresholdTextBox.Text = subjectConfig.Processing.ColorTreshold.ToString();
             SheetWidthTextBox.Text = subjectConfig.Export.Width.ToString();
             SheetHeightTextBox.Text = subjectConfig.Export.Height.ToString();
+
+            NoteTextBox.Text = subjectConfig.Note;
 
             ProcessingCardControl.GetColorTextBox.Text = subjectConfig.Processing.BackgroundColor ?? "";
             ProcessingCardControl.UpdateColorPreview();
@@ -1334,6 +1345,8 @@ namespace FramesToMMSpriteResources
 
             SheetWidthTextBox.TextChanged += SheetWidthTextBox_ValueChanged;
             SheetHeightTextBox.TextChanged += SheetHeightTextBox_ValueChanged;
+
+            NoteTextBox.TextChanged += NoteTextBox_ValueChanged;
 
             SetCheckedState();
         }
@@ -1990,6 +2003,15 @@ namespace FramesToMMSpriteResources
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
                 currentConfig.Export.Width = string.IsNullOrWhiteSpace(text) ? null : int.Parse(text);
+            }
+        }
+
+        private void NoteTextBox_ValueChanged(object sender, RoutedEventArgs args)
+        {
+            string text = (sender as TextBox)!.Text;
+            foreach (SubjectConfig currentConfig in _currentConfigs)
+            {
+                currentConfig.Note = text;
             }
         }
 
@@ -2889,7 +2911,7 @@ namespace FramesToMMSpriteResources
                 return true;
             }
 
-            if (e.Key != Windows.System.VirtualKey.Q && e.Key != Windows.System.VirtualKey.E)
+            if (e.Key != Windows.System.VirtualKey.Q && e.Key != Windows.System.VirtualKey.E || FocusManager.GetFocusedElement(this.Content.XamlRoot) is TextBox)
             {
                 return false;
             }

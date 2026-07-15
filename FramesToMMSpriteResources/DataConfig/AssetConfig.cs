@@ -13,6 +13,9 @@ namespace FramesToMMSpriteResources
         [JsonPropertyName("is_hd")]
         public bool IsHd = true;
 
+        [JsonPropertyName("note")]
+        public string Note;
+
         [JsonIgnore]
         public Dictionary<string, SubjectConfig>? SubjectConfigs = [];
 
