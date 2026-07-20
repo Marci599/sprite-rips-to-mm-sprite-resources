@@ -351,7 +351,7 @@ namespace FramesToMMSpriteResources
                     IsWindowActive = false;
 
                     ClearKeyboardState();
-                                
+                    EnableAlignButtons(false);
                     FrameCoordinateEditorControl.UnloadAnimation();
 
                     cts?.Cancel();
@@ -1284,6 +1284,7 @@ namespace FramesToMMSpriteResources
                     animationConfig = subjectConfig.AnimationConfigs![animationName];
                     bool isFromFramePanel = (TreeViewControl.SelectedNode == null || (TreeViewControl.SelectedNode.Content as TreeItem)!.Depth == ItemDepth.Frame);
                     int frameCount = TreeViewControl.SelectedNode!.Parent.Children.Count;
+                    EnableAlignButtons(false);
                     if (animate)
                     {
                         await Task.Delay(_fadeOutMs);
@@ -1663,6 +1664,7 @@ namespace FramesToMMSpriteResources
             }
             
             FrameCoordinateEditorControl.SetSpriteIndex(selectedIndex);
+            EnableAlignButtons(true);
             FrameCoordinateEditorControl.SpritePositionMoved += SpriteOffset_ValueMoved;
 
             if (IsWindowActive)
@@ -1764,131 +1766,159 @@ namespace FramesToMMSpriteResources
             return new Vector2(x, y);
         }
 
-        private void ALignDownButton_Click(object sender, RoutedEventArgs e)
+
+        private enum HorizontalAlign
         {
-            int rawPositionX = (FrameCoordinateEditorControl.PreviewSpriteFrames[0].OriginalSize.X / 2) * -1;
-            int rawPositionY = FrameCoordinateEditorControl.PreviewSpriteFrames[0].OriginalSize.Y;
+            Left,
+            Center,
+            Right
+        }
+
+        private enum VerticalAlign
+        {
+            Top,
+            Center,
+            Bottom
+        }
+
+        void EnableAlignButtons(bool isEnable)
+        {
+            AlignDownRightButton.IsEnabled = isEnable;
+            AlignDownButton.IsEnabled = isEnable;
+            AlignDownLeftButton.IsEnabled = isEnable;
+
+            AlignRightButton.IsEnabled = isEnable;
+            AlignCenterButton.IsEnabled = isEnable;
+            AlignLeftButton.IsEnabled = isEnable;
+
+            AlignUpRightButton.IsEnabled = isEnable;
+            AlignUpButton.IsEnabled = isEnable;
+            AlignUpLeftButton.IsEnabled = isEnable;
+        }
+
+        private void AlignButton_Click(HorizontalAlign horizontal, VerticalAlign vertical)
+        {
             AnimationConfig animationConfig = GetCurrentFrameAnimationConfig();
             AnimationInterfaceConfig animationInterfaceConfig = (animationConfig.InterfaceConfig as AnimationInterfaceConfig)!;
-            FrameConfig frameConfig = animationConfig.FrameCongfigs[int.Parse((TreeViewControl.SelectedNode.Content as TreeItem)!.Text)];
 
-            if (animationInterfaceConfig.AlignBasedOn == AlignBasedOn.RawSpriteSie)
+            var selectedNode = TreeViewControl.SelectedNode;
+            var animationNode = selectedNode.Parent!;
+            List<FrameConfig> frameConfigs = animationConfig.FrameCongfigs;
+
+            int originalWidth = FrameCoordinateEditorControl.PreviewSpriteFrames[0].OriginalSize.X;
+            int originalHeight = FrameCoordinateEditorControl.PreviewSpriteFrames[0].OriginalSize.Y;
+
+            int GetRawX() => horizontal switch
             {
-                int x = frameConfig.Offset.X;
-                int y = frameConfig.Offset.Y;
-                if (animationInterfaceConfig.AlignOnXAxis)
-                    x = rawPositionX;
-                if (animationInterfaceConfig.AlignOnYAxis)
-                    y = rawPositionY;
-                SpriteOffset_ValueChanged(new(x, y));
-            }
-            else
+                HorizontalAlign.Left => 0,
+                HorizontalAlign.Center => -(originalWidth / 2),
+                HorizontalAlign.Right => -originalWidth,
+                _ => 0
+            };
+
+            int GetRawY() => vertical switch
             {
-                List<FrameConfig> frameConfigList = animationConfig.FrameCongfigs;
-                var animationNode = TreeViewControl.SelectedNode.Parent;
-                for (int i = 0; i < animationNode.Children.Count; i++)
+                VerticalAlign.Top => 0,
+                VerticalAlign.Center => originalHeight / 2,
+                VerticalAlign.Bottom => originalHeight,
+                _ => 0
+            };
+
+            for (int i = 0; i < animationNode.Children.Count; i++)
+            {
+                var frameNodeContent = animationNode.Children[i].Content as TreeItem;
+                if (frameNodeContent is null || !frameNodeContent.IsSelected)
+                    continue;
+
+                int x = frameConfigs[i].Offset.X;
+                int y = frameConfigs[i].Offset.Y;
+
+                if (animationInterfaceConfig.AlignBasedOn == AlignBasedOn.RawSpriteSie)
                 {
-                    var frameNodeContent = (animationNode.Children[i].Content as TreeItem)!;
-                    if (frameNodeContent.IsSelected)
+                    if (animationInterfaceConfig.AlignOnXAxis)
+                        x = GetRawX();
+
+                    if (animationInterfaceConfig.AlignOnYAxis)
+                        y = GetRawY();
+                }
+                else
+                {
+                    var rect = FrameCoordinateEditorControl.PreviewSpriteFrames[i].CroppedRect;
+
+                    if (animationInterfaceConfig.AlignOnXAxis)
                     {
-                        int x = animationConfig.FrameCongfigs[i].Offset.X;
-                        int y = animationConfig.FrameCongfigs[i].Offset.Y;
-                        if (animationInterfaceConfig.AlignOnXAxis)
-                            x = rawPositionX + ((FrameCoordinateEditorControl.PreviewSpriteFrames[0].OriginalSize.X - FrameCoordinateEditorControl.PreviewSpriteFrames[i].CroppedRect.Width) / 2) - FrameCoordinateEditorControl.PreviewSpriteFrames[i].CroppedRect.Left;
-                        if (animationInterfaceConfig.AlignOnYAxis)
-                            y = rawPositionY - (FrameCoordinateEditorControl.PreviewSpriteFrames[0].OriginalSize.Y - FrameCoordinateEditorControl.PreviewSpriteFrames[i].CroppedRect.Bottom);     
-                        
-                        frameConfigList[i].Offset = new(x, y);
+                        x = horizontal switch
+                        {
+                            HorizontalAlign.Left => -rect.Left,
+                            HorizontalAlign.Center => -(rect.Left + rect.Width / 2),
+                            HorizontalAlign.Right => -rect.Right,
+                            _ => x
+                        };
+                    }
+
+                    if (animationInterfaceConfig.AlignOnYAxis)
+                    {
+                        y = vertical switch
+                        {
+                            VerticalAlign.Top => rect.Top,
+                            VerticalAlign.Center => rect.Top + rect.Height / 2,
+                            VerticalAlign.Bottom => rect.Bottom,
+                            _ => y
+                        };
                     }
                 }
+
+                frameConfigs[i].Offset = new(x, y);
             }
 
             RefreshOffsetFieldVisually();
             FrameCoordinateEditorControl.UpdateVisuals();
         }
 
-        private void ALignTopLeftButton_Click(object sender, RoutedEventArgs e)
+
+        private void AlignDownRightButton_Click(object sender, RoutedEventArgs e)
         {
-            AnimationConfig animationConfig = GetCurrentFrameAnimationConfig();
-            FrameConfig frameConfig = animationConfig.FrameCongfigs[int.Parse((TreeViewControl.SelectedNode.Content as TreeItem)!.Text)];
-            AnimationInterfaceConfig animationInterfaceConfig = (animationConfig.InterfaceConfig as AnimationInterfaceConfig)!;
-
-            if (animationInterfaceConfig.AlignBasedOn == AlignBasedOn.RawSpriteSie)
-            {
-                int x = frameConfig.Offset.X;
-                int y = frameConfig.Offset.Y;
-                if (animationInterfaceConfig.AlignOnXAxis)
-                    x = 0;
-                if (animationInterfaceConfig.AlignOnYAxis)
-                    y = 0;
-                SpriteOffset_ValueChanged(new(x, y));
-            }
-            else
-            {
-                List<FrameConfig> frameConfigList = animationConfig.FrameCongfigs;
-                var animationNode = TreeViewControl.SelectedNode.Parent;
-                for (int i = 0; i < animationNode.Children.Count; i++)
-                {
-                    var frameNodeContent = (animationNode.Children[i].Content as TreeItem)!;
-                    if (frameNodeContent.IsSelected)
-                    {
-                        int x = animationConfig.FrameCongfigs[i].Offset.X;
-                        int y = animationConfig.FrameCongfigs[i].Offset.Y;
-                        if (animationInterfaceConfig.AlignOnXAxis)
-                            x = 0 - FrameCoordinateEditorControl.PreviewSpriteFrames[i].CroppedRect.Left;
-                        if (animationInterfaceConfig.AlignOnYAxis)
-                            y = 0 + FrameCoordinateEditorControl.PreviewSpriteFrames[i].CroppedRect.Top;
-
-                        frameConfigList[i].Offset = new(x, y);
-
-                    }
-                }
-            }
-            RefreshOffsetFieldVisually();
-            FrameCoordinateEditorControl.UpdateVisuals();
+            AlignButton_Click(HorizontalAlign.Right, VerticalAlign.Bottom);
         }
 
-        private void ALignCenterButton_Click(object sender, RoutedEventArgs e)
+        private void AlignDownButton_Click(object sender, RoutedEventArgs e)
         {
-            int rawPositionX = (FrameCoordinateEditorControl.PreviewSpriteFrames[0].OriginalSize.X / 2) * -1;
-            int rawPositionY = FrameCoordinateEditorControl.PreviewSpriteFrames[0].OriginalSize.Y / 2;
-            AnimationConfig animationConfig = GetCurrentFrameAnimationConfig();
-            AnimationInterfaceConfig animationInterfaceConfig = (animationConfig.InterfaceConfig as AnimationInterfaceConfig)!;
-            FrameConfig frameConfig = animationConfig.FrameCongfigs[int.Parse((TreeViewControl.SelectedNode.Content as TreeItem)!.Text)];
+            AlignButton_Click(HorizontalAlign.Center, VerticalAlign.Bottom);
+        }
 
-            if (animationInterfaceConfig.AlignBasedOn == AlignBasedOn.RawSpriteSie)
-            {
-                int x = frameConfig.Offset.X;
-                int y = frameConfig.Offset.Y;
-                if(animationInterfaceConfig.AlignOnXAxis)
-                    x = rawPositionX;
-                if (animationInterfaceConfig.AlignOnYAxis)
-                    y = rawPositionY;
-                SpriteOffset_ValueChanged(new(x, y));
-            }
-            else
-            {
-                List<FrameConfig> frameConfigList = animationConfig.FrameCongfigs;
-                var animationNode = TreeViewControl.SelectedNode.Parent;
-                for (int i = 0; i < animationNode.Children.Count; i++)
-                {
-                    var frameNodeContent = (animationNode.Children[i].Content as TreeItem)!;
-                    if (frameNodeContent.IsSelected)
-                    {
-                        int x = animationConfig.FrameCongfigs[i].Offset.X;
-                        int y = animationConfig.FrameCongfigs[i].Offset.Y;
+        private void AlignDownLeftButton_Click(object sender, RoutedEventArgs e)
+        {
+            AlignButton_Click(HorizontalAlign.Left, VerticalAlign.Bottom);
+        }
 
-                        if (animationInterfaceConfig.AlignOnXAxis)
-                            x = rawPositionX + ((FrameCoordinateEditorControl.PreviewSpriteFrames[0].OriginalSize.X - FrameCoordinateEditorControl.PreviewSpriteFrames[i].CroppedRect.Width) / 2) - FrameCoordinateEditorControl.PreviewSpriteFrames[i].CroppedRect.Left;
-                        if (animationInterfaceConfig.AlignOnYAxis)
-                            y = rawPositionY + (((FrameCoordinateEditorControl.PreviewSpriteFrames[0].OriginalSize.Y - FrameCoordinateEditorControl.PreviewSpriteFrames[i].CroppedRect.Height) / 2) - FrameCoordinateEditorControl.PreviewSpriteFrames[i].CroppedRect.Top) * -1;
+        private void AlignRightButton_Click(object sender, RoutedEventArgs e)
+        {
+            AlignButton_Click(HorizontalAlign.Right, VerticalAlign.Center);
+        }
 
-                        frameConfigList[i].Offset = new(x, y);
-                    }
-                }
-            }
-            RefreshOffsetFieldVisually();
-            FrameCoordinateEditorControl.UpdateVisuals();
+        private void AlignCenterButton_Click(object sender, RoutedEventArgs e)
+        {
+            AlignButton_Click(HorizontalAlign.Center, VerticalAlign.Center);
+        }
+
+        private void AlignLeftButton_Click(object sender, RoutedEventArgs e)
+        {
+            AlignButton_Click(HorizontalAlign.Left, VerticalAlign.Center);
+        }
+
+        private void AlignUpRightButton_Click(object sender, RoutedEventArgs e)
+        {
+            AlignButton_Click(HorizontalAlign.Right, VerticalAlign.Top);
+        }
+
+        private void AlignUpButton_Click(object sender, RoutedEventArgs e)
+        {
+            AlignButton_Click(HorizontalAlign.Center, VerticalAlign.Top);
+        }
+
+        private void AlignUpLeftButton_Click(object sender, RoutedEventArgs e)
+        {
+            AlignButton_Click(HorizontalAlign.Left, VerticalAlign.Top);
         }
 
         private void OffsetXTextBox_ValueChanged(float? number)
@@ -2528,15 +2558,16 @@ namespace FramesToMMSpriteResources
         {
             SettingsToggleButton.IsChecked = true;
             ClearAllTreeItemSelections();
-            
+            TreeViewControl.SelectedNode = null;
+            ProgramConfig.SelectedNodePath = [];
+            ProgramConfig.SelectedNodes = null;
+
             if (HelpPanel.Visibility == Visibility.Visible)
             {
                 return;
             }
 
-            TreeViewControl.SelectedNode = null;
-            ProgramConfig.SelectedNodePath = [];
-            ProgramConfig.SelectedNodes = null;
+
             FadeOutAllPanels(false, true);
 
             UpdateBreadcrumb("Settings & Help");
@@ -3172,5 +3203,7 @@ namespace FramesToMMSpriteResources
         {
             ProgramConfig.AssetConfig!.ProcessingDefault = (ProcessingConfig)GetCurrentSubjectConfig().Processing.Clone();
         }
+
+  
     }
 }

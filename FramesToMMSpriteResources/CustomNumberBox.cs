@@ -8,6 +8,32 @@ namespace FramesToMMSpriteResources
 {
     public class CustomNumberBox : TextBox
     {
+        public static readonly DependencyProperty MinimumProperty =
+            DependencyProperty.Register(
+                nameof(Minimum),
+                typeof(double),
+                typeof(CustomNumberBox),
+                new PropertyMetadata(double.NegativeInfinity));
+
+        public double Minimum
+        {
+            get => (double)GetValue(MinimumProperty);
+            set => SetValue(MinimumProperty, value);
+        }
+
+        public static readonly DependencyProperty MaximumProperty =
+            DependencyProperty.Register(
+                nameof(Maximum),
+                typeof(double),
+                typeof(CustomNumberBox),
+                new PropertyMetadata(double.PositiveInfinity));
+
+        public double Maximum
+        {
+            get => (double)GetValue(MaximumProperty);
+            set => SetValue(MaximumProperty, value);
+        }
+
         private float? _value;
         public float? Value
         {
@@ -26,17 +52,21 @@ namespace FramesToMMSpriteResources
             }
             set
             {
-                if (_value == value)
-                    return;
+                float? newValue = value;
+                if(newValue != null)
+                {
+                    newValue = (float)Math.Clamp(newValue.Value, Minimum, Maximum);
+                }
 
-                _value = value;
+                if (_value == newValue) return;
+
+                _value = newValue;
                 suppressTextChanged = true;
                 Text = _value.ToString();
                 SelectionStart = Text?.Length??0;
                 SelectionLength = 0;
                 suppressTextChanged = false;
                 ValueChanged?.Invoke(Value);
-
             }
         }
 
@@ -69,10 +99,15 @@ namespace FramesToMMSpriteResources
                 return;
             }
 
-            if (float.TryParse(Text, out float number))
+            if (float.TryParse(Text, out float value))
             {
-                Value = number;
-                return;
+                float clampedValue = (float)Math.Clamp(value, Minimum, Maximum);
+                if (value == clampedValue)
+                {
+                    Value = value;
+                    return;
+                } 
+                _value = clampedValue;
             }
       
             isTextValid = false;
@@ -95,12 +130,17 @@ namespace FramesToMMSpriteResources
             if (FocusState == FocusState.Unfocused)
                 return;
 
+            float? value = Value;
+            if (value == null) return;
+
             var delta = e.GetCurrentPoint(this).Properties.MouseWheelDelta;
             if (delta == 0)
                 return;
 
-            Value = delta > 0 ? Value + Step : Value - Step;
+            var scrolledValue = delta > 0 ? value + Step : value - Step;
             
+            Value = (float)Math.Clamp(scrolledValue.Value, Minimum, Maximum);
+
             e.Handled = true;
         }
     }

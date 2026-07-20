@@ -27,7 +27,7 @@
                     <TextBlock Text="If already transparent, leave it blank" Style="{StaticResource HelperTextStyle}" />
                 </StackPanel>
 
-                <local:CustomNumberBox Grid.Column="1" x:Name="ThresholdTextBox" PlaceholderText="100" Header="Threshold" VerticalAlignment="Top"/>
+                <local:CustomNumberBox Grid.Column="1" x:Name="ThresholdTextBox" PlaceholderText="100" Header="Threshold" VerticalAlignment="Top" Minimum="0" Maximum="400"/>
             </Grid>
    
             
@@ -41,7 +41,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <local:CustomNumberBox Grid.Column="0" x:Name="ResizeTextBox" PlaceholderText="100" Header="Resize to percent" />
+                <local:CustomNumberBox Grid.Column="0" x:Name="ResizeTextBox" PlaceholderText="100" Header="Resize to percent" Minimum="1" Maximum="1000"/>
                 <ComboBox Grid.Column="1" x:Name="SamplingComboBox" Header="Filter mode" HorizontalAlignment="Stretch">
                     <x:String>Nearest</x:String>
                     <x:String>Linear</x:String>

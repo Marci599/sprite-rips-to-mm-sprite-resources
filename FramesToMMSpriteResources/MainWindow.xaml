@@ -203,10 +203,10 @@
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <local:CustomNumberBox Grid.Column="0" x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width" VerticalAlignment="Top"/>
+                                                    <local:CustomNumberBox Grid.Column="0" x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width" VerticalAlignment="Top" Minimum="1" Maximum="5000"/>
 
 
-                                                    <local:CustomNumberBox Grid.Column="1" x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height"/>
+                                                    <local:CustomNumberBox Grid.Column="1" x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height" Minimum="1" Maximum="5000"/>
 
 
                                                 </Grid>
@@ -261,7 +261,7 @@
 
 
 
-                                                <local:CustomNumberBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay"/>
+                                                <local:CustomNumberBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay" Minimum="-1" Maximum="1000"/>
                                                 <ComboBox x:Name="LoopTypeComboBox" Header="Loop mode" HorizontalAlignment="Stretch">
                                                     <x:String>Default</x:String>
                                                     <x:String>Loop</x:String>
@@ -314,8 +314,8 @@
 
 
 
-                                                <local:CustomNumberBox Grid.Column="0" x:Name="SkipTextBox" PlaceholderText="0" Header="Skip frame amount"/>
-                                                <TextBlock Margin="0 -8 0 0" Text="Skips entered amount of frames and draws the next, then skips again. Can increase speed or reduce framerate."  Style="{StaticResource HelperTextStyle}"/>
+                                                <local:CustomNumberBox Grid.Column="0" x:Name="SkipTextBox" PlaceholderText="0" Header="Step" Minimum="1" Maximum="5000"/>
+                                                <TextBlock Margin="0 -8 0 0" Text="Steps entered amount of frames and draws the next, then steps again. Can increase speed or reduce framerate."  Style="{StaticResource HelperTextStyle}"/>
 
 
                                                 <StackPanel Spacing="4">
@@ -325,8 +325,8 @@
                                                                         <ColumnDefinition Width="*"/>
                                                                     </Grid.ColumnDefinitions>
 
-                                                        <local:CustomNumberBox Grid.Column="0" x:Name="AnimationOffsetXTextBox" PlaceholderText="0" Header="Offset X"/>
-                                                        <local:CustomNumberBox Grid.Column="1" x:Name="AnimationOffsetYTextBox" PlaceholderText="0" Header="Offset Y"/>
+                                                        <local:CustomNumberBox Grid.Column="0" x:Name="AnimationOffsetXTextBox" PlaceholderText="0" Header="Offset X" Minimum="-9999" Maximum="9999"/>
+                                                        <local:CustomNumberBox Grid.Column="1" x:Name="AnimationOffsetYTextBox" PlaceholderText="0" Header="Offset Y" Minimum="-9999" Maximum="9999"/>
 
                                                                 </Grid>
                                                                 <TextBlock Text="Adjusts the offset of every frame after processing"  Style="{StaticResource HelperTextStyle}"/>
@@ -471,10 +471,10 @@
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <local:CustomNumberBox Grid.Column="0" x:Name="OffsetXTextBox" Header="Offset X" PlaceholderText="0"/>
-                                                    <local:CustomNumberBox Grid.Column="1" x:Name="OffsetYTextBox" Header="Offset Y" PlaceholderText="0"/>
+                                                    <local:CustomNumberBox Grid.Column="0" x:Name="OffsetXTextBox" Header="Offset X" PlaceholderText="0" Minimum="-99999" Maximum="99999"/>
+                                                    <local:CustomNumberBox Grid.Column="1" x:Name="OffsetYTextBox" Header="Offset Y" PlaceholderText="0" Minimum="-99999" Maximum="99999"/>
                                                 </Grid>
-                                                <local:CustomNumberBox Grid.Column="1" x:Name="MultiplyTextBox" Header="Multiply delay by" PlaceholderText="1"/>
+                                            <local:CustomNumberBox Grid.Column="1" x:Name="MultiplyTextBox" Header="Multiply delay by" PlaceholderText="1" Minimum="0" Maximum="1000"/>
                                             </StackPanel>
                                         </Border>
                                         <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
@@ -501,25 +501,61 @@
                                                     </Grid>
                                      
                                                 </StackPanel>
-                                        
 
-                                                <Grid ColumnSpacing="10" Margin="0 0 0 0">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <Button Grid.Column="0" Click="ALignCenterButton_Click" HorizontalAlignment="Stretch" Height="32">
-                                                        <FontIcon Glyph="&#xE73F;" FontSize="12"/>
-                                                    </Button>
-                                                    <Button Grid.Column="1" Click="ALignDownButton_Click" HorizontalAlignment="Stretch" Height="32">
-                                                        <FontIcon Glyph="&#xE74B;" FontSize="12"/>
-                                                    </Button>
-                                                    <Button Grid.Column="2" Click="ALignTopLeftButton_Click" HorizontalAlignment="Stretch" Height="32">
-                                                        <FontIcon Glyph="&#xEA4F;" FontSize="12"/>
-                                                    </Button>
-                                                </Grid>
-                                            </StackPanel>
+
+                                            <Grid ColumnSpacing="10" Margin="0 0 0 0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Button x:Name="AlignDownRightButton" Grid.Column="0" Click="AlignDownRightButton_Click" HorizontalAlignment="Stretch" Height="32">
+                                                    <FontIcon Glyph="&#xE8AD;" FontSize="12"
+              Rotation="90" Scale="1,1,1" CenterPoint="6,6,0"/>
+                                                </Button>
+                                                <Button x:Name="AlignDownButton" Grid.Column="1" Click="AlignDownButton_Click" HorizontalAlignment="Stretch" Height="32">
+                                                    <FontIcon Glyph="&#xE74B;" FontSize="12"/>
+                                                </Button>
+                                                <Button x:Name="AlignDownLeftButton" Grid.Column="2" Click="AlignDownLeftButton_Click" HorizontalAlignment="Stretch" Height="32">
+                                                    <FontIcon Glyph="&#xEA4F;" FontSize="12" Rotation="-90" CenterPoint="6,6,0"/>
+                                                </Button>
+                                            </Grid>
+
+                                            <Grid ColumnSpacing="10" Margin="0 -2 0 0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Button x:Name="AlignRightButton" Grid.Column="0" Click="AlignRightButton_Click" HorizontalAlignment="Stretch" Height="32">
+                                                    <FontIcon Glyph="&#xE72A;" FontSize="12"/>
+                                                </Button>
+                                                <Button x:Name="AlignCenterButton" Grid.Column="1" Click="AlignCenterButton_Click" HorizontalAlignment="Stretch" Height="32">
+                                                    <FontIcon Glyph="&#xE710;" FontSize="12"/>
+                                                </Button>
+
+                                                <Button x:Name="AlignLeftButton" Grid.Column="2" Click="AlignLeftButton_Click" HorizontalAlignment="Stretch" Height="32">
+                                                    <FontIcon Glyph="&#xE72B;" FontSize="12"/>
+                                                </Button>
+                                            </Grid>
+
+                                            <Grid ColumnSpacing="10" Margin="0 -2 0 0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Button x:Name="AlignUpRightButton" Grid.Column="0" Click="AlignUpRightButton_Click" HorizontalAlignment="Stretch" Height="32">
+                                                    <FontIcon Glyph="&#xE8AD;" FontSize="12"/>
+                                                </Button>
+                                                <Button x:Name="AlignUpButton" Grid.Column="1" Click="AlignUpButton_Click" HorizontalAlignment="Stretch" Height="32">
+                                                    <FontIcon Glyph="&#xE74A;" FontSize="12"/>
+                                                </Button>
+                                                <Button x:Name="AlignUpLeftButton" Grid.Column="2" Click="AlignUpLeftButton_Click" HorizontalAlignment="Stretch" Height="32">
+                                                    <FontIcon Glyph="&#xEA4F;" FontSize="12"/>
+                                                </Button>
+                                            </Grid>
+                                        </StackPanel>
                                         </Border>
                                         <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 8">
                                             <StackPanel Spacing="12">
@@ -531,8 +567,8 @@
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="32"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <local:CustomNumberBox Grid.Column="0" x:Name="DirectionTextBox" Header="Direction" PlaceholderText="90"/>
-                                                    <local:CustomNumberBox Grid.Column="1" x:Name="SpeedTextBox" Header="Speed" PlaceholderText="0"/>
+                                                    <local:CustomNumberBox Grid.Column="0" x:Name="DirectionTextBox" Header="Direction" PlaceholderText="90"  Minimum="-360" Maximum="360"/>
+                                                    <local:CustomNumberBox Grid.Column="1" x:Name="SpeedTextBox" Header="Speed" PlaceholderText="0" Minimum="0" Maximum="9999"/>
                                                     <Button Grid.Column="2" x:Name="RemoveMovementButton" VerticalAlignment="Bottom" Padding="9" Height="32" Click="RemoveMovementButton_Click">
                                                         <FontIcon Glyph="&#xE768;" FontSize="12"/>
                                                     </Button>

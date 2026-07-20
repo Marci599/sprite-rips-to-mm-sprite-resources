@@ -6,7 +6,8 @@
     IsTabStop="True"
     KeyDown="RootGrid_KeyDown"
     KeyUp="RootGrid_KeyUp"
-    xmlns:controls="using:CommunityToolkit.WinUI.Controls">
+    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
+    xmlns:local="using:FramesToMMSpriteResources">
 
         <Grid>
             <skia:SKSwapChainPanel x:Name="CoordinateCanvas"
@@ -75,10 +76,11 @@
                     HorizontalAlignment="Right">
                     <Border CornerRadius="4">
                         <StackPanel Spacing="0" Orientation="Horizontal">
-                            <TextBox x:Name="FromNumberBox"
+                            <local:CustomNumberBox x:Name="FromNumberBox"
                                 Width="45"
                                 MinWidth="0"
-                                PlaceholderText="0" CornerRadius="4 0 0 4"/>
+                                PlaceholderText="0" CornerRadius="4 0 0 4"
+                                Minimum="0" Maximum="9999"/>
                             <Border Background="{ThemeResource SurfaceStrokeColorDefaultBrush}"
                                 Margin="-1 -1 -1 0"
                                 BorderThickness="1"
@@ -87,10 +89,11 @@
                                 <TextBlock Text="-" VerticalAlignment="Center" Padding="0 0 0 3"/>
                             </Border>
 
-                            <TextBox x:Name="ToNumberBox" CornerRadius="0 4 4 0"
+                            <local:CustomNumberBox x:Name="ToNumberBox" CornerRadius="0 4 4 0"
                                 Width="45"           
                                 MinWidth="0"
-                                PlaceholderText="n"/>
+                                PlaceholderText="n"
+                                Minimum="0" Maximum="9999"/>
                         </StackPanel>
                     </Border>
                 </Border>
@@ -112,7 +115,7 @@
                                 <TextBlock Text="Recenter"/>
                             </StackPanel>
                         </Button>
-                        <TextBox x:Name="ZoomNumberBox"/>
+                        <local:CustomNumberBox x:Name="ZoomNumberBox" PlaceholderText="100" Minimum="10" Maximum="1800"/>
                     </StackPanel>
                 </Border>
             <Border

@@ -214,10 +214,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
         AnimationPreviewCanvas.PointerWheelChanged -= AnimationPreviewCanvas_PointerWheelChanged;
 
         ShowPreviousToggleSwitch.Toggled -= ShowPreviousToggleSwitch_Toggled;
-        ZoomNumberBox.TextChanged -= ZoomNumberBox_TextChanged;
+        ZoomNumberBox.ValueChanged -= ZoomNumberBox_TextChanged;
 
-        FromNumberBox.TextChanged -= FromNumberBox_TextChanged;
-        ToNumberBox.TextChanged -= ToNumberBox_TextChanged;
+        FromNumberBox.ValueChanged -= FromNumberBox_TextChanged;
+        ToNumberBox.ValueChanged -= ToNumberBox_TextChanged;
     }
 
 
@@ -251,8 +251,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
         {
             int maxFrames = Math.Max(PreviewSpriteFrames.Count - 1, 0);
             ToNumberBox.PlaceholderText = maxFrames.ToString();
-            //ToNumberBox.Maximum = maxFrames;
-            //FromNumberBox.Maximum = maxFrames;
+            ToNumberBox.Maximum = maxFrames;
+            FromNumberBox.Maximum = maxFrames;
             _previewTimer.Start();
 
             ShowPreviousToggleSwitch.IsOn = MainWindow.ProgramConfig.ShowPreviousFrameBehind;
@@ -292,10 +292,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
             AnimationPreviewCanvas.PointerWheelChanged += AnimationPreviewCanvas_PointerWheelChanged;
 
             ShowPreviousToggleSwitch.Toggled += ShowPreviousToggleSwitch_Toggled;
-            ZoomNumberBox.TextChanged += ZoomNumberBox_TextChanged;
+            ZoomNumberBox.ValueChanged += ZoomNumberBox_TextChanged;
 
-            FromNumberBox.TextChanged += FromNumberBox_TextChanged;
-            ToNumberBox.TextChanged += ToNumberBox_TextChanged;
+            FromNumberBox.ValueChanged += FromNumberBox_TextChanged;
+            ToNumberBox.ValueChanged += ToNumberBox_TextChanged;
 
 
 
@@ -457,15 +457,15 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _isUpdatingZoomControls = false;
     }
 
-    private void ZoomNumberBox_TextChanged(object? sender, RoutedEventArgs args)
+    private void ZoomNumberBox_TextChanged(float? zoomValue)
     {
-        string text = (sender as TextBox)!.Text;
-        if (_isUpdatingZoomControls || string.IsNullOrWhiteSpace(text))
+ 
+        if (_isUpdatingZoomControls)
         {
             return;
         }
 
-        float newZoom = Math.Clamp(float.Parse(text) / 100.0f, MinZoom, MaxZoom);
+        float newZoom = Math.Clamp((float)zoomValue! / 100.0f, MinZoom, MaxZoom);
         if (Math.Abs(newZoom - GetSubjectInterfaceConfig().EditorCanvas.Zoom) < 0.0001f)
         {
             return;
@@ -1062,27 +1062,26 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
  
 
-    private void FromNumberBox_TextChanged(object? sender, RoutedEventArgs args)
+    private void FromNumberBox_TextChanged(float? fromValue)
     {
-        string text = (sender as TextBox)!.Text;
-        getCurrentAnimationInterfaceConfig().Range.From = string.IsNullOrWhiteSpace(text) ? 0 : int.Parse(text);
-        //ToNumberBox.Minimum = getCurrentAnimationInterfaceConfig().Range.From;
+     
+        getCurrentAnimationInterfaceConfig().Range.From = (int)fromValue!;
+        ToNumberBox.Minimum = getCurrentAnimationInterfaceConfig().Range.From;
     }
 
-    private void ToNumberBox_TextChanged(object? sender, RoutedEventArgs args)
+    private void ToNumberBox_TextChanged(float? toValue)
     {
-        string text = (sender as TextBox)!.Text;
-        var number = string.IsNullOrWhiteSpace(text) ? double.NaN : double.Parse(text);
+  
         var max = Math.Max(PreviewSpriteFrames.Count - 1, 0);
-        if (double.IsNaN(number) || number == max)
+        if (toValue == null || toValue == max)
         {
             getCurrentAnimationInterfaceConfig().Range.To = -1;
-            //FromNumberBox.Maximum = max;
+            FromNumberBox.Maximum = max;
             return;
         }
 
-        getCurrentAnimationInterfaceConfig().Range.To = (int)number;
-        //FromNumberBox.Maximum = number;
+        getCurrentAnimationInterfaceConfig().Range.To = (int)toValue;
+        FromNumberBox.Maximum = (double)toValue;
     }
 
     private void ApplyHeldNudgeKeys()
