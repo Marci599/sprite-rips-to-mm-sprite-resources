@@ -151,21 +151,34 @@
                         <Grid x:Name="SubjectPanel" Visibility="Collapsed">
                             <ScrollViewer>
                                 <StackPanel Padding="20 20 20 20" Spacing="10">
-                                    
-                                        
-                                            
 
-                                        
 
-                                        
 
-                     
-                                
 
+
+
+
+
+
+
+                               
                                     <!-- Processing Group -->
                                     <Border Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
                                         <StackPanel Spacing="12">
-                                            <TextBlock Text="Processing" Style="{StaticResource SectionHeaderStyle}"/>
+                                            <Grid ColumnSpacing="10">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="Processing" Style="{StaticResource SectionHeaderStyle}"/>
+                                                <Button Grid.Column="1" x:Name="SetAsDefaultProcesingButton" Margin="0 -3 -11 -7" Click="SetAsDefaultProcesingButton_Click" ToolTipService.ToolTip="When a new subject config is created, a copy of this processing config will be used">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <FontIcon Glyph="&#xF5ED;" FontSize="12"/>
+                                                        <TextBlock Text="Set as default"/>
+                                                    </StackPanel>
+                                                    </Button>
+                                            </Grid>
+                                           
 
                                             <Rectangle Style="{StaticResource GroupDividerStyle}"/>
                                             <local:ProcessingCard x:Name="ProcessingCardControl" Grid.Column="1"/>
@@ -173,14 +186,14 @@
                                     
                                     </Border>
 
-                                    <Grid ColumnSpacing="10">
+                                    <Grid ColumnSpacing="10" MaxWidth="1000">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="*"/>
                                             
                                         </Grid.ColumnDefinitions>
                                         <!-- Sheet Dimensions Group -->
-                                        <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
+                                        <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
                                             <StackPanel Spacing="12">
                                                 <TextBlock Text="Exporting" Style="{StaticResource SectionHeaderStyle}"/>
                                                 <Rectangle Style="{StaticResource GroupDividerStyle}"/>
@@ -190,10 +203,10 @@
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <TextBox Grid.Column="0" x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width" VerticalAlignment="Top"/>
+                                                    <local:CustomNumberBox Grid.Column="0" x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width" VerticalAlignment="Top"/>
 
 
-                                                    <TextBox Grid.Column="1" x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height"/>
+                                                    <local:CustomNumberBox Grid.Column="1" x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height"/>
 
 
                                                 </Grid>
@@ -248,7 +261,7 @@
 
 
 
-                                                <TextBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay"/>
+                                                <local:CustomNumberBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay"/>
                                                 <ComboBox x:Name="LoopTypeComboBox" Header="Loop mode" HorizontalAlignment="Stretch">
                                                     <x:String>Default</x:String>
                                                     <x:String>Loop</x:String>
@@ -266,18 +279,29 @@
                                                 <TextBlock Text="Bulk editing" Style="{StaticResource SectionHeaderStyle}"/>
 
                                                 <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                                                    
 
-                                                <Button Click="MirrorButton_Click" HorizontalAlignment="Left" Height="32">
-                                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <FontIcon Glyph="&#xE8AB;" FontSize="12"/>
-                                                        <TextBlock Text="Mirror horizontally"/>
+                                                    <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
+                                                        <Button Click="MirrorButton_Click" HorizontalAlignment="Left" Height="32">
+                                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                <FontIcon Glyph="&#xE8AB;" FontSize="12"/>
+                                                                <TextBlock Text="Mirror horizontally"/>
 
-                                                    </StackPanel>
+                                                            </StackPanel>
 
-                                                </Button>
+                                                        </Button>
+                                                        <Button Click="MirrorButtonVertical_Click" HorizontalAlignment="Left" Height="32">
+                                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                <FontIcon Glyph="&#xE8CB;" FontSize="12"/>
+                                                                <TextBlock Text="Mirror vertically"/>
 
-                                            </StackPanel>
+                                                            </StackPanel>
+
+                                                        </Button>
+                                                    </controls:WrapPanel>
+                                                    <TextBlock Text="To crop, you can import your frames to NickeManarin/ScreenToGif do it there, and save back here" Style="{StaticResource HelperTextStyle}"/>
+
+
+                                                </StackPanel>
                                         </Border>
 
                                         </Grid>
@@ -290,7 +314,7 @@
 
 
 
-                                                <TextBox Grid.Column="0" x:Name="SkipTextBox" PlaceholderText="0" Header="Skip frame amount"/>
+                                                <local:CustomNumberBox Grid.Column="0" x:Name="SkipTextBox" PlaceholderText="0" Header="Skip frame amount"/>
                                                 <TextBlock Margin="0 -8 0 0" Text="Skips entered amount of frames and draws the next, then skips again. Can increase speed or reduce framerate."  Style="{StaticResource HelperTextStyle}"/>
 
 
@@ -301,8 +325,8 @@
                                                                         <ColumnDefinition Width="*"/>
                                                                     </Grid.ColumnDefinitions>
 
-                                                        <TextBox Grid.Column="0" x:Name="AnimationOffsetXTextBox" PlaceholderText="0" Header="Offset X"/>
-                                                        <TextBox Grid.Column="1" x:Name="AnimationOffsetYTextBox" PlaceholderText="0" Header="Offset Y"/>
+                                                        <local:CustomNumberBox Grid.Column="0" x:Name="AnimationOffsetXTextBox" PlaceholderText="0" Header="Offset X"/>
+                                                        <local:CustomNumberBox Grid.Column="1" x:Name="AnimationOffsetYTextBox" PlaceholderText="0" Header="Offset Y"/>
 
                                                                 </Grid>
                                                                 <TextBlock Text="Adjusts the offset of every frame after processing"  Style="{StaticResource HelperTextStyle}"/>
@@ -447,10 +471,10 @@
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <TextBox Grid.Column="0" x:Name="OffsetXTextBox" Header="Offset X" PlaceholderText="0"/>
-                                                    <TextBox Grid.Column="1" x:Name="OffsetYTextBox" Header="Offset Y" PlaceholderText="0"/>
+                                                    <local:CustomNumberBox Grid.Column="0" x:Name="OffsetXTextBox" Header="Offset X" PlaceholderText="0"/>
+                                                    <local:CustomNumberBox Grid.Column="1" x:Name="OffsetYTextBox" Header="Offset Y" PlaceholderText="0"/>
                                                 </Grid>
-                                                <TextBox Grid.Column="1" x:Name="MultiplyTextBox" Header="Multiply delay by" PlaceholderText="1"/>
+                                                <local:CustomNumberBox Grid.Column="1" x:Name="MultiplyTextBox" Header="Multiply delay by" PlaceholderText="1"/>
                                             </StackPanel>
                                         </Border>
                                         <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
@@ -507,8 +531,8 @@
                                                         <ColumnDefinition Width="*"/>
                                                         <ColumnDefinition Width="32"/>
                                                     </Grid.ColumnDefinitions>
-                                                    <TextBox Grid.Column="0" x:Name="DirectionTextBox" Header="Direction" PlaceholderText="90"/>
-                                                    <TextBox Grid.Column="1" x:Name="SpeedTextBox" Header="Speed" PlaceholderText="0"/>
+                                                    <local:CustomNumberBox Grid.Column="0" x:Name="DirectionTextBox" Header="Direction" PlaceholderText="90"/>
+                                                    <local:CustomNumberBox Grid.Column="1" x:Name="SpeedTextBox" Header="Speed" PlaceholderText="0"/>
                                                     <Button Grid.Column="2" x:Name="RemoveMovementButton" VerticalAlignment="Bottom" Padding="9" Height="32" Click="RemoveMovementButton_Click">
                                                         <FontIcon Glyph="&#xE768;" FontSize="12"/>
                                                     </Button>

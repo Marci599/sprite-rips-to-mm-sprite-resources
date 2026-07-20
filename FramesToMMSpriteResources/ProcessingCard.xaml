@@ -1,7 +1,8 @@
 <UserControl
     x:Class="FramesToMMSpriteResources.ProcessingCard"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:FramesToMMSpriteResources">
 
     
         <StackPanel Spacing="12">
@@ -26,7 +27,7 @@
                     <TextBlock Text="If already transparent, leave it blank" Style="{StaticResource HelperTextStyle}" />
                 </StackPanel>
 
-                <TextBox Grid.Column="1" x:Name="ThresholdTextBox" PlaceholderText="100" Header="Threshold" VerticalAlignment="Top"/>
+                <local:CustomNumberBox Grid.Column="1" x:Name="ThresholdTextBox" PlaceholderText="100" Header="Threshold" VerticalAlignment="Top"/>
             </Grid>
    
             
@@ -40,7 +41,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <TextBox Grid.Column="0" x:Name="ResizeTextBox" PlaceholderText="100" Header="Resize to percent" />
+                <local:CustomNumberBox Grid.Column="0" x:Name="ResizeTextBox" PlaceholderText="100" Header="Resize to percent" />
                 <ComboBox Grid.Column="1" x:Name="SamplingComboBox" Header="Filter mode" HorizontalAlignment="Stretch">
                     <x:String>Nearest</x:String>
                     <x:String>Linear</x:String>

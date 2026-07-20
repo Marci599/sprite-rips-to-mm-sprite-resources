@@ -31,11 +31,11 @@ public sealed partial class ProcessingCard : UserControl
     public CheckBox GetCropTopCheckBox { get => CropTopCheckBox; }
     public CheckBox GetCropRightCheckBox { get => CropRightCheckBox; }
     public CheckBox GetCropBottomCheckBox { get => CropBottomCheckBox; }
-    public TextBox GetResizeTextBox { get => ResizeTextBox; }
+    public CustomNumberBox GetResizeTextBox { get => ResizeTextBox; }
     public ComboBox GetSamplingComboBox { get => SamplingComboBox; }
     public ComboBox GetMipmapComboBox { get => MipmapComboBox; }
     public TextBox GetColorTextBox { get => ColorTextBox; }
-    public TextBox GetThresholdTextBox { get => ThresholdTextBox; }
+    public CustomNumberBox GetThresholdTextBox { get => ThresholdTextBox; }
 
     public void UpdateColorPreview()
     {

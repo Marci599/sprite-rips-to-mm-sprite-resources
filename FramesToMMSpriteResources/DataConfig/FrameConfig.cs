@@ -1,8 +1,9 @@
-﻿using System.Text.Json.Serialization;
+﻿using System;
+using System.Text.Json.Serialization;
 
 namespace FramesToMMSpriteResources
 {
-    public class FrameConfig
+    public class FrameConfig : ICloneable
     {
         [JsonPropertyName("offset")]
         public IntVector2 Offset = new IntVector2(0,0);
@@ -22,7 +23,13 @@ namespace FramesToMMSpriteResources
             Name = name;
         }
 
-
-
+        public object Clone()
+        {
+            return new FrameConfig
+            {
+                Offset = this.Offset,
+                MultipyDelayBy = this.MultipyDelayBy,
+            };
+        }
     }
 }

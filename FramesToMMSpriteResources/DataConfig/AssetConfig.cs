@@ -16,6 +16,9 @@ namespace FramesToMMSpriteResources
         [JsonPropertyName("note")]
         public string Note;
 
+        [JsonPropertyName("processing_default")]
+        public ProcessingConfig ProcessingDefault = new();
+
         [JsonIgnore]
         public Dictionary<string, SubjectConfig>? SubjectConfigs = [];
 

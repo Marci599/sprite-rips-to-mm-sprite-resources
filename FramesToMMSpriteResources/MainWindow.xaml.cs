@@ -21,6 +21,7 @@ using System.Linq;
 using System.Media;
 using System.Numerics;
 using System.Reflection.PortableExecutable;
+using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text.Json;
@@ -33,9 +34,6 @@ using Windows.Storage;
 using Windows.Storage.Pickers;
 using Windows.Storage.Streams;
 
-//TODO: WHEN THERE IS A NODE SAVED AS SELECTED, BUT THE FOLDER/SPRITE GETS REMOVED, PROGRAM CRASHES
-//TODO: REMOVE UNUSED OFFSETS AFTER GENERATION
-//TODO: HANDLE NUMBER PARSING
 namespace FramesToMMSpriteResources
 {
     public enum ItemDepth
@@ -709,6 +707,7 @@ namespace FramesToMMSpriteResources
             IsHdCheckBox.Click += ClickIsHdCheckBox;
 
             var subjectDirs = Directory.GetDirectories(WorkingPath);
+            List<string> trimmedSelectedNodes = [];
 
             foreach (var subjectDir in subjectDirs)
             {
@@ -718,11 +717,12 @@ namespace FramesToMMSpriteResources
                     SubjectConfig subjectConfig = LoadJson<SubjectConfig>(Path.Combine(subjectDir, CONFIG_FILENAME));
                     subjectConfig.InterfaceConfig = LoadJson<SubjectInterfaceConfig>(Path.Combine(subjectDir, INTERFACE_CONFIG_FILENAME));
       
-
+              
                     var subjectTreeItem = new TreeViewNode { Content = new TreeItem(subjectName, ItemDepth.Subject), IsExpanded = subjectConfig.InterfaceConfig.IsExpanded };
 
                     var animationDirs = Directory.GetDirectories(subjectDir);
-                    int framesSum = 0;
+                    int framesSum = 0;                 
+
                     foreach (var animationDir in animationDirs)
                     {
                         string animationName = Path.GetFileName(animationDir);
@@ -750,7 +750,17 @@ namespace FramesToMMSpriteResources
                                 }
                                 else
                                 {
-                                    animationConfig.FrameCongfigs.Add(new FrameConfig(fileName));
+                                    if(animationConfig.FrameCongfigs.Count == 0)
+                                    {
+                                        animationConfig.FrameCongfigs.Add(new FrameConfig(fileName));
+                                    }
+                                    else
+                                    {
+                                        var frameConfigCopy = (FrameConfig)animationConfig.FrameCongfigs[animationConfig.FrameCongfigs.Count - 1].Clone();
+                                        frameConfigCopy.Name = fileName;
+                                        animationConfig.FrameCongfigs.Add(frameConfigCopy);
+                                    }
+                                    
                                 }
 
                                 string frameName = frameIndex.ToString("D4");
@@ -766,6 +776,7 @@ namespace FramesToMMSpriteResources
                                     ProgramConfig.SelectedNodePath[1] == animationName &&
                                     ProgramConfig.SelectedNodes.Contains(frameName))
                                 {
+                                    trimmedSelectedNodes.Add(frameName);
                                     (frameTreeViewNode.Content as TreeItem)!.IsSelected = true;
 
                                     if (ProgramConfig.SelectedNodes.Last() == frameName)
@@ -802,6 +813,7 @@ namespace FramesToMMSpriteResources
                                 ProgramConfig.SelectedNodePath[0] == subjectName &&
                                 ProgramConfig.SelectedNodes.Contains(animationName))
                             {
+                                trimmedSelectedNodes.Add(animationName);
                                 (animationTreeItem.Content as TreeItem)!.IsSelected = true;
 
                                 if (ProgramConfig.SelectedNodes.Last() == animationName)
@@ -824,6 +836,7 @@ namespace FramesToMMSpriteResources
                     ProgramConfig.SelectedNodePath.Count == 0 &&
                     ProgramConfig.SelectedNodes.Contains(subjectName))
                     {
+                        trimmedSelectedNodes.Add(subjectName);
                         (subjectTreeItem.Content as TreeItem)!.IsSelected = true;
 
                         if (ProgramConfig.SelectedNodes.Last() == subjectName)
@@ -833,6 +846,7 @@ namespace FramesToMMSpriteResources
                     }
                 }       
             }
+            ProgramConfig.SelectedNodes = trimmedSelectedNodes;
         }
 
         void UpdateBreadcrumb(params string[] items)
@@ -1298,19 +1312,20 @@ namespace FramesToMMSpriteResources
             ProcessingCardControl.GetCropRightCheckBox.Click -= ClickCropRightCheckBox;
             ProcessingCardControl.GetCropBottomCheckBox.Click -= ClickCropBottomCheckBox;
 
-            ProcessingCardControl.GetResizeTextBox.TextChanged -= ResizeTextBox_ValueChanged;
+            ProcessingCardControl.GetResizeTextBox.ValueChanged -= ResizeTextBox_ValueChanged;
             ProcessingCardControl.GetSamplingComboBox.SelectionChanged -= SamplingComboBox_SelectionChanged;
             ProcessingCardControl.GetMipmapComboBox.SelectionChanged -= MipmapComboBox_SelectionChanged;
             ProcessingCardControl.GetColorTextBox.TextChanged -= ColorTextBox_TextChanged;
-            ProcessingCardControl.GetThresholdTextBox.TextChanged -= ThresholdTextBox_ValueChanged;
+            ProcessingCardControl.GetColorTextBox.TextChanged -= ProcessingCardControl.ColorTextBox_TextChanged;
+            ProcessingCardControl.GetThresholdTextBox.ValueChanged -= ThresholdTextBox_ValueChanged;
 
-            SheetWidthTextBox.TextChanged -= SheetWidthTextBox_ValueChanged;
-            SheetHeightTextBox.TextChanged -= SheetHeightTextBox_ValueChanged;
+            SheetWidthTextBox.ValueChanged -= SheetWidthTextBox_ValueChanged;
+            SheetHeightTextBox.ValueChanged -= SheetHeightTextBox_ValueChanged;
 
             NoteTextBox.TextChanged -= NoteTextBox_ValueChanged;
 
             subjectConfig.Export ??= new SubjectExportConfig();
-            subjectConfig.Processing ??= new ProcessingConfig();
+            subjectConfig.Processing ??= (ProcessingConfig)ProgramConfig.AssetConfig!.ProcessingDefault.Clone();
 
             ProcessingCardControl.GetRemoveBackgroundCheckBox.IsChecked = subjectConfig.Processing.RemoveBackground;
             ProcessingCardControl.GetCropLeftCheckBox.IsChecked = subjectConfig.Processing.CropLeft;
@@ -1318,13 +1333,13 @@ namespace FramesToMMSpriteResources
             ProcessingCardControl.GetCropRightCheckBox.IsChecked = subjectConfig.Processing.CropRight;
             ProcessingCardControl.GetCropBottomCheckBox.IsChecked = subjectConfig.Processing.CropBottom;
 
-            ProcessingCardControl.GetResizeTextBox.Text = subjectConfig.Processing.ResizeToPercent.ToString();
+            ProcessingCardControl.GetResizeTextBox.Value = subjectConfig.Processing.ResizeToPercent;
             ProcessingCardControl.GetSamplingComboBox.SelectedIndex = subjectConfig.Processing.FilterMode;
             ProcessingCardControl.GetMipmapComboBox.SelectedIndex = subjectConfig.Processing.MipmapMode;
 
-            ProcessingCardControl.GetThresholdTextBox.Text = subjectConfig.Processing.ColorTreshold.ToString();
-            SheetWidthTextBox.Text = subjectConfig.Export.Width.ToString();
-            SheetHeightTextBox.Text = subjectConfig.Export.Height.ToString();
+            ProcessingCardControl.GetThresholdTextBox.Value = subjectConfig.Processing.ColorTreshold;
+            SheetWidthTextBox.Value = subjectConfig.Export.Width;
+            SheetHeightTextBox.Value = subjectConfig.Export.Height;
 
             NoteTextBox.Text = subjectConfig.Note;
 
@@ -1337,14 +1352,15 @@ namespace FramesToMMSpriteResources
             ProcessingCardControl.GetCropRightCheckBox.Click += ClickCropRightCheckBox;
             ProcessingCardControl.GetCropBottomCheckBox.Click += ClickCropBottomCheckBox;
 
-            ProcessingCardControl.GetResizeTextBox.TextChanged += ResizeTextBox_ValueChanged;
+            ProcessingCardControl.GetResizeTextBox.ValueChanged += ResizeTextBox_ValueChanged;
             ProcessingCardControl.GetSamplingComboBox.SelectionChanged += SamplingComboBox_SelectionChanged;
             ProcessingCardControl.GetMipmapComboBox.SelectionChanged += MipmapComboBox_SelectionChanged;
             ProcessingCardControl.GetColorTextBox.TextChanged += ColorTextBox_TextChanged;
-            ProcessingCardControl.GetThresholdTextBox.TextChanged += ThresholdTextBox_ValueChanged;
+            ProcessingCardControl.GetColorTextBox.TextChanged += ProcessingCardControl.ColorTextBox_TextChanged;
+            ProcessingCardControl.GetThresholdTextBox.ValueChanged += ThresholdTextBox_ValueChanged;
 
-            SheetWidthTextBox.TextChanged += SheetWidthTextBox_ValueChanged;
-            SheetHeightTextBox.TextChanged += SheetHeightTextBox_ValueChanged;
+            SheetWidthTextBox.ValueChanged += SheetWidthTextBox_ValueChanged;
+            SheetHeightTextBox.ValueChanged += SheetHeightTextBox_ValueChanged;
 
             NoteTextBox.TextChanged += NoteTextBox_ValueChanged;
 
@@ -1358,12 +1374,12 @@ namespace FramesToMMSpriteResources
             RecoverXCheckBox.Click -= ClickRecoverXCheckBox;
             RecoverYCheckBox.Click -= ClickRecoverYCheckBox;
 
-            DelayTextBox.TextChanged -= DelayTextBox_ValueChanged;
+            DelayTextBox.ValueChanged -= DelayTextBox_ValueChanged;
             LoopTypeComboBox.SelectionChanged -= LoopTypeComboBox_SelectionChanged;
-            SkipTextBox.TextChanged -= SkipTextBox_ValueChanged;
+            SkipTextBox.ValueChanged -= SkipTextBox_ValueChanged;
 
-            AnimationOffsetXTextBox.TextChanged -= AnimationOffsetXTextBox_ValueChanged;
-            AnimationOffsetYTextBox.TextChanged -= AnimationOffsetYTextBox_ValueChanged;
+            AnimationOffsetXTextBox.ValueChanged -= AnimationOffsetXTextBox_ValueChanged;
+            AnimationOffsetYTextBox.ValueChanged -= AnimationOffsetYTextBox_ValueChanged;
 
             AlsoKnownAsTextBox.TextChanged -= AlsoKnownAsTextBox_TextChanged;
             AlsoKnownAsAddButton.Click -= AlsoKnownAsAddButton_Click;
@@ -1376,14 +1392,14 @@ namespace FramesToMMSpriteResources
             RecoverXCheckBox.IsChecked = animationConfig.RecoverCroppedOffset.X;
             RecoverYCheckBox.IsChecked = animationConfig.RecoverCroppedOffset.Y;
 
-            DelayTextBox.Text = animationConfig.Delay.ToString();
+            DelayTextBox.Value = animationConfig.Delay;
 
             LoopTypeComboBox.SelectedIndex = animationConfig.LoopType;
 
-            SkipTextBox.Text = animationConfig.Skip.ToString();
+            SkipTextBox.Value = animationConfig.Skip;
 
-            AnimationOffsetXTextBox.Text = animationConfig.Offset.Value.X.ToString();
-            AnimationOffsetYTextBox.Text = animationConfig.Offset.Value.Y.ToString();
+            AnimationOffsetXTextBox.Value = animationConfig.Offset.Value.X;
+            AnimationOffsetYTextBox.Value = animationConfig.Offset.Value.Y;
 
             AlsoKnownAsTextBox.Text = (animationConfig.InterfaceConfig as AnimationInterfaceConfig)!.AlsoKnownAs;
 
@@ -1392,13 +1408,13 @@ namespace FramesToMMSpriteResources
             RecoverXCheckBox.Click += ClickRecoverXCheckBox;
             RecoverYCheckBox.Click += ClickRecoverYCheckBox;
 
-            DelayTextBox.TextChanged += DelayTextBox_ValueChanged;
+            DelayTextBox.ValueChanged += DelayTextBox_ValueChanged;
             LoopTypeComboBox.SelectionChanged += LoopTypeComboBox_SelectionChanged;
 
-            SkipTextBox.TextChanged += SkipTextBox_ValueChanged;
+            SkipTextBox.ValueChanged += SkipTextBox_ValueChanged;
 
-            AnimationOffsetXTextBox.TextChanged += AnimationOffsetXTextBox_ValueChanged;
-            AnimationOffsetYTextBox.TextChanged += AnimationOffsetYTextBox_ValueChanged;
+            AnimationOffsetXTextBox.ValueChanged += AnimationOffsetXTextBox_ValueChanged;
+            AnimationOffsetYTextBox.ValueChanged += AnimationOffsetYTextBox_ValueChanged;
 
             AlsoKnownAsTextBox.TextChanged += AlsoKnownAsTextBox_TextChanged;    
             AlsoKnownAsAddButton.Click += AlsoKnownAsAddButton_Click;
@@ -1434,11 +1450,11 @@ namespace FramesToMMSpriteResources
             ProcessingOverwriteCardControl.GetCropRightCheckBox.Click -= ClickOverwriteCropRightCheckBox;
             ProcessingOverwriteCardControl.GetCropBottomCheckBox.Click -= ClickOverwriteCropBottomCheckBox;
 
-            ProcessingOverwriteCardControl.GetResizeTextBox.TextChanged -= ResizeOverwriteTextBox_ValueChanged;
+            ProcessingOverwriteCardControl.GetResizeTextBox.ValueChanged -= ResizeOverwriteTextBox_ValueChanged;
             ProcessingOverwriteCardControl.GetSamplingComboBox.SelectionChanged -= SamplingOverwriteComboBox_SelectionChanged;
             ProcessingOverwriteCardControl.GetMipmapComboBox.SelectionChanged -= MipmapOverwriteComboBox_SelectionChanged;
             ProcessingOverwriteCardControl.GetColorTextBox.TextChanged -= ColorOverwriteTextBox_TextChanged;
-            ProcessingOverwriteCardControl.GetThresholdTextBox.TextChanged -= ThresholdOverwriteTextBox_ValueChanged;
+            ProcessingOverwriteCardControl.GetThresholdTextBox.ValueChanged -= ThresholdOverwriteTextBox_ValueChanged;
 
             ProcessingOverwriteCardControl.GetColorTextBox.TextChanged -= ProcessingOverwriteCardControl.ColorTextBox_TextChanged;
 
@@ -1448,10 +1464,10 @@ namespace FramesToMMSpriteResources
             ProcessingOverwriteCardControl.GetCropRightCheckBox.IsChecked = configToSetFrom.CropRight;
             ProcessingOverwriteCardControl.GetCropBottomCheckBox.IsChecked = configToSetFrom.CropBottom;
 
-            ProcessingOverwriteCardControl.GetResizeTextBox.Text = configToSetFrom.ResizeToPercent.ToString();
+            ProcessingOverwriteCardControl.GetResizeTextBox.Value = configToSetFrom.ResizeToPercent;
             ProcessingOverwriteCardControl.GetSamplingComboBox.SelectedIndex = configToSetFrom.FilterMode;
             ProcessingOverwriteCardControl.GetMipmapComboBox.SelectedIndex = configToSetFrom.MipmapMode;
-            ProcessingOverwriteCardControl.GetThresholdTextBox.Text = configToSetFrom.ColorTreshold.ToString();
+            ProcessingOverwriteCardControl.GetThresholdTextBox.Value = configToSetFrom.ColorTreshold;
             ProcessingOverwriteCardControl.GetColorTextBox.Text = configToSetFrom.BackgroundColor ?? "";
             ProcessingOverwriteCardControl.UpdateColorPreview();
 
@@ -1462,11 +1478,11 @@ namespace FramesToMMSpriteResources
             ProcessingOverwriteCardControl.GetCropRightCheckBox.Click += ClickOverwriteCropRightCheckBox;
             ProcessingOverwriteCardControl.GetCropBottomCheckBox.Click += ClickOverwriteCropBottomCheckBox;
 
-            ProcessingOverwriteCardControl.GetResizeTextBox.TextChanged += ResizeOverwriteTextBox_ValueChanged;
+            ProcessingOverwriteCardControl.GetResizeTextBox.ValueChanged += ResizeOverwriteTextBox_ValueChanged;
             ProcessingOverwriteCardControl.GetSamplingComboBox.SelectionChanged += SamplingOverwriteComboBox_SelectionChanged;
             ProcessingOverwriteCardControl.GetMipmapComboBox.SelectionChanged += MipmapOverwriteComboBox_SelectionChanged;
             ProcessingOverwriteCardControl.GetColorTextBox.TextChanged += ColorOverwriteTextBox_TextChanged;
-            ProcessingOverwriteCardControl.GetThresholdTextBox.TextChanged += ThresholdOverwriteTextBox_ValueChanged;
+            ProcessingOverwriteCardControl.GetThresholdTextBox.ValueChanged += ThresholdOverwriteTextBox_ValueChanged;
 
             ProcessingOverwriteCardControl.GetColorTextBox.TextChanged += ProcessingOverwriteCardControl.ColorTextBox_TextChanged;
 
@@ -1478,16 +1494,16 @@ namespace FramesToMMSpriteResources
         async void DisplayFrameCongifAsync(string subjectName, string animationName, string frameName, bool isFromFramePanel, int frameCount, SubjectConfig subjectConfig, AnimationConfig animationConfig)
         {
 
-            DirectionTextBox.TextChanged -= DirectionTextBox_ValueChanged;
-            SpeedTextBox.TextChanged -= SpeedTextBox_ValueChanged;
+            DirectionTextBox.ValueChanged -= DirectionTextBox_ValueChanged;
+            SpeedTextBox.ValueChanged -= SpeedTextBox_ValueChanged;
 
             BasedOnRadioButtons.SelectionChanged -= BasedOnRadioButtons_SelectionChanged;
             AlignOnXAxis.Click -= AlignOnXAxis_Click;
             AlignOnYAxis.Click -= AlignOnYAxis_Click;
 
-            OffsetXTextBox.TextChanged -= OffsetXTextBox_ValueChanged;
-            OffsetYTextBox.TextChanged -= OffsetYTextBox_ValueChanged;
-            MultiplyTextBox.TextChanged -= MultiplyTextBox_ValueChanged;
+            OffsetXTextBox.ValueChanged -= OffsetXTextBox_ValueChanged;
+            OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
+            MultiplyTextBox.ValueChanged -= MultiplyTextBox_ValueChanged;
        
             string[] newPath = [subjectName, animationName];
 
@@ -1512,27 +1528,27 @@ namespace FramesToMMSpriteResources
 
             AnimationInterfaceConfig animationInterfaceConfig = (animationConfig.InterfaceConfig as AnimationInterfaceConfig)!;
 
-            DirectionTextBox.Text = animationInterfaceConfig.Direction.ToString();
-            SpeedTextBox.Text = animationInterfaceConfig.Speed.ToString();
+            DirectionTextBox.Value = animationInterfaceConfig.Direction;
+            SpeedTextBox.Value = animationInterfaceConfig.Speed;
 
             BasedOnRadioButtons.SelectedIndex = (int)animationInterfaceConfig.AlignBasedOn;
             AlignOnXAxis.IsChecked = animationInterfaceConfig.AlignOnXAxis;
             AlignOnYAxis.IsChecked = animationInterfaceConfig.AlignOnYAxis;
 
-            OffsetXTextBox.Text = frameConfig.Offset.X.ToString();
-            OffsetYTextBox.Text = frameConfig.Offset.Y.ToString();
-            MultiplyTextBox.Text = frameConfig.MultipyDelayBy.ToString();
+            OffsetXTextBox.Value = frameConfig.Offset.X;
+            OffsetYTextBox.Value = frameConfig.Offset.Y;
+            MultiplyTextBox.Value = frameConfig.MultipyDelayBy;
 
-            DirectionTextBox.TextChanged += DirectionTextBox_ValueChanged;
-            SpeedTextBox.TextChanged += SpeedTextBox_ValueChanged;
+            DirectionTextBox.ValueChanged += DirectionTextBox_ValueChanged;
+            SpeedTextBox.ValueChanged += SpeedTextBox_ValueChanged;
 
             BasedOnRadioButtons.SelectionChanged += BasedOnRadioButtons_SelectionChanged;
             AlignOnXAxis.Click += AlignOnXAxis_Click;
             AlignOnYAxis.Click += AlignOnYAxis_Click;
 
-            OffsetXTextBox.TextChanged += OffsetXTextBox_ValueChanged;
-            OffsetYTextBox.TextChanged += OffsetYTextBox_ValueChanged;
-            MultiplyTextBox.TextChanged += MultiplyTextBox_ValueChanged;
+            OffsetXTextBox.ValueChanged += OffsetXTextBox_ValueChanged;
+            OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
+            MultiplyTextBox.ValueChanged += MultiplyTextBox_ValueChanged;
             if (IsLoadingFrames && !isCancelled) return;
             cts = new();
             try
@@ -1689,22 +1705,22 @@ namespace FramesToMMSpriteResources
         SubjectConfig GetCurrentSubjectConfig()
         {
             var node = TreeViewControl.SelectedNode;
-            var subjectName = (node.Parent.Content as TreeItem)!.Text;
+            var subjectName = (node.Content as TreeItem)!.Text;
             return ProgramConfig.AssetConfig!.SubjectConfigs![subjectName];
         }
 
         public void RefreshOffsetFieldVisually()
         {
-            OffsetXTextBox.TextChanged -= OffsetXTextBox_ValueChanged;
-            OffsetYTextBox.TextChanged -= OffsetYTextBox_ValueChanged;
+            OffsetXTextBox.ValueChanged -= OffsetXTextBox_ValueChanged;
+            OffsetYTextBox.ValueChanged -= OffsetYTextBox_ValueChanged;
 
             var frameConfig = GetCurrentFrameConfig();
 
-            OffsetXTextBox.Text = frameConfig.Offset.X.ToString();
-            OffsetYTextBox.Text = frameConfig.Offset.Y.ToString();
+            OffsetXTextBox.Value = frameConfig.Offset.X;
+            OffsetYTextBox.Value = frameConfig.Offset.Y;
 
-            OffsetXTextBox.TextChanged += OffsetXTextBox_ValueChanged;
-            OffsetYTextBox.TextChanged += OffsetYTextBox_ValueChanged;
+            OffsetXTextBox.ValueChanged += OffsetXTextBox_ValueChanged;
+            OffsetYTextBox.ValueChanged += OffsetYTextBox_ValueChanged;
         }
         private void RemoveMovementButton_Click(object sender, RoutedEventArgs e)
         {
@@ -1875,24 +1891,21 @@ namespace FramesToMMSpriteResources
             FrameCoordinateEditorControl.UpdateVisuals();
         }
 
-        private void OffsetXTextBox_ValueChanged(object sender, RoutedEventArgs args)
+        private void OffsetXTextBox_ValueChanged(float? number)
         {
-            string text = (sender as TextBox)!.Text;
-            SpriteOffset_ValueChanged(new(string.IsNullOrWhiteSpace(text) ? 0 : int.Parse(text), GetCurrentFrameConfig().Offset.Y));
+            SpriteOffset_ValueChanged(new((int)number!, GetCurrentFrameConfig().Offset.Y));
             FrameCoordinateEditorControl.UpdateVisuals();
         }
 
-        private void OffsetYTextBox_ValueChanged(object sender, RoutedEventArgs args)
+        private void OffsetYTextBox_ValueChanged(float? number)
         {
-            string text = (sender as TextBox)!.Text;
-            SpriteOffset_ValueChanged(new IntVector2(GetCurrentFrameConfig().Offset.X, string.IsNullOrWhiteSpace(text) ? 0 : int.Parse(text)));
+            SpriteOffset_ValueChanged(new IntVector2(GetCurrentFrameConfig().Offset.X, (int)number!));
             FrameCoordinateEditorControl.UpdateVisuals();
         }
 
-        private void MultiplyTextBox_ValueChanged(object sender, RoutedEventArgs args)
+        private void MultiplyTextBox_ValueChanged(float? number)
         {
-            string text = (sender as TextBox)!.Text;
-            GetCurrentFrameConfig().MultipyDelayBy = string.IsNullOrWhiteSpace(text) ? 1 : int.Parse(text);
+            GetCurrentFrameConfig().MultipyDelayBy = (int)number!;
         }
 
         private AnimationInterfaceConfig GetCurrentFrameAnimationInterfaceConfig()
@@ -1915,16 +1928,14 @@ namespace FramesToMMSpriteResources
             GetCurrentFrameAnimationInterfaceConfig().AlignOnYAxis = (sender as CheckBox)!.IsChecked!.Value;
         }
 
-        private void DirectionTextBox_ValueChanged(object sender, RoutedEventArgs args)
+        private void DirectionTextBox_ValueChanged(float? number)
         {
-            string text = (sender as TextBox)!.Text;
-            GetCurrentFrameAnimationInterfaceConfig().Direction = string.IsNullOrWhiteSpace(text) ? 90 : float.Parse(text);
+            GetCurrentFrameAnimationInterfaceConfig().Direction = (float)number!;
         }
 
-        private void SpeedTextBox_ValueChanged(object sender, RoutedEventArgs args)
+        private void SpeedTextBox_ValueChanged(float? number)
         {
-            string text = (sender as TextBox)!.Text;
-            GetCurrentFrameAnimationInterfaceConfig().Speed = string.IsNullOrWhiteSpace(text) ? 0 : float.Parse(text);
+            GetCurrentFrameAnimationInterfaceConfig().Speed = (float)number!;
         }
 
         private void SpriteOffset_ValueChanged(IntVector2 intVector2)
@@ -1944,39 +1955,35 @@ namespace FramesToMMSpriteResources
             RefreshOffsetFieldVisually();
         }
 
-        private void AnimationOffsetYTextBox_ValueChanged(object sender, RoutedEventArgs args)
+        private void AnimationOffsetYTextBox_ValueChanged(float? number)
         {
-            string text = (sender as TextBox)!.Text;
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
-                currentConfig!.Offset = new Vector2((currentConfig).Offset!.Value.X, string.IsNullOrWhiteSpace(text) ? 0 : float.Parse(text));
+                currentConfig!.Offset = new Vector2((currentConfig).Offset!.Value.X, (float)number!);
             }         
         }
 
-        private void SkipTextBox_ValueChanged(object sender, RoutedEventArgs args)
+        private void SkipTextBox_ValueChanged(float? number)
         {
-            string text = (sender as TextBox)!.Text;
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
-                currentConfig.Skip = int.Parse(text);
+                currentConfig.Skip = (int)number!;
             }
         }
 
-        private void AnimationOffsetXTextBox_ValueChanged(object sender, RoutedEventArgs args)
+        private void AnimationOffsetXTextBox_ValueChanged(float? number)
         {
-            string text = (sender as TextBox)!.Text;
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
-                currentConfig.Offset = new Vector2(string.IsNullOrWhiteSpace(text) ? 0 : float.Parse(text), (currentConfig).Offset!.Value.Y);
+                currentConfig.Offset = new Vector2((float)number!, (currentConfig).Offset!.Value.Y);
             }
         }
 
-        private void DelayTextBox_ValueChanged(object sender, RoutedEventArgs args)
+        private void DelayTextBox_ValueChanged(float? number)
         {
-            string text = (sender as TextBox)!.Text;
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
-                currentConfig.Delay = string.IsNullOrWhiteSpace(text) ? 1 : int.Parse(text);
+                currentConfig.Delay = (int)number!;
             }
         }
 
@@ -1984,25 +1991,23 @@ namespace FramesToMMSpriteResources
         {
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
-                currentConfig.LoopType = (sender as ComboBox).SelectedIndex;
+                currentConfig.LoopType = (sender as ComboBox)!.SelectedIndex;
             }
         }
 
-        private void SheetHeightTextBox_ValueChanged(object sender, RoutedEventArgs args)
+        private void SheetHeightTextBox_ValueChanged(float? number)
         {
-            string text = (sender as TextBox)!.Text;
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
-                currentConfig.Export.Height = string.IsNullOrWhiteSpace(text) ? null : int.Parse(text);
+                currentConfig.Export.Height = (int)number!;
             }
         }
 
-        private void SheetWidthTextBox_ValueChanged(object sender, RoutedEventArgs args)
+        private void SheetWidthTextBox_ValueChanged(float? number)
         {
-            string text = (sender as TextBox)!.Text;
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
-                currentConfig.Export.Width = string.IsNullOrWhiteSpace(text) ? null : int.Parse(text);
+                currentConfig.Export.Width = (int)number!;
             }
         }
 
@@ -2026,13 +2031,11 @@ namespace FramesToMMSpriteResources
             AnimationSpriteFramePath = new string[3];
         }
 
-        private void ThresholdTextBox_ValueChanged(object sender, RoutedEventArgs args)
+        private void ThresholdTextBox_ValueChanged(float? number)
         {
-            string text = (sender as TextBox)!.Text;
-            int threshold = string.IsNullOrWhiteSpace(text) ? 100 : int.Parse(text);
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
-                currentConfig.Processing.ColorTreshold = threshold;
+                currentConfig.Processing.ColorTreshold = (int)number!;
             }
             AnimationSpriteFramePath = new string[3];
         }
@@ -2047,12 +2050,11 @@ namespace FramesToMMSpriteResources
             AnimationSpriteFramePath = new string[3];
         }
 
-        private void ResizeTextBox_ValueChanged(object sender, RoutedEventArgs args)
+        private void ResizeTextBox_ValueChanged(float? number)
         {
-            string text = (sender as TextBox)!.Text;
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
-                currentConfig.Processing.ResizeToPercent = string.IsNullOrWhiteSpace(text) ? 100 : float.Parse(text);
+                currentConfig.Processing.ResizeToPercent = (float)number!;
             }
         }
 
@@ -2141,7 +2143,7 @@ namespace FramesToMMSpriteResources
 
         private void AlsoKnownAsTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            var subjConf = GetCurrentSubjectConfig();
+            var subjConf = GetCurrentAnimationSubjectConfig();
             string text = (sender as TextBox)!.Text;
             bool isAllowedToAdd = !string.IsNullOrWhiteSpace(text);
 
@@ -2172,14 +2174,12 @@ namespace FramesToMMSpriteResources
             RemoveOverwriteButton.Visibility = Visibility.Visible;
         }
 
-        private void ThresholdOverwriteTextBox_ValueChanged(object sender, RoutedEventArgs args)
+        private void ThresholdOverwriteTextBox_ValueChanged(float? number)
         {
-            string text = (sender as TextBox)!.Text;
-            int threshold = string.IsNullOrWhiteSpace(text) ? 100 : int.Parse(text);
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
                 currentConfig.ProcessingOverwrite ??= (ProcessingConfig)GetCurrentAnimationSubjectConfig().Processing.Clone();
-                currentConfig.ProcessingOverwrite.ColorTreshold = threshold;
+                currentConfig.ProcessingOverwrite.ColorTreshold = (int)number!;
             }
             AnimationSpriteFramePath = new string[3];
             RemoveOverwriteButton.Visibility = Visibility.Visible;
@@ -2197,13 +2197,12 @@ namespace FramesToMMSpriteResources
             RemoveOverwriteButton.Visibility = Visibility.Visible;
         }
 
-        private void ResizeOverwriteTextBox_ValueChanged(object sender, RoutedEventArgs args)
+        private void ResizeOverwriteTextBox_ValueChanged(float? number)
         {
-            string text = (sender as TextBox)!.Text;
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
                 currentConfig.ProcessingOverwrite ??= (ProcessingConfig)GetCurrentAnimationSubjectConfig().Processing.Clone();
-                currentConfig.ProcessingOverwrite.ResizeToPercent = string.IsNullOrWhiteSpace(text) ? 100 : float.Parse(text);
+                currentConfig.ProcessingOverwrite.ResizeToPercent = (float)number!;
             }
             RemoveOverwriteButton.Visibility = Visibility.Visible;
         }
@@ -2418,6 +2417,11 @@ namespace FramesToMMSpriteResources
 
         private void MirrorButton_Click(object sender, RoutedEventArgs e)
         {
+            MirrorFrames(-1, 1);
+        }
+
+        private void MirrorFrames(int hor, int ver)
+        {
             var node = TreeViewControl.SelectedNode;
             var subjectName = (node.Parent.Content as TreeItem)!.Text;
             var animationName = (node.Content as TreeItem)!.Text;
@@ -2442,8 +2446,8 @@ namespace FramesToMMSpriteResources
                     var flipped = new SKBitmap(src.Info.Width, src.Info.Height, src.ColorType, src.AlphaType);
                     using (var canvas = new SKCanvas(flipped))
                     {
-                        canvas.Scale(-1, 1);
-                        canvas.Translate(-src.Width, 0);
+                        canvas.Scale(hor, ver);
+                        canvas.Translate(hor==-1?-src.Width:0, ver==-1?-src.Height:0);
                         canvas.DrawBitmap(src, 0, 0);
                         canvas.Flush();
                     }
@@ -2465,6 +2469,11 @@ namespace FramesToMMSpriteResources
             AnimationSpriteFramePath = new string[3];
         }
 
+
+        private void MirrorButtonVertical_Click(object sender, RoutedEventArgs e)
+        {
+            MirrorFrames(1, -1);
+        }
         private void ClickIsHdCheckBox(object sender, RoutedEventArgs e)
         {
             ProgramConfig.AssetConfig!.IsHd = (sender as CheckBox)!.IsChecked!.Value;
@@ -3159,6 +3168,9 @@ namespace FramesToMMSpriteResources
             await Windows.System.Launcher.LaunchUriAsync(new Uri("file:///" + GetUserConfigDirectory().Replace('\\', '/')));
         }
 
-
+        private void SetAsDefaultProcesingButton_Click(object sender, RoutedEventArgs e)
+        {
+            ProgramConfig.AssetConfig!.ProcessingDefault = (ProcessingConfig)GetCurrentSubjectConfig().Processing.Clone();
+        }
     }
 }

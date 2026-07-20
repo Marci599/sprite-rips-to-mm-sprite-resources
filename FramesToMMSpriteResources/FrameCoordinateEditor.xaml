@@ -29,7 +29,8 @@
                             Margin="4 0 0 4"
                             BorderThickness="1"             
                             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-                            <skia:SKSwapChainPanel x:Name="AnimationPreviewCanvas"                                              
+                            <skia:SKSwapChainPanel x:Name="AnimationPreviewCanvas"    
+                        
                                 HorizontalAlignment="Stretch"
                                 VerticalAlignment="Stretch"/>
                         </Border>

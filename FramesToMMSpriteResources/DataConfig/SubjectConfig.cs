@@ -17,7 +17,7 @@ namespace FramesToMMSpriteResources
         public string Note;
 
         [JsonPropertyName("processing")]
-        public ProcessingConfig Processing = new();
+        public ProcessingConfig Processing;
 
         [JsonPropertyName("export")]
         public SubjectExportConfig Export = new();
@@ -33,7 +33,7 @@ namespace FramesToMMSpriteResources
     public class ProcessingConfig : ICloneable
     {
         [JsonPropertyName("background_color")]
-        public string? BackgroundColor;
+        public string? BackgroundColor = "#00FF00";
 
         [JsonPropertyName("color_threshold")]
         public int ColorTreshold = 100;
@@ -45,10 +45,10 @@ namespace FramesToMMSpriteResources
         public float ResizeToPercent = 100;
 
         [JsonPropertyName("sampling_mode")]
-        public int FilterMode = 0;
+        public int FilterMode = 1;
 
         [JsonPropertyName("mipmap_mode")]
-        public int MipmapMode = 0;
+        public int MipmapMode = 1;
 
         [JsonPropertyName("crop_left")]
         public bool CropLeft = true;

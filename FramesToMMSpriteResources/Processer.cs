@@ -171,6 +171,13 @@ namespace FramesToMMSpriteResources
                     MaxDegreeOfParallelism = Environment.ProcessorCount
                 };
 
+                if (animationConfig.FrameCongfigs.Count > spritePaths.Length)
+                {
+                    animationConfig.FrameCongfigs.RemoveRange(
+                        spritePaths.Length,
+                        animationConfig.FrameCongfigs.Count - spritePaths.Length);
+                }
+
                 Parallel.For(0, spritePaths.Length, parallelOptions, i =>
                 {
                     var spritePath = spritePaths[i];
