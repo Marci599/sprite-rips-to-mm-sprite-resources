@@ -20,6 +20,7 @@
     </Window.SystemBackdrop>
 
     <Grid x:Name="MainRootGrid" KeyDown="MainRootGrid_KeyDown" KeyUp="MainRootGrid_KeyUp" IsTabStop="True" Background="Transparent">
+    <Grid>
         <Grid.Resources>
             <local:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
             <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
@@ -120,26 +121,35 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-            <BreadcrumbBar
-                x:Name="HeaderBreadcrumbBar"
-                Grid.Row="0"
-                Margin="0 2 0 20">
-                <BreadcrumbBar.Resources>
-                    <x:Double x:Key="BreadcrumbBarChevronFontSize">18</x:Double>
-                </BreadcrumbBar.Resources>
-                <BreadcrumbBar.ItemTemplate>
-                    <DataTemplate x:DataType="x:String">
-                        <TextBlock
-                            Margin="10 0 10 0"
-                            Text="{x:Bind}"
-                            FontSize="26"
-                            FontWeight="SemiBold"
-                            VerticalAlignment="Center"
-                          
-                            />
-                    </DataTemplate>
-                </BreadcrumbBar.ItemTemplate>
-            </BreadcrumbBar>
+            <Grid Grid.Row="0" RowSpacing="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <BreadcrumbBar
+                    x:Name="HeaderBreadcrumbBar"
+                    Grid.Row="0"
+                    Margin="0 2 0 20">
+                    <BreadcrumbBar.Resources>
+                        <x:Double x:Key="BreadcrumbBarChevronFontSize">18</x:Double>
+                    </BreadcrumbBar.Resources>
+                    <BreadcrumbBar.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <TextBlock
+                Margin="10 0 10 0"
+                Text="{x:Bind}"
+                FontSize="26"
+                FontWeight="SemiBold"
+                VerticalAlignment="Center"
+              
+                />
+                        </DataTemplate>
+                    </BreadcrumbBar.ItemTemplate>
+                </BreadcrumbBar>
+                    <TextBlock Grid.Column="1" x:Name="ClickTipText" Text="Click on window content to load" Style="{StaticResource HelperTextStyle}" VerticalAlignment="Center" Margin="0 0 20 0"/>
+                </Grid>
+            
 
             <Border Grid.Row="1" Background="{ThemeResource LayerFillColorDefaultBrush}" CornerRadius="20 0 0 0" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
                 <ContentControl x:Name="ControlEnabler" HorizontalAlignment="Stretch" 
@@ -376,10 +386,10 @@
                                                                         <ColumnDefinition Width="Auto"/>
                                                                     </Grid.ColumnDefinitions>
                                                                     <TextBox Grid.Column="0" Text="{Binding Name, Mode=TwoWay}" GotFocus="AlsoKnownAsEditTextBox_GotFocus" LostFocus="AlsoKnownAsEditTextBox_LostFocus" KeyDown="AlsoKnownAsEditTextBox_KeyDown" CornerRadius="4 0 0 4"/>
-                                                                    <TextBox Grid.Column="1" Text="{Binding Range.From, Mode=TwoWay}" CornerRadius="0"
+                                                                    <local:CustomNumberBox Grid.Column="1" Text="{Binding Range.From, Mode=TwoWay}" CornerRadius="0"
                                                                         Width="45"
                                                                        MinWidth="0"
-                                                                       
+                                                                       Minimum="0"
                                                                         PlaceholderText="0"/>
                                                                      <Border Grid.Column="2" Background="{ThemeResource SurfaceStrokeColorDefaultBrush}"
                                                                         Margin="0 -1 0 0"
@@ -390,9 +400,9 @@
                                                                         <TextBlock Text="-" VerticalAlignment="Center" Padding="0 0 0 3"/>
                                                                     </Border>
 
-                                                                    <TextBox Grid.Column="3" Text="{Binding Range.To, Mode=TwoWay}" CornerRadius="0 0 0 0"
+                                                                        <local:CustomNumberBox Grid.Column="3" Text="{Binding Range.To, Mode=TwoWay}" CornerRadius="0 0 0 0"
                                                                         Width="45" MinWidth="0"          
-                                                                       
+                                                                       Minimum="-1"
                                                                        
                                                                         PlaceholderText="-1"/>
                                                                     <Button Grid.Column="4" x:Name="RemoveButton" Height="32" Width="32" Padding="0" Click="AlsoKnownAsRemoveButton_Click" CornerRadius="0 4 4 0">
@@ -794,7 +804,12 @@
             </Grid>
             
         </Grid>
-        
+   
     </Grid>
-
+        <Border x:Name="InitialBorder" Background="{ThemeResource SolidBackgroundFillColorBaseBrush}">
+            <TextBlock FontSize="26" HorizontalAlignment="Center"
+FontWeight="SemiBold"
+VerticalAlignment="Center" Text="Click on window content to load"/>
+        </Border>
+    </Grid>
 </Window>

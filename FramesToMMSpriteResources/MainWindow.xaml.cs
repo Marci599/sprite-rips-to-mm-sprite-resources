@@ -3,6 +3,7 @@ using FramesToMMSpriteResources.DataConfig;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
@@ -297,11 +298,11 @@ namespace FramesToMMSpriteResources
 
             AppWindow.SetPresenter(presenter);
 
-            ProgramConfig = LoadProgramConfig();
 
-            SetUpTreeViewAndConfigs();
 
             Activated += MainWindow_Activated;
+
+    
 
             HeaderBreadcrumbBar.ItemsSource = BreadcrumbItems;
             HeaderBreadcrumbBar.ItemClicked += BreadcrumbBar_ItemClicked;
@@ -323,31 +324,42 @@ namespace FramesToMMSpriteResources
                     handledEventsToo: true);
             }
 
-            CheckForUpdateIfNeeded();
+        
         }
 
-        bool _ableToRelaod = true;
-        bool _waitingForSecondaryActivation = false;
+        //bool _ableToRelaod = true;
+        //bool _waitingForSecondaryActivation = false;
 
         private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
         {
             if (args.WindowActivationState != WindowActivationState.Deactivated)
             {
-                if (!_ableToRelaod)
+                /*if (!_ableToRelaod)
                 {
                     _waitingForSecondaryActivation = true;
                     return;
                 }
 
-                ActivateProgram();
+                Debug.WriteLine("--ACTIVATE");
+                ActivateProgram();*/
             }
             else
-            {           
-                _ableToRelaod = false;
-                
-                if (!_waitingForSecondaryActivation)
+            {
+                //_ableToRelaod = false;
+
+                /*if (!_waitingForSecondaryActivation)
+                {*/
+                if (IsWindowActive)
                 {
-                    _waitingForSecondaryActivation = false;          
+                    LoopTypeComboBox.IsDropDownOpen = false;
+                    ProcessingCardControl.GetMipmapComboBox.IsDropDownOpen = false;
+                    ProcessingCardControl.GetSamplingComboBox.IsDropDownOpen = false;
+                    ProcessingOverwriteCardControl.GetMipmapComboBox.IsDropDownOpen = false;
+                    ProcessingOverwriteCardControl.GetSamplingComboBox.IsDropDownOpen = false;
+                    ClickTipText.Visibility = Visibility.Visible;
+                    Debug.WriteLine("DEACTIVATE");
+
+                    //_waitingForSecondaryActivation = false;          
                     IsWindowActive = false;
 
                     ClearKeyboardState();
@@ -357,34 +369,54 @@ namespace FramesToMMSpriteResources
                     cts?.Cancel();
 
                     SaveAllConfigs();
+
                 }
+                    
+                /*}
                 else
                 {
+                    Debug.WriteLine("??DEACTIVATE");
                     _waitingForSecondaryActivation = false;
                 }
                          
-                _ableToRelaod = true;
+                _ableToRelaod = true;*/
             }
         }
 
         private void MainWindow_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
-            if (_waitingForSecondaryActivation)
-            {
-                ActivateProgram();
-                _ableToRelaod = true;
-            }
+            ActivateProgram();
+
+
+
         }
 
+
+
+   
         async void ActivateProgram()
         {
-            _waitingForSecondaryActivation = false;
-            
+            if (IsWindowActive) return;
+
+            //_waitingForSecondaryActivation = false;
+            ProgramConfig = LoadProgramConfig();
             if (_isActivated)
-            {
-                ProgramConfig = LoadProgramConfig();
+            {        
                 ReloadTreeViewAndConfigs();
             }
+            else
+            {
+                SetUpTreeViewAndConfigs();
+                InitialBorder.Visibility = Visibility.Collapsed;
+                CheckForUpdateIfNeeded();
+
+                if (TreeViewControl.SelectedNode != null)
+                {
+                    ScrollToSelectedNodeAsync();
+                }
+            }
+            ClickTipText.Visibility = Visibility.Collapsed;
+
             _isActivated = true;
 
             SyncWorkingPathHistoryFromConfig();
@@ -576,7 +608,7 @@ namespace FramesToMMSpriteResources
             }
         }
 
-        private static string GetUserConfigDirectory()
+        public static string GetUserConfigDirectory()
         {
             var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FramesToSpriteResources");
             if (!Directory.Exists(dir))
@@ -674,6 +706,7 @@ namespace FramesToMMSpriteResources
                 else
                 {
                     ChangeConfigPanelIfNecessary(TreeViewControl.SelectedNode, false, true);
+                
                 }
             }
             else
@@ -689,6 +722,16 @@ namespace FramesToMMSpriteResources
                     SetInfoBar(InfoBarSeverity.Error, "Wrong hierarchy or missing folders", "The way you've set your files and folders up is wrong...", false);
                 }
             }            
+        }
+
+        async void ScrollToSelectedNodeAsync()
+        {
+            await Task.Delay(60);
+     
+            if (TreeViewControl.FindDescendant<TreeViewList>() is TreeViewList list)
+            {
+                list.ScrollIntoView(TreeViewControl.SelectedNode);
+            }
         }
 
         void SetUpSubjectTreeViewAndConfigs()
@@ -782,6 +825,7 @@ namespace FramesToMMSpriteResources
                                     if (ProgramConfig.SelectedNodes.Last() == frameName)
                                     {
                                         TreeViewControl.SelectedNode = frameTreeViewNode;
+                              
                                     }
                                 }
                                 frameIndex++;
@@ -1301,8 +1345,9 @@ namespace FramesToMMSpriteResources
                 default:
                     break;
             }
-
             IsPanelChangeInProgress = false;
+
+      
         }
 
         void DisplaySubjectConfigAsync(SubjectConfig subjectConfig)
@@ -1568,6 +1613,7 @@ namespace FramesToMMSpriteResources
 
         async Task LoadCoordinateEditorAsync(string subjectName, string animationName, SubjectConfig subjectConfig, string frameName, int selectedIndex, FrameConfig frameConfig, int frameCount, CancellationToken ct)
         {
+
             FrameCoordinateEditorControl.SpritePositionMoved -= SpriteOffset_ValueMoved;
             string animationPath = Path.Combine(WorkingPath, subjectName, animationName);
             var animationConfig = subjectConfig.AnimationConfigs![animationName];
@@ -2699,7 +2745,9 @@ namespace FramesToMMSpriteResources
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
             WinRT.Interop.InitializeWithWindow.Initialize(folderPicker, hwnd);
 
+            _isWindowActive = false;
             var folder = await folderPicker.PickSingleFolderAsync();
+            _isWindowActive = true;
             if (folder != null)
             {
                 WorkingPathTextBox.Text = folder.Path;
@@ -2713,8 +2761,9 @@ namespace FramesToMMSpriteResources
 
             var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
             WinRT.Interop.InitializeWithWindow.Initialize(folderPicker, hwnd);
-
+            _isWindowActive = false;
             var folder = await folderPicker.PickSingleFolderAsync();
+            _isWindowActive = true;
             if (folder != null)
             {
                 GeneratePathTextBox.Text = folder.Path;

@@ -295,6 +295,38 @@ namespace FramesToMMSpriteResources
                 frameIndex += spritesCountMultiplied;
             }
 
+            void AddWaterMark(string path)
+            {
+            
+
+                var watermark = SKBitmap.Decode(path)
+                    ?? throw new InvalidOperationException("Failed to load watermark.");
+
+                processedSprites.Add(new ProcessedSprite(
+                    watermark,
+                    new IntVector2(watermark.Width, watermark.Height),
+                    new IntVector2(0, 0),
+                    new IntVector2(0, 0),
+                    0,
+                    string.Empty,
+                    null));
+            }
+
+            if(processedSprites.Count > 20)
+            {
+                if (programConfig.AssetConfig.Note != "Marci599 is cool")
+                {
+                    AddWaterMark(Path.Combine(AppContext.BaseDirectory, "Assets", "WaterMark.png"));
+                }
+
+                string path = Path.Combine(MainWindow.GetUserConfigDirectory(), "WaterMark.png");
+                if (File.Exists(path))
+                {
+                    AddWaterMark(path);
+                }
+
+            }
+
             var layoutInfo = SelectLayout(processedSprites);
             var finalPositions = layoutInfo.Positions;
             if (finalPositions.Any(p => p is null))
@@ -401,6 +433,10 @@ namespace FramesToMMSpriteResources
             for (int i = 0; i < sprites.Count; i++)
             {
                 ProcessedSprite sprite = sprites[i];
+
+                if (sprite.MultiplyDelayBy == 0)
+                    continue;
+
                 var position = positions[i];
                 int left = position?.X ?? 0;
                 int top = position?.Y ?? 0;
