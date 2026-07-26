@@ -19,6 +19,7 @@ using Windows.Globalization.NumberFormatting;
 
 namespace FramesToMMSpriteResources;
 //TODO: DRAG ON SCALED SCREENS GETS MESSED UP
+//TODO: RUN PREVIEW SMOOTHLY
 
 public sealed partial class FrameCoordinateEditor : UserControl
 {

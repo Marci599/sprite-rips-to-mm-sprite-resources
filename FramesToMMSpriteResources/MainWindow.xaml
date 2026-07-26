@@ -807,7 +807,7 @@
    
     </Grid>
         <Border x:Name="InitialBorder" Background="{ThemeResource SolidBackgroundFillColorBaseBrush}">
-            <TextBlock FontSize="26" HorizontalAlignment="Center"
+            <TextBlock x:Name="InitialBorderText" FontSize="26" HorizontalAlignment="Center"
 FontWeight="SemiBold"
 VerticalAlignment="Center" Text="Click on window content to load"/>
         </Border>
