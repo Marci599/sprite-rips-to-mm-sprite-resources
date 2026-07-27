@@ -1244,8 +1244,9 @@ namespace FramesToMMSpriteResources
             if (animate)
             {
                 await Task.Delay(_fadeInMs);
+                IsPanelChangeInProgress = false;
             }
-            IsPanelChangeInProgress = false;      
+       
         }
 
         void DisplaySubjectConfigAsync(SubjectConfig subjectConfig)
@@ -1365,7 +1366,7 @@ namespace FramesToMMSpriteResources
 
             PopulateAlsoKnownAsList();
             AlsoKnownAsListView.ItemsSource = AlsoKnownAsEntries;
-            AlsoKnownAsAddButton.IsEnabled = false;
+            CheckAlsoKnownAsAddButtonState();
 
 
 
@@ -2116,20 +2117,23 @@ namespace FramesToMMSpriteResources
 
         private void AlsoKnownAsTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            var subjConf = GetCurrentAnimationSubjectConfig();
-            string text = (sender as TextBox)!.Text;
-            bool isAllowedToAdd = !string.IsNullOrWhiteSpace(text);
+            CheckAlsoKnownAsAddButtonState();
 
+            var animConf = subjConf.AnimationConfigs[(TreeViewControl.SelectedNode.Content as TreeItem)!.Text];
+            (animConf.InterfaceConfig as AnimationInterfaceConfig)!.AlsoKnownAs = text;  
+        }
+
+        void CheckAlsoKnownAsAddButtonState()
+        {
+            var subjConf = GetCurrentAnimationSubjectConfig();
+            string text = AlsoKnownAsTextBox.Text;
+            bool isAllowedToAdd = !string.IsNullOrWhiteSpace(text);
             foreach ((string animationName, AnimationConfig animationConfig) in subjConf.AnimationConfigs!)
             {
                 if (animationName == text || (animationConfig.AlsoKnownAs != null && animationConfig.AlsoKnownAs.ContainsKey(text)))
                     isAllowedToAdd = false;
             }
-
             AlsoKnownAsAddButton.IsEnabled = isAllowedToAdd;
-
-            var animConf = subjConf.AnimationConfigs[(TreeViewControl.SelectedNode.Content as TreeItem)!.Text];
-            (animConf.InterfaceConfig as AnimationInterfaceConfig)!.AlsoKnownAs = text;  
         }
 
         private void ColorOverwriteTextBox_TextChanged(object sender, TextChangedEventArgs e)
