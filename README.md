@@ -23,21 +23,16 @@ Download latest version here: [Releases](https://github.com/Marci599/sprite-rips
     
 This is how your folders and files should look like.
 ```
-<Folder>
-├─ <GameThemeName>
-│  ├─ <SubjectName>
-│  │  └─ raw
-│  │     ├─ <AnimationName>
-│  │     │  ├─ frame001.png
-│  │     │  └─ frame002.png
-│  │     ├─ <AnimationName>
-│  │     └─ <AnimationName>
-│  ├─ <SubjectName>
-│  └─ <SubjectName>
-├─ <GameThemeName>
-└─ <GameThemeName>
+<FTMMSRAssets>
+├─ <SubjectName>
+│  ├─ <AnimationName>
+│  │  ├─ frame001.png
+│  │  └─ frame002.png
+│  ├─ <AnimationName>
+│  └─ <AnimationName>
+├─ <SubjectName>
+└─ <SubjectName>
 ```
-If you are working with only one GameTheme, you can remove the GameTheme folders, and have the subjects in the Working directory.
 
 You can download this example that contains a subject with raw frames: [V_Yoshi](https://github.com/Marci599/sprite-rips-to-mm-sprite-resources/blob/master/example.zip)
 - Unzip it and put V_Yoshi inside a GameTheme.
