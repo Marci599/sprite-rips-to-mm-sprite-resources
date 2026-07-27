@@ -1,815 +1,1224 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8" ?>
 <Window
     x:Class="FramesToMMSpriteResources.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:FramesToMMSpriteResources"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:controls="using:CommunityToolkit.WinUI.Controls"
-
-    
-
-
- 
-    mc:Ignorable="d"
-    Title="Frames to MM sprite resources">
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:FramesToMMSpriteResources"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="Frames to MM sprite resources"
+    mc:Ignorable="d">
 
     <Window.SystemBackdrop>
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
-    <Grid x:Name="MainRootGrid" KeyDown="MainRootGrid_KeyDown" KeyUp="MainRootGrid_KeyUp" IsTabStop="True" Background="Transparent">
-    <Grid>
-        <Grid.Resources>
-            <local:CountToVisibilityConverter x:Key="CountToVisibilityConverter"/>
-            <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-            <local:DepthToIconGlyphConverter x:Key="DepthToIconGlyphConverter"/>
-            <local:DepthToMarginConverter x:Key="DepthToMarginConverter"/>
-        </Grid.Resources>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="auto"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-
+    <Grid
+        x:Name="MainRootGrid"
+        Background="Transparent"
+        IsTabStop="True"
+        KeyDown="MainRootGrid_KeyDown"
+        KeyUp="MainRootGrid_KeyUp">
         <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
+            <Grid.Resources>
+                <local:CountToVisibilityConverter x:Key="CountToVisibilityConverter" />
+                <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+                <local:DepthToIconGlyphConverter x:Key="DepthToIconGlyphConverter" />
+                <local:DepthToMarginConverter x:Key="DepthToMarginConverter" />
+            </Grid.Resources>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
 
-            <TreeView x:Name="TreeViewControl" Grid.Row="0" Margin="0 2 0 0" Width="220" CanReorderItems="False" CanDragItems="False" SelectionMode="Single">
-                <TreeView.ItemContainerStyle>
-                    <Style TargetType="TreeViewItem">
-
-                    </Style>
-                </TreeView.ItemContainerStyle>
-                <TreeView.ItemTemplate>
-                    <DataTemplate>
-                        <Grid>
-                            <Border Background="{ThemeResource AccentFillColorDefaultBrush}" Margin="{Binding Content.Depth, Converter={StaticResource DepthToMarginConverter}}" Height="16" CornerRadius="1.5" Width="3" Visibility="{Binding Content.IsSelected, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                            <Grid ColumnSpacing="0" Padding="0 0 12 0">
-
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <FontIcon Grid.Column="0" Glyph="{Binding Content.Depth, Converter={StaticResource DepthToIconGlyphConverter}}" Width="20" Height="32" Margin="-4 0 12 0" Opacity="0.67" FontSize="18"/>
-                                <TextBlock Grid.Column="1"
- 
-                                           VerticalAlignment="Center"
-                                           Margin="0 -20 0 -20"
-                                            Text="{Binding Content.Text}"
-                                           TextTrimming="Clip"
-                                           TextWrapping="Wrap"
-                                           MaxLines="2"/>
-                                <Border Grid.Column="2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="10" MinWidth="20" Height="20" Padding="6 0 6 2" Visibility="{Binding Content.CountText, Converter={StaticResource CountToVisibilityConverter}}">
-                                    <TextBlock Text="{Binding Content.CountText}" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorTertiaryBrush}" FontWeight="SemiBold"/>
-                                </Border>
-
-                            </Grid>
-                        </Grid>
-                        
-                    </DataTemplate>
-                </TreeView.ItemTemplate>
-            </TreeView>
-            <StackPanel Grid.Row="1" VerticalAlignment="Bottom" Spacing="0" Padding="4" HorizontalAlignment="Stretch">
-
-                <Rectangle Style="{StaticResource GroupDividerStyle}" Margin="8 -4 8 4"/>
-                <ToggleButton x:Name="SettingsToggleButton" Style="{StaticResource TreeLikeNavToggleButtonStyle}" Padding="16 10 14 10" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Click="ClickSettings">
-                    <Grid ColumnSpacing="12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-
-                        <FontIcon
-                            Grid.Column="0"
-                            Glyph="&#xE713;"
-                            Opacity="0.67"
-                            FontSize="18"/>
-
-                        <TextBlock
-                            Grid.Column="1"
-                            Text="Settings &amp; Help"
-                            VerticalAlignment="Center"/>
-
-                        <InfoBadge
-                            x:Name="UpdateBadge"
-                            Grid.Column="2"
-                            Style="{StaticResource AttentionIconInfoBadgeStyle}"
-                            VerticalAlignment="Center"
-                            Visibility="Collapsed"/>
-                    </Grid>
-                </ToggleButton>
-            </StackPanel>
-
-            <StackPanel x:Name="TreeViewPlaceHolderStackPanel" VerticalAlignment="Center" Spacing="12">
-                <TextBlock x:Name="TreeViewPlaceHolderText" Text="Could not display hierarchy" HorizontalAlignment="Center"/>
-                <Button x:Name="TreeViewPlaceHolderButton" Content="Generate hierarchy" HorizontalAlignment="Center" Visibility="Collapsed" Click="ClickGenerateHieararchy"/>
-            </StackPanel>
-
-        </Grid>
-
-
-        <!-- Content area -->
-        <Grid Grid.Column="1" RowSpacing="0">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-            <Grid Grid.Row="0" RowSpacing="0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <BreadcrumbBar
-                    x:Name="HeaderBreadcrumbBar"
+                <TreeView
+                    x:Name="TreeViewControl"
                     Grid.Row="0"
-                    Margin="0 2 0 20">
-                    <BreadcrumbBar.Resources>
-                        <x:Double x:Key="BreadcrumbBarChevronFontSize">18</x:Double>
-                    </BreadcrumbBar.Resources>
-                    <BreadcrumbBar.ItemTemplate>
-                        <DataTemplate x:DataType="x:String">
-                            <TextBlock
-                Margin="10 0 10 0"
-                Text="{x:Bind}"
-                FontSize="26"
-                FontWeight="SemiBold"
-                VerticalAlignment="Center"
-              
-                />
-                        </DataTemplate>
-                    </BreadcrumbBar.ItemTemplate>
-                </BreadcrumbBar>
-                    <TextBlock Grid.Column="1" x:Name="ClickTipText" Text="Click on window content to load" Style="{StaticResource HelperTextStyle}" VerticalAlignment="Center" Margin="0 0 20 0"/>
-                </Grid>
-            
+                    Width="220"
+                    Margin="0,2,0,0"
+                    CanDragItems="False"
+                    CanReorderItems="False"
+                    SelectionMode="Single">
+                    <TreeView.ItemContainerStyle>
+                        <Style TargetType="TreeViewItem" />
+                    </TreeView.ItemContainerStyle>
+                    <TreeView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Border
+                                    Width="3"
+                                    Height="16"
+                                    Margin="{Binding Content.Depth, Converter={StaticResource DepthToMarginConverter}}"
+                                    Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                    CornerRadius="1.5"
+                                    Visibility="{Binding Content.IsSelected, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                <Grid Padding="0,0,12,0" ColumnSpacing="0">
 
-            <Border Grid.Row="1" Background="{ThemeResource LayerFillColorDefaultBrush}" CornerRadius="20 0 0 0" BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-                <ContentControl x:Name="ControlEnabler" HorizontalAlignment="Stretch" 
-                    VerticalAlignment="Stretch"
-                    HorizontalContentAlignment="Stretch" 
-                    VerticalContentAlignment="Stretch">
-                    <Grid>
-                        <!-- Subject Panel (default visible) -->
-                        <Grid x:Name="SubjectPanel" Visibility="Collapsed">
-                            <ScrollViewer>
-                                <StackPanel Padding="20 20 20 20" Spacing="10">
-
-
-
-
-
-
-
-
-
-
-                               
-                                    <!-- Processing Group -->
-                                    <Border Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
-                                        <StackPanel Spacing="12">
-                                            <Grid ColumnSpacing="10">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="Processing" Style="{StaticResource SectionHeaderStyle}"/>
-                                                <Button Grid.Column="1" x:Name="SetAsDefaultProcesingButton" Margin="0 -3 -11 -7" Click="SetAsDefaultProcesingButton_Click" ToolTipService.ToolTip="When a new subject config is created, a copy of this processing config will be used">
-                                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <FontIcon Glyph="&#xF5ED;" FontSize="12"/>
-                                                        <TextBlock Text="Set as default"/>
-                                                    </StackPanel>
-                                                    </Button>
-                                            </Grid>
-                                           
-
-                                            <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                                            <local:ProcessingCard x:Name="ProcessingCardControl" Grid.Column="1"/>
-                                        </StackPanel>
-                                    
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon
+                                        Grid.Column="0"
+                                        Width="20"
+                                        Height="32"
+                                        Margin="-4,0,12,0"
+                                        FontSize="18"
+                                        Glyph="{Binding Content.Depth, Converter={StaticResource DepthToIconGlyphConverter}}"
+                                        Opacity="0.67" />
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        Margin="0,-20,0,-20"
+                                        VerticalAlignment="Center"
+                                        MaxLines="2"
+                                        Text="{Binding Content.Text}"
+                                        TextTrimming="Clip"
+                                        TextWrapping="Wrap" />
+                                    <Border
+                                        Grid.Column="2"
+                                        Height="20"
+                                        MinWidth="20"
+                                        Padding="6,0,6,2"
+                                        Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                        CornerRadius="10"
+                                        Visibility="{Binding Content.CountText, Converter={StaticResource CountToVisibilityConverter}}">
+                                        <TextBlock
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            FontWeight="SemiBold"
+                                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                            Text="{Binding Content.CountText}" />
                                     </Border>
 
-                                    <Grid ColumnSpacing="10" MaxWidth="1000">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            
-                                        </Grid.ColumnDefinitions>
-                                        <!-- Sheet Dimensions Group -->
-                                        <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
-                                            <StackPanel Spacing="12">
-                                                <TextBlock Text="Exporting" Style="{StaticResource SectionHeaderStyle}"/>
-                                                <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+                                </Grid>
+                            </Grid>
 
+                        </DataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+                <StackPanel
+                    Grid.Row="1"
+                    Padding="4"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Bottom"
+                    Spacing="0">
+
+                    <Rectangle Margin="8,-4,8,4" Style="{StaticResource GroupDividerStyle}" />
+                    <ToggleButton
+                        x:Name="SettingsToggleButton"
+                        Padding="16,10,14,10"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch"
+                        Click="ClickSettings"
+                        Style="{StaticResource TreeLikeNavToggleButtonStyle}">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <FontIcon
+                                Grid.Column="0"
+                                FontSize="18"
+                                Glyph="&#xE713;"
+                                Opacity="0.67" />
+
+                            <TextBlock
+                                Grid.Column="1"
+                                VerticalAlignment="Center"
+                                Text="Settings &amp; Help" />
+
+                            <InfoBadge
+                                x:Name="UpdateBadge"
+                                Grid.Column="2"
+                                VerticalAlignment="Center"
+                                Style="{StaticResource AttentionIconInfoBadgeStyle}"
+                                Visibility="Collapsed" />
+                        </Grid>
+                    </ToggleButton>
+                </StackPanel>
+
+                <StackPanel
+                    x:Name="TreeViewPlaceHolderStackPanel"
+                    VerticalAlignment="Center"
+                    Spacing="12">
+                    <TextBlock
+                        x:Name="TreeViewPlaceHolderText"
+                        HorizontalAlignment="Center"
+                        Text="Could not display hierarchy" />
+                    <Button
+                        x:Name="TreeViewPlaceHolderButton"
+                        HorizontalAlignment="Center"
+                        Click="ClickGenerateHieararchy"
+                        Content="Generate hierarchy"
+                        Visibility="Collapsed" />
+                </StackPanel>
+
+            </Grid>
+
+
+            <!--  Content area  -->
+            <Grid Grid.Column="1" RowSpacing="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" RowSpacing="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <BreadcrumbBar
+                        x:Name="HeaderBreadcrumbBar"
+                        Grid.Row="0"
+                        Margin="0,2,0,20">
+                        <BreadcrumbBar.Resources>
+                            <x:Double x:Key="BreadcrumbBarChevronFontSize">18</x:Double>
+                        </BreadcrumbBar.Resources>
+                        <BreadcrumbBar.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <TextBlock
+                                    Margin="10,0,10,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="26"
+                                    FontWeight="SemiBold"
+                                    Text="{x:Bind}" />
+                            </DataTemplate>
+                        </BreadcrumbBar.ItemTemplate>
+                    </BreadcrumbBar>
+                    <TextBlock
+                        x:Name="ClickTipText"
+                        Grid.Column="1"
+                        Margin="0,0,20,0"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource HelperTextStyle}"
+                        Text="Click on window content to load" />
+                </Grid>
+
+
+                <Border
+                    Grid.Row="1"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="20 0 0 0">
+                    <ContentControl
+                        x:Name="ControlEnabler"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch">
+                        <Grid>
+                            <!--  Subject Panel (default visible)  -->
+                            <Grid x:Name="SubjectPanel" Visibility="Collapsed">
+                                <ScrollViewer>
+                                    <StackPanel Padding="20,20,20,20" Spacing="10">
+
+
+
+
+
+
+
+
+
+
+
+                                        <!--  Processing Group  -->
+                                        <Border MaxWidth="1000" Style="{StaticResource CardBorderStyle}">
+                                            <StackPanel Spacing="12">
                                                 <Grid ColumnSpacing="10">
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
                                                     </Grid.ColumnDefinitions>
-                                                    <local:CustomNumberBox Grid.Column="0" x:Name="SheetWidthTextBox" PlaceholderText="Auto" Header="Width" VerticalAlignment="Top" Minimum="1" Maximum="5000"/>
-
-
-                                                    <local:CustomNumberBox Grid.Column="1" x:Name="SheetHeightTextBox" PlaceholderText="Auto" Header="Height" Minimum="1" Maximum="5000"/>
-
-
+                                                    <TextBlock
+                                                        Grid.Column="0"
+                                                        Style="{StaticResource SectionHeaderStyle}"
+                                                        Text="Processing" />
+                                                    <Button
+                                                        x:Name="SetAsDefaultProcesingButton"
+                                                        Grid.Column="1"
+                                                        Margin="0,-3,-11,-7"
+                                                        Click="SetAsDefaultProcesingButton_Click"
+                                                        ToolTipService.ToolTip="When a new subject config is created, a copy of this processing config will be used">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <FontIcon FontSize="12" Glyph="&#xF5ED;" />
+                                                            <TextBlock Text="Set as default" />
+                                                        </StackPanel>
+                                                    </Button>
                                                 </Grid>
-                                                <TextBlock Text="For automatic sizing, leave it blank" Style="{StaticResource HelperTextStyle}" Margin="0 -8 0 0"/>
 
+
+                                                <Rectangle Style="{StaticResource GroupDividerStyle}" />
+                                                <local:ProcessingCard x:Name="ProcessingCardControl" Grid.Column="1" />
                                             </StackPanel>
+
                                         </Border>
 
-                                        <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}" MaxWidth="1000">
-                                            <Grid RowSpacing="12">
+                                        <Grid MaxWidth="1000" ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+
+                                            </Grid.ColumnDefinitions>
+                                            <!--  Sheet Dimensions Group  -->
+                                            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
+                                                <StackPanel Spacing="12">
+                                                    <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Exporting" />
+                                                    <Rectangle Style="{StaticResource GroupDividerStyle}" />
+
+                                                    <Grid ColumnSpacing="10">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <local:CustomNumberBox
+                                                            x:Name="SheetWidthTextBox"
+                                                            Grid.Column="0"
+                                                            VerticalAlignment="Top"
+                                                            Header="Width"
+                                                            Maximum="5000"
+                                                            Minimum="1"
+                                                            PlaceholderText="Auto" />
+
+
+                                                        <local:CustomNumberBox
+                                                            x:Name="SheetHeightTextBox"
+                                                            Grid.Column="1"
+                                                            Header="Height"
+                                                            Maximum="5000"
+                                                            Minimum="1"
+                                                            PlaceholderText="Auto" />
+
+
+                                                    </Grid>
+                                                    <TextBlock
+                                                        Margin="0,-8,0,0"
+                                                        Style="{StaticResource HelperTextStyle}"
+                                                        Text="For automatic sizing, leave it blank" />
+
+                                                </StackPanel>
+                                            </Border>
+
+                                            <Border
+                                                Grid.Column="1"
+                                                MaxWidth="1000"
+                                                Style="{StaticResource CardBorderStyle}">
+                                                <Grid RowSpacing="12">
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="*" />
+                                                    </Grid.RowDefinitions>
+                                                    <TextBlock
+                                                        Grid.Row="0"
+                                                        Style="{StaticResource SectionHeaderStyle}"
+                                                        Text="Note" />
+                                                    <Rectangle Grid.Row="1" Style="{StaticResource GroupDividerStyle}" />
+
+
+                                                    <TextBox
+                                                        x:Name="NoteTextBox"
+                                                        Grid.Row="2"
+                                                        Margin="-16,-13,-16,-16"
+                                                        AcceptsReturn="True"
+                                                        CornerRadius="0"
+                                                        TextWrapping="Wrap" />
+                                                </Grid>
+                                            </Border>
+                                        </Grid>
+
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Grid>
+
+                            <!--  Animations Panel (hidden by default)  -->
+                            <Grid x:Name="AnimationsPanel" Visibility="Collapsed">
+                                <ScrollViewer>
+                                    <StackPanel
+                                        x:Name="AnimationDetailPanel"
+                                        Padding="20,20,20,20"
+                                        Spacing="10">
+
+                                        <Grid MaxWidth="1000" ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <Grid RowSpacing="10">
                                                 <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="Auto"/>
-                                                    <RowDefinition Height="*"/>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="*" />
+
                                                 </Grid.RowDefinitions>
-                                                <TextBlock Grid.Row="0" Text="Note" Style="{StaticResource SectionHeaderStyle}"/>
-                                                <Rectangle Grid.Row="1" Style="{StaticResource GroupDividerStyle}"/>
+
+                                                <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}">
+                                                    <StackPanel Spacing="12">
+                                                        <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Properties" />
+
+                                                        <Rectangle Style="{StaticResource GroupDividerStyle}" />
 
 
-                                                <TextBox x:Name="NoteTextBox" Grid.Row="2" Margin="-16 -13 -16 -16" CornerRadius="0" TextWrapping="Wrap" AcceptsReturn="True"/>
+
+                                                        <local:CustomNumberBox
+                                                            x:Name="DelayTextBox"
+                                                            Header="Delay"
+                                                            Maximum="1000"
+                                                            Minimum="-1"
+                                                            PlaceholderText="1" />
+                                                        <ComboBox
+                                                            x:Name="LoopTypeComboBox"
+                                                            HorizontalAlignment="Stretch"
+                                                            Header="Loop mode">
+                                                            <x:String>Default</x:String>
+                                                            <x:String>Loop</x:String>
+                                                            <x:String>No loop</x:String>
+                                                        </ComboBox>
+
+
+
+                                                    </StackPanel>
+                                                </Border>
+
+
+                                                <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+                                                    <StackPanel Spacing="12">
+                                                        <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Bulk editing" />
+
+                                                        <Rectangle Style="{StaticResource GroupDividerStyle}" />
+
+                                                        <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
+                                                            <Button
+                                                                Height="32"
+                                                                HorizontalAlignment="Left"
+                                                                Click="MirrorButton_Click">
+                                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                    <FontIcon FontSize="12" Glyph="&#xE8AB;" />
+                                                                    <TextBlock Text="Mirror horizontally" />
+
+                                                                </StackPanel>
+
+                                                            </Button>
+                                                            <Button
+                                                                Height="32"
+                                                                HorizontalAlignment="Left"
+                                                                Click="MirrorButtonVertical_Click">
+                                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                    <FontIcon FontSize="12" Glyph="&#xE8CB;" />
+                                                                    <TextBlock Text="Mirror vertically" />
+
+                                                                </StackPanel>
+
+                                                            </Button>
+                                                        </controls:WrapPanel>
+                                                        <TextBlock Style="{StaticResource HelperTextStyle}" Text="To crop, you can import your frames to NickeManarin/ScreenToGif do it there, and save back here" />
+
+
+                                                    </StackPanel>
+                                                </Border>
+
                                             </Grid>
-                                        </Border>
-                                    </Grid>
-                                    
-                                </StackPanel>
-                            </ScrollViewer>
-                        </Grid>
+                                            <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}">
+                                                <StackPanel Spacing="12">
+                                                    <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Generating" />
 
-                        <!-- Animations Panel (hidden by default) -->
-                        <Grid x:Name="AnimationsPanel" Visibility="Collapsed">
-                            <ScrollViewer>
-                                <StackPanel x:Name="AnimationDetailPanel" Spacing="10" Padding="20 20 20 20">
-
-                                    <Grid ColumnSpacing="10"   MaxWidth="1000">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <Grid RowSpacing="10">
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="*"/>
-                                           
-                                            </Grid.RowDefinitions>
-
-                                        <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}">
-                                            <StackPanel Spacing="12">
-                                                <TextBlock Text="Properties" Style="{StaticResource SectionHeaderStyle}"/>
-
-                                                <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+                                                    <Rectangle Style="{StaticResource GroupDividerStyle}" />
 
 
 
-                                                <local:CustomNumberBox x:Name="DelayTextBox" PlaceholderText="1" Header="Delay" Minimum="-1" Maximum="1000"/>
-                                                <ComboBox x:Name="LoopTypeComboBox" Header="Loop mode" HorizontalAlignment="Stretch">
-                                                    <x:String>Default</x:String>
-                                                    <x:String>Loop</x:String>
-                                                    <x:String>No loop</x:String>
-                                                </ComboBox>
+
+                                                    <local:CustomNumberBox
+                                                        x:Name="SkipTextBox"
+                                                        Grid.Column="0"
+                                                        Header="Step"
+                                                        Maximum="5000"
+                                                        Minimum="1"
+                                                        PlaceholderText="0" />
+                                                    <TextBlock
+                                                        Margin="0,-8,0,0"
+                                                        Style="{StaticResource HelperTextStyle}"
+                                                        Text="Steps entered amount of frames and draws the next, then steps again. Can increase speed or reduce framerate." />
 
 
+                                                    <StackPanel Spacing="4">
+                                                        <Grid ColumnSpacing="8">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
 
-                                            </StackPanel>
-                                        </Border>
-                                          
+                                                            <local:CustomNumberBox
+                                                                x:Name="AnimationOffsetXTextBox"
+                                                                Grid.Column="0"
+                                                                Header="Offset X"
+                                                                Maximum="9999"
+                                                                Minimum="-9999"
+                                                                PlaceholderText="0" />
+                                                            <local:CustomNumberBox
+                                                                x:Name="AnimationOffsetYTextBox"
+                                                                Grid.Column="1"
+                                                                Header="Offset Y"
+                                                                Maximum="9999"
+                                                                Minimum="-9999"
+                                                                PlaceholderText="0" />
 
-                                        <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
-                                            <StackPanel Spacing="12">
-                                                <TextBlock Text="Bulk editing" Style="{StaticResource SectionHeaderStyle}"/>
+                                                        </Grid>
+                                                        <TextBlock Style="{StaticResource HelperTextStyle}" Text="Adjusts the offset of every frame after processing" />
+                                                    </StackPanel>
 
-                                                <Rectangle Style="{StaticResource GroupDividerStyle}"/>
 
-                                                    <controls:WrapPanel HorizontalSpacing="10" VerticalSpacing="10">
-                                                        <Button Click="MirrorButton_Click" HorizontalAlignment="Left" Height="32">
-                                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                                <FontIcon Glyph="&#xE8AB;" FontSize="12"/>
-                                                                <TextBlock Text="Mirror horizontally"/>
+                                                    <StackPanel Spacing="4">
+                                                        <TextBlock Text="Recover cropped offset on" />
+                                                        <Grid ColumnSpacing="8">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <CheckBox
+                                                                x:Name="RecoverXCheckBox"
+                                                                Grid.Column="0"
+                                                                Content="X axis" />
+                                                            <CheckBox
+                                                                x:Name="RecoverYCheckBox"
+                                                                Grid.Column="1"
+                                                                Content="Y axis" />
+                                                        </Grid>
+                                                        <TextBlock Style="{StaticResource HelperTextStyle}" Text="If enabled, the offsets will be adjusted to account for any cropping that was done" />
+                                                    </StackPanel>
+                                                    <StackPanel Spacing="4">
+                                                        <CheckBox x:Name="RegenerateCheckBox" Content="Regenerate frame properties" />
+                                                        <TextBlock Style="{StaticResource HelperTextStyle}" Text="If disabled, offsets and sub-positions won't be overwritten" />
+                                                    </StackPanel>
+                                                    <StackPanel Spacing="4">
+                                                        <Grid ColumnSpacing="-1">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBox
+                                                                x:Name="AlsoKnownAsTextBox"
+                                                                Grid.Column="0"
+                                                                CornerRadius="4 0 0 4"
+                                                                Header="Also known as"
+                                                                PlaceholderText="Animation name" />
+                                                            <Button
+                                                                x:Name="AlsoKnownAsAddButton"
+                                                                Grid.Column="1"
+                                                                Width="32"
+                                                                Height="32"
+                                                                Padding="0"
+                                                                VerticalAlignment="Bottom"
+                                                                CornerRadius="0 4 4 0"
+                                                                IsEnabled="False">
+                                                                <FontIcon FontSize="14" Glyph="&#xE710;" />
+                                                            </Button>
+                                                        </Grid>
+                                                        <ListView
+                                                            x:Name="AlsoKnownAsListView"
+                                                            MaxHeight="150"
+                                                            Margin="0,0,-12,0"
+                                                            SelectionMode="None">
+                                                            <ListView.ItemContainerTransitions>
+                                                                <TransitionCollection />
+                                                            </ListView.ItemContainerTransitions>
+                                                            <ListView.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Grid Margin="16,0,0,0" ColumnSpacing="-1">
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="*" />
+                                                                            <ColumnDefinition Width="Auto" />
+                                                                            <ColumnDefinition Width="Auto" />
+                                                                            <ColumnDefinition Width="Auto" />
+                                                                            <ColumnDefinition Width="Auto" />
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <TextBox
+                                                                            Grid.Column="0"
+                                                                            CornerRadius="4 0 0 4"
+                                                                            GotFocus="AlsoKnownAsEditTextBox_GotFocus"
+                                                                            KeyDown="AlsoKnownAsEditTextBox_KeyDown"
+                                                                            LostFocus="AlsoKnownAsEditTextBox_LostFocus"
+                                                                            Text="{Binding Name, Mode=TwoWay}" />
+                                                                        <local:CustomNumberBox
+                                                                            Grid.Column="1"
+                                                                            Width="45"
+                                                                            MinWidth="0"
+                                                                            CornerRadius="0"
+                                                                            Minimum="0"
+                                                                            PlaceholderText="0"
+                                                                            Text="{Binding Range.From, Mode=TwoWay}" />
+                                                                        <Border
+                                                                            Grid.Column="2"
+                                                                            Margin="0,-1,0,0"
+                                                                            Padding="2"
+                                                                            Background="{ThemeResource SurfaceStrokeColorDefaultBrush}"
+                                                                            BorderBrush="{ThemeResource TextControlElevationBorderBrush}"
+                                                                            BorderThickness="1">
+                                                                            <TextBlock
+                                                                                Padding="0,0,0,3"
+                                                                                VerticalAlignment="Center"
+                                                                                Text="-" />
+                                                                        </Border>
 
-                                                            </StackPanel>
+                                                                        <local:CustomNumberBox
+                                                                            Grid.Column="3"
+                                                                            Width="45"
+                                                                            MinWidth="0"
+                                                                            CornerRadius="0 0 0 0"
+                                                                            Minimum="-1"
+                                                                            PlaceholderText="-1"
+                                                                            Text="{Binding Range.To, Mode=TwoWay}" />
+                                                                        <Button
+                                                                            x:Name="RemoveButton"
+                                                                            Grid.Column="4"
+                                                                            Width="32"
+                                                                            Height="32"
+                                                                            Padding="0"
+                                                                            Click="AlsoKnownAsRemoveButton_Click"
+                                                                            CornerRadius="0 4 4 0">
+                                                                            <FontIcon FontSize="12" Glyph="&#xE74D;" />
+                                                                        </Button>
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </ListView.ItemTemplate>
+                                                        </ListView>
+                                                    </StackPanel>
 
-                                                        </Button>
-                                                        <Button Click="MirrorButtonVertical_Click" HorizontalAlignment="Left" Height="32">
-                                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                                <FontIcon Glyph="&#xE8CB;" FontSize="12"/>
-                                                                <TextBlock Text="Mirror vertically"/>
 
-                                                            </StackPanel>
-
-                                                        </Button>
-                                                    </controls:WrapPanel>
-                                                    <TextBlock Text="To crop, you can import your frames to NickeManarin/ScreenToGif do it there, and save back here" Style="{StaticResource HelperTextStyle}"/>
 
 
                                                 </StackPanel>
-                                        </Border>
+                                            </Border>
+
+
 
                                         </Grid>
-                                        <Border Grid.Column="1" Style="{StaticResource CardBorderStyle}">
-                                            <StackPanel Spacing="12">
-                                                <TextBlock Text="Generating" Style="{StaticResource SectionHeaderStyle}"/>
 
-                                                <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+                                        <Expander
+                                            MinHeight="0"
+                                            MaxWidth="1000"
+                                            Padding="16,8,16,16"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch">
+                                            <Expander.Header>
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
 
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock
+                                                        Grid.Column="0"
+                                                        Padding="0,8,0,12"
+                                                        Style="{StaticResource SectionHeaderStyle}"
+                                                        Text="Processing override" />
+                                                    <Button
+                                                        x:Name="RemoveOverwriteButton"
+                                                        Grid.Column="1"
+                                                        Margin="0,0,-14,0"
+                                                        Click="RemoveOverwriteButton_Click"
+                                                        Visibility="Collapsed">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <FontIcon FontSize="12" Glyph="&#xE74D;" />
+                                                            <TextBlock Text="Remove override" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                </Grid>
 
+                                            </Expander.Header>
+                                            <Expander.Content>
+                                                <StackPanel IsTabStop="True" Spacing="10">
 
-
-                                                <local:CustomNumberBox Grid.Column="0" x:Name="SkipTextBox" PlaceholderText="0" Header="Step" Minimum="1" Maximum="5000"/>
-                                                <TextBlock Margin="0 -8 0 0" Text="Steps entered amount of frames and draws the next, then steps again. Can increase speed or reduce framerate."  Style="{StaticResource HelperTextStyle}"/>
-
-
-                                                <StackPanel Spacing="4">
-                                                                <Grid ColumnSpacing="8">
-                                                                    <Grid.ColumnDefinitions>
-                                                                        <ColumnDefinition Width="*"/>
-                                                                        <ColumnDefinition Width="*"/>
-                                                                    </Grid.ColumnDefinitions>
-
-                                                        <local:CustomNumberBox Grid.Column="0" x:Name="AnimationOffsetXTextBox" PlaceholderText="0" Header="Offset X" Minimum="-9999" Maximum="9999"/>
-                                                        <local:CustomNumberBox Grid.Column="1" x:Name="AnimationOffsetYTextBox" PlaceholderText="0" Header="Offset Y" Minimum="-9999" Maximum="9999"/>
-
-                                                                </Grid>
-                                                                <TextBlock Text="Adjusts the offset of every frame after processing"  Style="{StaticResource HelperTextStyle}"/>
-                                                            </StackPanel>
-                                         
-
-                                                            <StackPanel Spacing="4">
-                                                        <TextBlock Text="Recover cropped offset on"/>
-                                                        <Grid ColumnSpacing="8">
-                                                                    <Grid.ColumnDefinitions>
-                                                                        <ColumnDefinition Width="*"/>
-                                                                        <ColumnDefinition Width="*"/>
-                                                                    </Grid.ColumnDefinitions>
-                                                                    <CheckBox Grid.Column="0" x:Name="RecoverXCheckBox" Content="X axis"/>
-                                                                    <CheckBox Grid.Column="1" x:Name="RecoverYCheckBox" Content="Y axis"/>
-                                                                </Grid>
-                                                                <TextBlock Text="If enabled, the offsets will be adjusted to account for any cropping that was done"
-                                                                Style="{StaticResource HelperTextStyle}"/>
-                                                            </StackPanel>
-                                                <StackPanel Spacing="4">
-                                                    <CheckBox x:Name="RegenerateCheckBox" Content="Regenerate frame properties"/>
-                                                    <TextBlock Text="If disabled, offsets and sub-positions won't be overwritten"  Style="{StaticResource HelperTextStyle}"/>
+                                                    <local:ProcessingCard x:Name="ProcessingOverwriteCardControl" />
                                                 </StackPanel>
-                                                <StackPanel Spacing="4">
-                                                    <Grid ColumnSpacing="-1">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <TextBox x:Name="AlsoKnownAsTextBox" Header="Also known as" Grid.Column="0" PlaceholderText="Animation name" CornerRadius="4 0 0 4"/>
-                                                        <Button x:Name="AlsoKnownAsAddButton" Grid.Column="1" Padding="0" VerticalAlignment="Bottom" CornerRadius="0 4 4 0" Width="32" Height="32" IsEnabled="False">
-                                                            <FontIcon Glyph="&#xE710;" FontSize="14"/>
-                                                        </Button>
-                                                    </Grid>
-                                                    <ListView x:Name="AlsoKnownAsListView" SelectionMode="None" MaxHeight="150" Margin="0 0 -12 0">
-                                                        <ListView.ItemContainerTransitions>
-                                                            <TransitionCollection/>
-                                                        </ListView.ItemContainerTransitions>
-                                                        <ListView.ItemTemplate>
-                                                            <DataTemplate>
-                                                                <Grid ColumnSpacing="-1" Margin="16 0 0 0">
-                                                                    <Grid.ColumnDefinitions>
-                                                                        <ColumnDefinition Width="*"/>
-                                                                        <ColumnDefinition Width="Auto"/>
-                                                                        <ColumnDefinition Width="Auto"/>
-                                                                        <ColumnDefinition Width="Auto"/>
-                                                                        <ColumnDefinition Width="Auto"/>
-                                                                    </Grid.ColumnDefinitions>
-                                                                    <TextBox Grid.Column="0" Text="{Binding Name, Mode=TwoWay}" GotFocus="AlsoKnownAsEditTextBox_GotFocus" LostFocus="AlsoKnownAsEditTextBox_LostFocus" KeyDown="AlsoKnownAsEditTextBox_KeyDown" CornerRadius="4 0 0 4"/>
-                                                                    <local:CustomNumberBox Grid.Column="1" Text="{Binding Range.From, Mode=TwoWay}" CornerRadius="0"
-                                                                        Width="45"
-                                                                       MinWidth="0"
-                                                                       Minimum="0"
-                                                                        PlaceholderText="0"/>
-                                                                     <Border Grid.Column="2" Background="{ThemeResource SurfaceStrokeColorDefaultBrush}"
-                                                                        Margin="0 -1 0 0"
-                                                                        BorderThickness="1"
-                                                                        BorderBrush="{ThemeResource TextControlElevationBorderBrush}"
-                                                                        Padding="2"
-                                                                             >
-                                                                        <TextBlock Text="-" VerticalAlignment="Center" Padding="0 0 0 3"/>
-                                                                    </Border>
+                                            </Expander.Content>
+                                        </Expander>
 
-                                                                        <local:CustomNumberBox Grid.Column="3" Text="{Binding Range.To, Mode=TwoWay}" CornerRadius="0 0 0 0"
-                                                                        Width="45" MinWidth="0"          
-                                                                       Minimum="-1"
-                                                                       
-                                                                        PlaceholderText="-1"/>
-                                                                    <Button Grid.Column="4" x:Name="RemoveButton" Height="32" Width="32" Padding="0" Click="AlsoKnownAsRemoveButton_Click" CornerRadius="0 4 4 0">
-                                                                        <FontIcon Glyph="&#xE74D;" FontSize="12"/>
-                                                                    </Button>
-                                                                </Grid>
-                                                            </DataTemplate>
-                                                        </ListView.ItemTemplate>
-                                                    </ListView>
-                                                </StackPanel>
-                                               
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Grid>
+
+                            <!--  Frame Panel (hidden by default)  -->
+                            <Grid
+                                x:Name="FramePanel"
+                                Padding="20,0,0,0"
+                                Visibility="Collapsed">
 
 
-
-                                            </StackPanel>
-                                        </Border>
-
-                            
-
-                                    </Grid>
-
-                                    <Expander HorizontalAlignment="Stretch" MinHeight="0" HorizontalContentAlignment="Stretch" Padding="16 8 16 16" MaxWidth="1000">
-                                        <Expander.Header>
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                           
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="Processing override" Style="{StaticResource SectionHeaderStyle}" Padding="0 8 0 12"/>
-                                                <Button Grid.Column="1" x:Name="RemoveOverwriteButton" Visibility="Collapsed" Margin="0 0 -14 0" Click="RemoveOverwriteButton_Click">
-                                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <FontIcon Glyph="&#xE74D;" FontSize="12"/>
-                                                        <TextBlock Text="Remove override"/>
-                                                    </StackPanel>
-                                                </Button>
-                                            </Grid>
-                                            
-                                        </Expander.Header>
-                                        <Expander.Content>
-                                            <StackPanel Spacing="10" IsTabStop="True" >
-                                        
-                                                <local:ProcessingCard x:Name="ProcessingOverwriteCardControl"/>
-                                            </StackPanel>
-                                        </Expander.Content>
-                                    </Expander>
-
-                                </StackPanel>
-                            </ScrollViewer>
-                        </Grid>
-
-                        <!-- Frame Panel (hidden by default) -->
-                        <Grid x:Name="FramePanel" Visibility="Collapsed" Padding="20 0 0 0">
-
-             
 
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="246"/>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="246" />
                                 </Grid.ColumnDefinitions>
-                                <Border 
+                                <Border
                                     x:Name="CanvasBorder"
-                                    Margin="0 20 0 20"
-                                    BorderThickness="1"             
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-                                    <local:FrameCoordinateEditor x:Name="FrameCoordinateEditorControl" Grid.Column="0" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"/>
+                                    Margin="0,20,0,20"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1">
+                                    <local:FrameCoordinateEditor
+                                        x:Name="FrameCoordinateEditorControl"
+                                        Grid.Column="0"
+                                        HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Stretch" />
                                 </Border>
                                 <ScrollView Grid.Column="1" CornerRadius="0">
-                                    <StackPanel x:Name="FrameConfigPanel" Spacing="10"  Padding="12 20 20 20">
-                                        <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
+                                    <StackPanel
+                                        x:Name="FrameConfigPanel"
+                                        Padding="12,20,20,20"
+                                        Spacing="10">
+                                        <Border Padding="16,8,16,16" Style="{StaticResource CardBorderStyle}">
                                             <StackPanel Spacing="12">
-                                                <TextBlock Text="Properties" Style="{StaticResource SectionHeaderStyle}"/>
-                                                <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+                                                <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Properties" />
+                                                <Rectangle Style="{StaticResource GroupDividerStyle}" />
                                                 <Grid ColumnSpacing="10">
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
                                                     </Grid.ColumnDefinitions>
-                                                    <local:CustomNumberBox Grid.Column="0" x:Name="OffsetXTextBox" Header="Offset X" PlaceholderText="0" Minimum="-99999" Maximum="99999"/>
-                                                    <local:CustomNumberBox Grid.Column="1" x:Name="OffsetYTextBox" Header="Offset Y" PlaceholderText="0" Minimum="-99999" Maximum="99999"/>
+                                                    <local:CustomNumberBox
+                                                        x:Name="OffsetXTextBox"
+                                                        Grid.Column="0"
+                                                        Header="Offset X"
+                                                        Maximum="99999"
+                                                        Minimum="-99999"
+                                                        PlaceholderText="0" />
+                                                    <local:CustomNumberBox
+                                                        x:Name="OffsetYTextBox"
+                                                        Grid.Column="1"
+                                                        Header="Offset Y"
+                                                        Maximum="99999"
+                                                        Minimum="-99999"
+                                                        PlaceholderText="0" />
                                                 </Grid>
-                                            <local:CustomNumberBox Grid.Column="1" x:Name="MultiplyTextBox" Header="Multiply delay by" PlaceholderText="1" Minimum="0" Maximum="1000"/>
+                                                <local:CustomNumberBox
+                                                    x:Name="MultiplyTextBox"
+                                                    Grid.Column="1"
+                                                    Header="Multiply delay by"
+                                                    Maximum="1000"
+                                                    Minimum="0"
+                                                    PlaceholderText="1" />
                                             </StackPanel>
                                         </Border>
-                                        <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 16">
+                                        <Border Padding="16,8,16,16" Style="{StaticResource CardBorderStyle}">
                                             <StackPanel Spacing="12">
-                                                <TextBlock Text="Align" Style="{StaticResource SectionHeaderStyle}"/>
-                                                <Rectangle Style="{StaticResource GroupDividerStyle}"/>
+                                                <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Align" />
+                                                <Rectangle Style="{StaticResource GroupDividerStyle}" />
                                                 <!-- <RadioButtons x:Name="AlignToRadioButtons" Header="To" SelectedIndex="0">
                                                     <RadioButton Content="Origin"/>
                                                     <RadioButton Content="Selected frame"/>
-                                                </RadioButtons> -->
-                                                <RadioButtons x:Name="BasedOnRadioButtons" Header="To origin, based on" SelectedIndex="0">
-                                                    <RadioButton Content="Raw sprite size"/>
-                                                    <RadioButton Content="Cropped sprite size"/>
+                                                </RadioButtons>-->
+                                                <RadioButtons
+                                                    x:Name="BasedOnRadioButtons"
+                                                    Header="To origin, based on"
+                                                    SelectedIndex="0">
+                                                    <RadioButton Content="Raw sprite size" />
+                                                    <RadioButton Content="Cropped sprite size" />
                                                 </RadioButtons>
                                                 <StackPanel Spacing="8">
-                                                    <TextBlock Text="On"/>
+                                                    <TextBlock Text="On" />
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="*" />
                                                         </Grid.ColumnDefinitions>
-                                                        <CheckBox Grid.Column="0" x:Name="AlignOnXAxis" Content="X axis"/>
-                                                        <CheckBox Grid.Column="1" x:Name="AlignOnYAxis" Content="Y axis"/>
+                                                        <CheckBox
+                                                            x:Name="AlignOnXAxis"
+                                                            Grid.Column="0"
+                                                            Content="X axis" />
+                                                        <CheckBox
+                                                            x:Name="AlignOnYAxis"
+                                                            Grid.Column="1"
+                                                            Content="Y axis" />
                                                     </Grid>
-                                     
+
                                                 </StackPanel>
 
 
-                                            <Grid ColumnSpacing="10" Margin="0 0 0 0">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Button x:Name="AlignDownRightButton" Grid.Column="0" Click="AlignDownRightButton_Click" HorizontalAlignment="Stretch" Height="32">
-                                                    <FontIcon Glyph="&#xE8AD;" FontSize="12"
-              Rotation="90" Scale="1,1,1" CenterPoint="6,6,0"/>
-                                                </Button>
-                                                <Button x:Name="AlignDownButton" Grid.Column="1" Click="AlignDownButton_Click" HorizontalAlignment="Stretch" Height="32">
-                                                    <FontIcon Glyph="&#xE74B;" FontSize="12"/>
-                                                </Button>
-                                                <Button x:Name="AlignDownLeftButton" Grid.Column="2" Click="AlignDownLeftButton_Click" HorizontalAlignment="Stretch" Height="32">
-                                                    <FontIcon Glyph="&#xEA4F;" FontSize="12" Rotation="-90" CenterPoint="6,6,0"/>
-                                                </Button>
-                                            </Grid>
-
-                                            <Grid ColumnSpacing="10" Margin="0 -2 0 0">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Button x:Name="AlignRightButton" Grid.Column="0" Click="AlignRightButton_Click" HorizontalAlignment="Stretch" Height="32">
-                                                    <FontIcon Glyph="&#xE72A;" FontSize="12"/>
-                                                </Button>
-                                                <Button x:Name="AlignCenterButton" Grid.Column="1" Click="AlignCenterButton_Click" HorizontalAlignment="Stretch" Height="32">
-                                                    <FontIcon Glyph="&#xE710;" FontSize="12"/>
-                                                </Button>
-
-                                                <Button x:Name="AlignLeftButton" Grid.Column="2" Click="AlignLeftButton_Click" HorizontalAlignment="Stretch" Height="32">
-                                                    <FontIcon Glyph="&#xE72B;" FontSize="12"/>
-                                                </Button>
-                                            </Grid>
-
-                                            <Grid ColumnSpacing="10" Margin="0 -2 0 0">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <Button x:Name="AlignUpRightButton" Grid.Column="0" Click="AlignUpRightButton_Click" HorizontalAlignment="Stretch" Height="32">
-                                                    <FontIcon Glyph="&#xE8AD;" FontSize="12"/>
-                                                </Button>
-                                                <Button x:Name="AlignUpButton" Grid.Column="1" Click="AlignUpButton_Click" HorizontalAlignment="Stretch" Height="32">
-                                                    <FontIcon Glyph="&#xE74A;" FontSize="12"/>
-                                                </Button>
-                                                <Button x:Name="AlignUpLeftButton" Grid.Column="2" Click="AlignUpLeftButton_Click" HorizontalAlignment="Stretch" Height="32">
-                                                    <FontIcon Glyph="&#xEA4F;" FontSize="12"/>
-                                                </Button>
-                                            </Grid>
-                                        </StackPanel>
-                                        </Border>
-                                        <Border Style="{StaticResource CardBorderStyle}" Padding="16 8 16 8">
-                                            <StackPanel Spacing="12">
-                                                <TextBlock Text="Remove movement" Style="{StaticResource SectionHeaderStyle}"/>
-                                                <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                                                <Grid ColumnSpacing="10">
+                                                <Grid Margin="0,0,0,0" ColumnSpacing="10">
                                                     <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="32"/>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
                                                     </Grid.ColumnDefinitions>
-                                                    <local:CustomNumberBox Grid.Column="0" x:Name="DirectionTextBox" Header="Direction" PlaceholderText="90"  Minimum="-360" Maximum="360"/>
-                                                    <local:CustomNumberBox Grid.Column="1" x:Name="SpeedTextBox" Header="Speed" PlaceholderText="0" Minimum="0" Maximum="9999"/>
-                                                    <Button Grid.Column="2" x:Name="RemoveMovementButton" VerticalAlignment="Bottom" Padding="9" Height="32" Click="RemoveMovementButton_Click">
-                                                        <FontIcon Glyph="&#xE768;" FontSize="12"/>
+                                                    <Button
+                                                        x:Name="AlignDownRightButton"
+                                                        Grid.Column="0"
+                                                        Height="32"
+                                                        HorizontalAlignment="Stretch"
+                                                        Click="AlignDownRightButton_Click">
+                                                        <FontIcon
+                                                            CenterPoint="6,6,0"
+                                                            FontSize="12"
+                                                            Glyph="&#xE8AD;"
+                                                            Rotation="90"
+                                                            Scale="1,1,1" />
+                                                    </Button>
+                                                    <Button
+                                                        x:Name="AlignDownButton"
+                                                        Grid.Column="1"
+                                                        Height="32"
+                                                        HorizontalAlignment="Stretch"
+                                                        Click="AlignDownButton_Click">
+                                                        <FontIcon FontSize="12" Glyph="&#xE74B;" />
+                                                    </Button>
+                                                    <Button
+                                                        x:Name="AlignDownLeftButton"
+                                                        Grid.Column="2"
+                                                        Height="32"
+                                                        HorizontalAlignment="Stretch"
+                                                        Click="AlignDownLeftButton_Click">
+                                                        <FontIcon
+                                                            CenterPoint="6,6,0"
+                                                            FontSize="12"
+                                                            Glyph="&#xEA4F;"
+                                                            Rotation="-90" />
                                                     </Button>
                                                 </Grid>
-                                                <TextBlock Text="Select frames you want to remove movement between" Style="{StaticResource HelperTextStyle}" Margin="0 -8 0 0"/>
+
+                                                <Grid Margin="0,-2,0,0" ColumnSpacing="10">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Button
+                                                        x:Name="AlignRightButton"
+                                                        Grid.Column="0"
+                                                        Height="32"
+                                                        HorizontalAlignment="Stretch"
+                                                        Click="AlignRightButton_Click">
+                                                        <FontIcon FontSize="12" Glyph="&#xE72A;" />
+                                                    </Button>
+                                                    <Button
+                                                        x:Name="AlignCenterButton"
+                                                        Grid.Column="1"
+                                                        Height="32"
+                                                        HorizontalAlignment="Stretch"
+                                                        Click="AlignCenterButton_Click">
+                                                        <FontIcon FontSize="12" Glyph="&#xE710;" />
+                                                    </Button>
+
+                                                    <Button
+                                                        x:Name="AlignLeftButton"
+                                                        Grid.Column="2"
+                                                        Height="32"
+                                                        HorizontalAlignment="Stretch"
+                                                        Click="AlignLeftButton_Click">
+                                                        <FontIcon FontSize="12" Glyph="&#xE72B;" />
+                                                    </Button>
+                                                </Grid>
+
+                                                <Grid Margin="0,-2,0,0" ColumnSpacing="10">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Button
+                                                        x:Name="AlignUpRightButton"
+                                                        Grid.Column="0"
+                                                        Height="32"
+                                                        HorizontalAlignment="Stretch"
+                                                        Click="AlignUpRightButton_Click">
+                                                        <FontIcon FontSize="12" Glyph="&#xE8AD;" />
+                                                    </Button>
+                                                    <Button
+                                                        x:Name="AlignUpButton"
+                                                        Grid.Column="1"
+                                                        Height="32"
+                                                        HorizontalAlignment="Stretch"
+                                                        Click="AlignUpButton_Click">
+                                                        <FontIcon FontSize="12" Glyph="&#xE74A;" />
+                                                    </Button>
+                                                    <Button
+                                                        x:Name="AlignUpLeftButton"
+                                                        Grid.Column="2"
+                                                        Height="32"
+                                                        HorizontalAlignment="Stretch"
+                                                        Click="AlignUpLeftButton_Click">
+                                                        <FontIcon FontSize="12" Glyph="&#xEA4F;" />
+                                                    </Button>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Padding="16,8,16,8" Style="{StaticResource CardBorderStyle}">
+                                            <StackPanel Spacing="12">
+                                                <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Remove movement" />
+                                                <Rectangle Style="{StaticResource GroupDividerStyle}" />
+                                                <Grid ColumnSpacing="10">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="32" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <local:CustomNumberBox
+                                                        x:Name="DirectionTextBox"
+                                                        Grid.Column="0"
+                                                        Header="Direction"
+                                                        Maximum="360"
+                                                        Minimum="-360"
+                                                        PlaceholderText="90" />
+                                                    <local:CustomNumberBox
+                                                        x:Name="SpeedTextBox"
+                                                        Grid.Column="1"
+                                                        Header="Speed"
+                                                        Maximum="9999"
+                                                        Minimum="0"
+                                                        PlaceholderText="0" />
+                                                    <Button
+                                                        x:Name="RemoveMovementButton"
+                                                        Grid.Column="2"
+                                                        Height="32"
+                                                        Padding="9"
+                                                        VerticalAlignment="Bottom"
+                                                        Click="RemoveMovementButton_Click">
+                                                        <FontIcon FontSize="12" Glyph="&#xE768;" />
+                                                    </Button>
+                                                </Grid>
+                                                <TextBlock
+                                                    Margin="0,-8,0,0"
+                                                    Style="{StaticResource HelperTextStyle}"
+                                                    Text="Select frames you want to remove movement between" />
                                             </StackPanel>
                                         </Border>
                                     </StackPanel>
                                 </ScrollView>
                             </Grid>
-                        
-                            
-                       
 
 
-                        <!-- HelpPanel -->
-                        <Grid x:Name="HelpPanel" Visibility="Collapsed">
-                            <ScrollViewer>
-                                <StackPanel Padding="20 20 20 20" Spacing="10">
 
 
-                                    <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" MaxWidth="1000" Padding="16 8 16 16">
-                                        <StackPanel Spacing="12">
-                                            <TextBlock x:Name="ProgramNameTextBlock" Text="Frames to MM sprite resources v" Style="{StaticResource SectionHeaderStyle}"/>
-                                            <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-                                            <TextBlock Text="Created by Marci599 for Mario Multiverse (SFMB).&#x0a;Mario Multiverse (SFMB) created by neoarc."/>
 
-                                            <StackPanel Orientation="Horizontal" Spacing="10" Margin="0 -4 0 0">
-                                                <HyperlinkButton Style="{StaticResource HyperlinkButtonAsButtonStyle}" NavigateUri="https://github.com/Marci599/sprite-rips-to-mm-sprite-resources">
-                                                    <StackPanel Spacing="6" Orientation="Horizontal">
-                                                        
-                                                        <TextBlock Text="GitHub"/>
-                                                        <FontIcon Glyph="&#xE8AD;" FontSize="14"/>
-                                                    </StackPanel>
-                                                </HyperlinkButton>
-                                                <HyperlinkButton Style="{StaticResource HyperlinkButtonAsButtonStyle}" NavigateUri="https://github.com/Marci599/sprite-rips-to-mm-sprite-resources#readme">
-                                                    <StackPanel Spacing="6" Orientation="Horizontal">
+                            <!--  HelpPanel  -->
+                            <Grid x:Name="HelpPanel" Visibility="Collapsed">
+                                <ScrollViewer>
+                                    <StackPanel Padding="20,20,20,20" Spacing="10">
 
-                                                        <TextBlock Text="Help / Controls"/>
-                                                        <FontIcon Glyph="&#xE8AD;" FontSize="14"/>
-                                                    </StackPanel>
-                                                </HyperlinkButton>
-                                                <HyperlinkButton Style="{StaticResource HyperlinkButtonAsButtonStyle}" NavigateUri="https://github.com/Marci599/sprite-rips-to-mm-sprite-resources/issues">
-                                                    <StackPanel Spacing="6" Orientation="Horizontal">
 
-                                                        <TextBlock Text="Issues"/>
-                                                        <FontIcon Glyph="&#xE8AD;" FontSize="14"/>
-                                                    </StackPanel>
-                                                </HyperlinkButton>
-                                       
-                                            </StackPanel>
-                                            
-                               
-                                            <TextBlock Text="Used for processing"/>
-                                            <StackPanel Orientation="Horizontal" Spacing="10" Margin="0 -4 0 0">
-                                                <HyperlinkButton Style="{StaticResource HyperlinkButtonAsButtonStyle}" NavigateUri="https://github.com/mono/skiasharp">
-                                                    <StackPanel Spacing="6" Orientation="Horizontal">
+                                        <Border
+                                            Grid.Row="1"
+                                            MaxWidth="1000"
+                                            Padding="16,8,16,16"
+                                            Style="{StaticResource CardBorderStyle}">
+                                            <StackPanel Spacing="12">
+                                                <TextBlock
+                                                    x:Name="ProgramNameTextBlock"
+                                                    Style="{StaticResource SectionHeaderStyle}"
+                                                    Text="Frames to MM sprite resources v" />
+                                                <Rectangle Style="{StaticResource GroupDividerStyle}" />
+                                                <TextBlock Text="Created by Marci599 for Mario Multiverse (SFMB).&#x0a;Mario Multiverse (SFMB) created by neoarc." />
 
-                                                        <TextBlock Text="SkiaSharp"/>
-                                                        <FontIcon Glyph="&#xE8AD;" FontSize="14"/>
-                                                    </StackPanel>
-                                                </HyperlinkButton>
-                                                <HyperlinkButton Style="{StaticResource HyperlinkButtonAsButtonStyle}" NavigateUri="https://github.com/oxipng/oxipng">
-                                                    <StackPanel Spacing="6" Orientation="Horizontal">
-
-                                                        <TextBlock Text="Oxipng"/>
-                                                        <FontIcon Glyph="&#xE8AD;" FontSize="14"/>
-                                                    </StackPanel>
-                                                </HyperlinkButton>
-                                       
-                                            </StackPanel>
-                                            
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" MaxWidth="1000" Padding="16 8 16 16">
-                                        <StackPanel Spacing="12">
-                                            <TextBlock Text="Settings" Style="{StaticResource SectionHeaderStyle}"/>
-
-                                            <Rectangle Style="{StaticResource GroupDividerStyle}"/>
-
-                                            <StackPanel Spacing="0">
-                                                <Grid ColumnSpacing="0">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <AutoSuggestBox x:Name="WorkingPathTextBox" Grid.Column="0" Header="Working directory path" CornerRadius="4 0 0 0" ItemsSource="{x:Bind WorkingPathHistory, Mode=OneWay}" SuggestionChosen="WorkingPathTextBox_SuggestionChosen" GotFocus="WorkingPathTextBox_GotFocus">
-                                                        <AutoSuggestBox.TextBoxStyle>
-                                                            <Style TargetType="TextBox">
-                                                                <Setter Property="IsSpellCheckEnabled" Value="False"/>
-                                                            </Style>
-                                                        </AutoSuggestBox.TextBoxStyle>
-                                                    </AutoSuggestBox>
-                                                    <Button x:Name="BrowseFolderButton" Style="{StaticResource AccentButtonStyle}" Grid.Column="1" VerticalAlignment="Bottom" Click="BrowseFolderButton_Click" CornerRadius="0 4 0 0">
+                                                <StackPanel
+                                                    Margin="0,-4,0,0"
+                                                    Orientation="Horizontal"
+                                                    Spacing="10">
+                                                    <HyperlinkButton NavigateUri="https://github.com/Marci599/sprite-rips-to-mm-sprite-resources" Style="{StaticResource HyperlinkButtonAsButtonStyle}">
                                                         <StackPanel Orientation="Horizontal" Spacing="6">
-                                                            <FontIcon Glyph="&#xE838;" FontSize="14"/>
-                                                            <TextBlock Text="Browse"/>
+
+                                                            <TextBlock Text="GitHub" />
+                                                            <FontIcon FontSize="14" Glyph="&#xE8AD;" />
                                                         </StackPanel>
-                                                    </Button>
-                                                </Grid>
-                                                <Border x:Name="AssetConfigBorder" Grid.Row="0" Style="{StaticResource CardBorderStyle}" MaxWidth="1000" Padding="16 8 16 16" CornerRadius="0 0 4 4" Margin="-1 0 -1 -1">
-                                                    <StackPanel Spacing="12">
-                                                        <TextBlock Text="Please provide a path where your folders and files will be located or are already located"  Style="{StaticResource HelperTextStyle}"/>
-                                                        <StackPanel Spacing="4" MaxWidth="1000">
-                                                            <CheckBox x:Name="IsHdCheckBox" Content="Is HD"/>
-                                                            <TextBlock Text="If enabled @2x pngs will be generated and .sprites files will be adjusted for that"  Style="{StaticResource HelperTextStyle}"/>
-                                                        </StackPanel>
-                                                        <Grid ColumnSpacing="0">
-                                                            <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="Auto"/>
-                                                            </Grid.ColumnDefinitions>
-                                                            <TextBox x:Name="GeneratePathTextBox" Grid.Column="0" Header="Generate path" PlaceholderText="Default" CornerRadius="4 0 0 4" IsSpellCheckEnabled="False"/>
-                                                            <Button x:Name="BrowseGenerateFolderButton" Style="{StaticResource AccentButtonStyle}" Grid.Column="1" VerticalAlignment="Bottom" Click="BrowseGenerateFolderButton_Click" CornerRadius="0 4 4 0">
-                                                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                                                    <FontIcon Glyph="&#xE838;" FontSize="14"/>
-                                                                    <TextBlock Text="Browse"/>
-                                                                </StackPanel>
-                                                            </Button>
-                                                        </Grid>
-                                                    </StackPanel>
-                                                </Border>
-                                                
-
-                                                
-                                            </StackPanel>
-
-                                            
-                           
-
-                                            <StackPanel Spacing="8">
-                                                <TextBlock Text="Manage program"/>
-                                                <controls:WrapPanel Orientation="Horizontal" HorizontalSpacing="8" VerticalSpacing="8">
-                                                    <Button x:Name="UninstallButton" Grid.Column="1" VerticalAlignment="Bottom" Click="UninstallButton_Click">
+                                                    </HyperlinkButton>
+                                                    <HyperlinkButton NavigateUri="https://github.com/Marci599/sprite-rips-to-mm-sprite-resources#readme" Style="{StaticResource HyperlinkButtonAsButtonStyle}">
                                                         <StackPanel Orientation="Horizontal" Spacing="6">
-                                                            <FontIcon Glyph="&#xE74D;" FontSize="14"/>
-                                                            <TextBlock Text="Uninstall"/>
+
+                                                            <TextBlock Text="Help / Controls" />
+                                                            <FontIcon FontSize="14" Glyph="&#xE8AD;" />
                                                         </StackPanel>
-                                                    </Button>
-                                                    <Button x:Name="ProgramDirectoryButton" Grid.Column="1" VerticalAlignment="Bottom" Click="ProgramDirectoryButton_Click">
+                                                    </HyperlinkButton>
+                                                    <HyperlinkButton NavigateUri="https://github.com/Marci599/sprite-rips-to-mm-sprite-resources/issues" Style="{StaticResource HyperlinkButtonAsButtonStyle}">
                                                         <StackPanel Orientation="Horizontal" Spacing="6">
-                                                            <FontIcon Glyph="&#xE838;" FontSize="14"/>
-                                                            <TextBlock Text="Open App Directory"/>
+
+                                                            <TextBlock Text="Issues" />
+                                                            <FontIcon FontSize="14" Glyph="&#xE8AD;" />
                                                         </StackPanel>
-                                                    </Button>
-                                                    <Button x:Name="ProgramSaveDirectoryButton" Grid.Column="1" VerticalAlignment="Bottom" Click="ProgramSaveDirectoryButton_Click">
-                                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                                            <FontIcon Glyph="&#xE838;" FontSize="14"/>
-                                                            <TextBlock Text="Open Local App Data Directory"/>
-                                                        </StackPanel>
-                                                    </Button>
-                                                </controls:WrapPanel>
-                                            </StackPanel>
+                                                    </HyperlinkButton>
 
-                                        </StackPanel>
-                                    </Border>
-
-
-
-
-                                    <InfoBar x:Name="UpdateInfoBar" IsOpen="False" Severity="Informational" MaxWidth="1000" Title="Update available" Message="Download the latest version of this program for an improved experience" IsClosable="False">
-                                        <InfoBar.ActionButton>
-                                            <HyperlinkButton HorizontalAlignment="Right" Style="{StaticResource HyperlinkButtonAsButtonStyle}" NavigateUri="https://github.com/Marci599/sprite-rips-to-mm-sprite-resources/releases/latest">
-                                                <StackPanel Orientation="Horizontal" Spacing="10">
-                                                    <TextBlock Text="Download"/>
-                                                    <FontIcon Glyph="&#xE8AD;" Opacity="0.67" FontSize="14"/>
                                                 </StackPanel>
-                                            </HyperlinkButton>
-                                        </InfoBar.ActionButton>
-                                    </InfoBar>
 
-                                </StackPanel>
-                            </ScrollViewer>
-                        </Grid>
-                    </Grid>
-                </ContentControl>
-            </Border>
 
-            <!-- Bottom Section - moved to Grid.Row="1" -->
-            <Grid Grid.Row="1" VerticalAlignment="Bottom" Margin="12">
-                <StackPanel x:Name="BottomBarStackPanel" SizeChanged="BottomBarStackPanel_SizeChanged" Translation="0,0,0">
-                    <InfoBar
-                    x:Name="PrimaryInfoBar"
-                    IsOpen="False"
-     
-             
-               
-                    CornerRadius="8 8 0 0"
-                    CloseButtonClick="ClickPrimaryInfoBar"/>
-                    <Border
-                    x:Name="SaveBarBorder"
-                    Background="{ThemeResource AcrylicBackgroundFillColorBaseBrush}"
-                    CornerRadius="8"
-                    Margin="0 -2 0 0"
-                    BorderThickness="1"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    >
+                                                <TextBlock Text="Used for processing" />
+                                                <StackPanel
+                                                    Margin="0,-4,0,0"
+                                                    Orientation="Horizontal"
+                                                    Spacing="10">
+                                                    <HyperlinkButton NavigateUri="https://github.com/mono/skiasharp" Style="{StaticResource HyperlinkButtonAsButtonStyle}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
 
-                        <Grid ColumnSpacing="8" Padding="16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-         
-                   
-                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Text="SkiaSharp" />
+                                                            <FontIcon FontSize="14" Glyph="&#xE8AD;" />
+                                                        </StackPanel>
+                                                    </HyperlinkButton>
+                                                    <HyperlinkButton NavigateUri="https://github.com/oxipng/oxipng" Style="{StaticResource HyperlinkButtonAsButtonStyle}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
 
-                            <Grid Grid.Column="0">
+                                                            <TextBlock Text="Oxipng" />
+                                                            <FontIcon FontSize="14" Glyph="&#xE8AD;" />
+                                                        </StackPanel>
+                                                    </HyperlinkButton>
 
-                                <StackPanel x:Name="ReduceFileSizeCheckBoxTexts" Margin="35 -2 0 -2">
-                                    <TextBlock Grid.Column="1" Text="Reduce file size" VerticalAlignment="Center" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Grid.Column="1" Text="If enabled, expect a bit slower generation"  Style="{StaticResource HelperTextStyle}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
-                                <CheckBox x:Name="ReduceFileSizeCheckBox" Grid.Column="0" Content="" VerticalAlignment="Center"/>
+                                                </StackPanel>
+
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border
+                                            Grid.Row="0"
+                                            MaxWidth="1000"
+                                            Padding="16,8,16,16"
+                                            Style="{StaticResource CardBorderStyle}">
+                                            <StackPanel Spacing="12">
+                                                <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Settings" />
+
+                                                <Rectangle Style="{StaticResource GroupDividerStyle}" />
+
+                                                <StackPanel Spacing="0">
+                                                    <Grid ColumnSpacing="0">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <AutoSuggestBox
+                                                            x:Name="WorkingPathTextBox"
+                                                            Grid.Column="0"
+                                                            CornerRadius="4 0 0 0"
+                                                            GotFocus="WorkingPathTextBox_GotFocus"
+                                                            Header="Working directory path"
+                                                            ItemsSource="{x:Bind WorkingPathHistory, Mode=OneWay}"
+                                                            SuggestionChosen="WorkingPathTextBox_SuggestionChosen">
+                                                            <AutoSuggestBox.TextBoxStyle>
+                                                                <Style TargetType="TextBox">
+                                                                    <Setter Property="IsSpellCheckEnabled" Value="False" />
+                                                                </Style>
+                                                            </AutoSuggestBox.TextBoxStyle>
+                                                        </AutoSuggestBox>
+                                                        <Button
+                                                            x:Name="BrowseFolderButton"
+                                                            Grid.Column="1"
+                                                            VerticalAlignment="Bottom"
+                                                            Click="BrowseFolderButton_Click"
+                                                            CornerRadius="0 4 0 0"
+                                                            Style="{StaticResource AccentButtonStyle}">
+                                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                <FontIcon FontSize="14" Glyph="&#xE838;" />
+                                                                <TextBlock Text="Browse" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </Grid>
+                                                    <Border
+                                                        x:Name="AssetConfigBorder"
+                                                        Grid.Row="0"
+                                                        MaxWidth="1000"
+                                                        Margin="-1,0,-1,-1"
+                                                        Padding="16,8,16,16"
+                                                        CornerRadius="0 0 4 4"
+                                                        Style="{StaticResource CardBorderStyle}">
+                                                        <StackPanel Spacing="12">
+                                                            <TextBlock Style="{StaticResource HelperTextStyle}" Text="Please provide a path where your folders and files will be located or are already located" />
+                                                            <StackPanel MaxWidth="1000" Spacing="4">
+                                                                <CheckBox x:Name="IsHdCheckBox" Content="Is HD" />
+                                                                <TextBlock Style="{StaticResource HelperTextStyle}" Text="If enabled @2x pngs will be generated and .sprites files will be adjusted for that" />
+                                                            </StackPanel>
+                                                            <Grid ColumnSpacing="0">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="*" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBox
+                                                                    x:Name="GeneratePathTextBox"
+                                                                    Grid.Column="0"
+                                                                    CornerRadius="4 0 0 4"
+                                                                    Header="Generate path"
+                                                                    IsSpellCheckEnabled="False"
+                                                                    PlaceholderText="Default" />
+                                                                <Button
+                                                                    x:Name="BrowseGenerateFolderButton"
+                                                                    Grid.Column="1"
+                                                                    VerticalAlignment="Bottom"
+                                                                    Click="BrowseGenerateFolderButton_Click"
+                                                                    CornerRadius="0 4 4 0"
+                                                                    Style="{StaticResource AccentButtonStyle}">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                        <FontIcon FontSize="14" Glyph="&#xE838;" />
+                                                                        <TextBlock Text="Browse" />
+                                                                    </StackPanel>
+                                                                </Button>
+                                                            </Grid>
+                                                        </StackPanel>
+                                                    </Border>
+
+
+
+                                                </StackPanel>
+
+
+
+
+                                                <StackPanel Spacing="8">
+                                                    <TextBlock Text="Manage program" />
+                                                    <controls:WrapPanel
+                                                        HorizontalSpacing="8"
+                                                        Orientation="Horizontal"
+                                                        VerticalSpacing="8">
+                                                        <Button
+                                                            x:Name="UninstallButton"
+                                                            Grid.Column="1"
+                                                            VerticalAlignment="Bottom"
+                                                            Click="UninstallButton_Click">
+                                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                <FontIcon FontSize="14" Glyph="&#xE74D;" />
+                                                                <TextBlock Text="Uninstall" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <Button
+                                                            x:Name="ProgramDirectoryButton"
+                                                            Grid.Column="1"
+                                                            VerticalAlignment="Bottom"
+                                                            Click="ProgramDirectoryButton_Click">
+                                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                <FontIcon FontSize="14" Glyph="&#xE838;" />
+                                                                <TextBlock Text="Open App Directory" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                        <Button
+                                                            x:Name="ProgramSaveDirectoryButton"
+                                                            Grid.Column="1"
+                                                            VerticalAlignment="Bottom"
+                                                            Click="ProgramSaveDirectoryButton_Click">
+                                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                <FontIcon FontSize="14" Glyph="&#xE838;" />
+                                                                <TextBlock Text="Open Local App Data Directory" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </controls:WrapPanel>
+                                                </StackPanel>
+
+                                            </StackPanel>
+                                        </Border>
+
+
+
+
+                                        <InfoBar
+                                            x:Name="UpdateInfoBar"
+                                            Title="Update available"
+                                            MaxWidth="1000"
+                                            IsClosable="False"
+                                            IsOpen="False"
+                                            Message="Download the latest version of this program for an improved experience"
+                                            Severity="Informational">
+                                            <InfoBar.ActionButton>
+                                                <HyperlinkButton
+                                                    HorizontalAlignment="Right"
+                                                    NavigateUri="https://github.com/Marci599/sprite-rips-to-mm-sprite-resources/releases/latest"
+                                                    Style="{StaticResource HyperlinkButtonAsButtonStyle}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                                        <TextBlock Text="Download" />
+                                                        <FontIcon
+                                                            FontSize="14"
+                                                            Glyph="&#xE8AD;"
+                                                            Opacity="0.67" />
+                                                    </StackPanel>
+                                                </HyperlinkButton>
+                                            </InfoBar.ActionButton>
+                                        </InfoBar>
+
+                                    </StackPanel>
+                                </ScrollViewer>
                             </Grid>
-
-
-                            <Button x:Name="GenerateButton" Grid.Column="1" Content="Generate Subject" MinWidth="120" Click="GenerateButton_Click"/>
                         </Grid>
-                    </Border>
-                </StackPanel>
-                
+                    </ContentControl>
+                </Border>
+
+                <!--  Bottom Section - moved to Grid.Row="1"  -->
+                <Grid
+                    Grid.Row="1"
+                    Margin="12"
+                    VerticalAlignment="Bottom">
+                    <StackPanel
+                        x:Name="BottomBarStackPanel"
+                        SizeChanged="BottomBarStackPanel_SizeChanged"
+                        Translation="0,0,0">
+                        <InfoBar
+                            x:Name="PrimaryInfoBar"
+                            CloseButtonClick="ClickPrimaryInfoBar"
+                            CornerRadius="8 8 0 0"
+                            IsOpen="False" />
+                        <Border
+                            x:Name="SaveBarBorder"
+                            Margin="0,-2,0,0"
+                            Background="{ThemeResource AcrylicBackgroundFillColorBaseBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8">
+
+                            <Grid Padding="16" ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+
+
+                                </Grid.ColumnDefinitions>
+
+                                <Grid Grid.Column="0">
+
+                                    <StackPanel x:Name="ReduceFileSizeCheckBoxTexts" Margin="35,-2,0,-2">
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Text="Reduce file size"
+                                            TextTrimming="CharacterEllipsis"
+                                            TextWrapping="NoWrap" />
+                                        <TextBlock
+                                            Grid.Column="1"
+                                            Style="{StaticResource HelperTextStyle}"
+                                            Text="If enabled, expect a bit slower generation"
+                                            TextTrimming="CharacterEllipsis"
+                                            TextWrapping="NoWrap" />
+                                    </StackPanel>
+                                    <CheckBox
+                                        x:Name="ReduceFileSizeCheckBox"
+                                        Grid.Column="0"
+                                        VerticalAlignment="Center"
+                                        Content="" />
+                                </Grid>
+
+
+                                <Button
+                                    x:Name="GenerateButton"
+                                    Grid.Column="1"
+                                    MinWidth="120"
+                                    Click="GenerateButton_Click"
+                                    Content="Generate Subject" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+
+                </Grid>
+
             </Grid>
-            
+
         </Grid>
-   
-    </Grid>
         <Border x:Name="InitialBorder" Background="{ThemeResource SolidBackgroundFillColorBaseBrush}">
-            <TextBlock x:Name="InitialBorderText" FontSize="26" HorizontalAlignment="Center"
-FontWeight="SemiBold"
-VerticalAlignment="Center" Text="Click on window content to load"/>
+            <TextBlock
+                x:Name="InitialBorderText"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                FontSize="26"
+                FontWeight="SemiBold"
+                Text="Click on window content to load" />
         </Border>
     </Grid>
 </Window>

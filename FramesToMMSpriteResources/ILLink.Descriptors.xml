@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<linker>
+	<assembly fullname="FramesToMMSpriteResources">
+		<type fullname="FramesToMMSpriteResources.CountToVisibilityConverter" preserve="all" />
+		<type fullname="FramesToMMSpriteResources.BoolToVisibilityConverter" preserve="all" />
+		<type fullname="FramesToMMSpriteResources.DepthToIconGlyphConverter" preserve="all" />
+		<type fullname="FramesToMMSpriteResources.DepthToMarginConverter" preserve="all" />
+	</assembly>
+</linker>

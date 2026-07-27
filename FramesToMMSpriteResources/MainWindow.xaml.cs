@@ -34,6 +34,14 @@ namespace FramesToMMSpriteResources
 
     public sealed partial class MainWindow : Window
     {
+        private static readonly object[] _temp =
+{
+    new CountToVisibilityConverter(),
+    new BoolToVisibilityConverter(),
+    new DepthToIconGlyphConverter(),
+    new DepthToMarginConverter()
+};
+
         //PROGRAM CONFIG
         private static readonly string CONFIG_FILENAME = "config.json";
         private static readonly string INTERFACE_CONFIG_FILENAME = "interface.json";
@@ -987,7 +995,7 @@ namespace FramesToMMSpriteResources
             TreeViewControl.SelectedNode = node;
         }
 
-        async void ChangeConfigPanelIfNecessary(TreeViewNode node, bool animate = true, bool nowGenerated = false)
+        void ChangeConfigPanelIfNecessary(TreeViewNode node, bool animate = true, bool nowGenerated = false)
         { 
             SettingsToggleButton.IsChecked = false;
 
@@ -1197,6 +1205,7 @@ namespace FramesToMMSpriteResources
                     subjectName = (node.Parent.Parent.Content as TreeItem)!.Text;
                     animationName = (node.Parent.Content as TreeItem)!.Text;
                     string frameName = (node.Content as TreeItem)!.Text;
+                    bool isFromFramePanel = (ProgramConfig.SelectedNodePath != null && ProgramConfig.SelectedNodePath.Count == 2);
                     HandleSelection(selectedNode, nowGenerated, [subjectName, animationName]);
                     UpdateBreadcrumb(subjectName, animationName, string.Join(", ", ProgramConfig.SelectedNodes!.OrderBy(s => s)));
                     CheckFrameCountAndDisplayWarning((node.Parent.Parent.Content as TreeItem)!.Count);
@@ -1211,7 +1220,8 @@ namespace FramesToMMSpriteResources
 
                     subjectConfig = ProgramConfig.AssetConfig!.SubjectConfigs![subjectName];
                     animationConfig = subjectConfig.AnimationConfigs![animationName];
-                    bool isFromFramePanel = (TreeViewControl.SelectedNode == null || (TreeViewControl.SelectedNode.Content as TreeItem)!.Depth == ItemDepth.Frame);
+               
+     
                     int frameCount = TreeViewControl.SelectedNode!.Parent.Children.Count;
                     EnableAlignButtons(false);
                     if (animate)
@@ -1225,7 +1235,7 @@ namespace FramesToMMSpriteResources
                
                         panelToShow.Visibility = Visibility.Visible;
                     }
-                    DisplayFrameCongifAsync(subjectName, animationName, frameName, isFromFramePanel, frameCount, subjectConfig, animationConfig);               
+                    DisplayFrameConfigAsync(subjectName, animationName, frameName, isFromFramePanel, frameCount, subjectConfig, animationConfig);               
                     break;
 
                 default:
@@ -1425,7 +1435,7 @@ namespace FramesToMMSpriteResources
 
         CancellationTokenSource? cts= null;
 
-        async void DisplayFrameCongifAsync(string subjectName, string animationName, string frameName, bool isFromFramePanel, int frameCount, SubjectConfig subjectConfig, AnimationConfig animationConfig)
+        async void DisplayFrameConfigAsync(string subjectName, string animationName, string frameName, bool isFromFramePanel, int frameCount, SubjectConfig subjectConfig, AnimationConfig animationConfig)
         {
 
             DirectionTextBox.ValueChanged -= DirectionTextBox_ValueChanged;
@@ -1446,7 +1456,8 @@ namespace FramesToMMSpriteResources
             bool isCancelled = false;
             if (!animationEquals)
             {
-                if (!subjectEquals || (TreeViewControl.SelectedNode == null || !isFromFramePanel && animationName != AnimationSpriteFramePath[1]))
+                Debug.WriteLine(isFromFramePanel);
+                if (!subjectEquals || (!isFromFramePanel && animationName != AnimationSpriteFramePath[1]))
                 {
                     FrameCoordinateEditorControl.UnloadAnimation();
                 }

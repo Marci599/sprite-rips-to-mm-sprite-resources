@@ -2,141 +2,167 @@
     x:Class="FramesToMMSpriteResources.FrameCoordinateEditor"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
+    xmlns:local="using:FramesToMMSpriteResources"
     xmlns:skia="using:SkiaSharp.Views.Windows"
     IsTabStop="True"
     KeyDown="RootGrid_KeyDown"
-    KeyUp="RootGrid_KeyUp"
-    xmlns:controls="using:CommunityToolkit.WinUI.Controls"
-    xmlns:local="using:FramesToMMSpriteResources">
+    KeyUp="RootGrid_KeyUp">
 
-        <Grid>
-            <skia:SKSwapChainPanel x:Name="CoordinateCanvas"
-                HorizontalAlignment="Stretch"
-                VerticalAlignment="Stretch"/>
-            <StackPanel
-                Margin="-4 10 10 0"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Top">
-                <Border 
-                    x:Name="AnimationPreviewHostBorder"        
-                    Width="126"
-                    Height="156"
-                    MinWidth="126"
-                    MinHeight="126">
-                    <Grid>
-                        <Border 
+    <Grid>
+        <skia:SKSwapChainPanel
+            x:Name="CoordinateCanvas"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch" />
+        <StackPanel
+            Margin="-4,10,10,0"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top">
+            <Border
+                x:Name="AnimationPreviewHostBorder"
+                Width="126"
+                Height="156"
+                MinWidth="126"
+                MinHeight="126">
+                <Grid>
+                    <Border
+                        Margin="4,0,0,4"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1">
+                        <skia:SKSwapChainPanel
+                            x:Name="AnimationPreviewCanvas"
                             HorizontalAlignment="Stretch"
-                            VerticalAlignment="Stretch"
-                            Margin="4 0 0 4"
-                            BorderThickness="1"             
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-                            <skia:SKSwapChainPanel x:Name="AnimationPreviewCanvas"    
-                        
-                                HorizontalAlignment="Stretch"
-                                VerticalAlignment="Stretch"/>
-                        </Border>
-                        <Border x:Name="PreviewResizeLeftHandle"
-                            Width="8"                        
-                            HorizontalAlignment="Left"
-                            Background="Transparent"
-                            PointerEntered="PreviewResizeLeftHandle_PointerEntered"
-                            PointerExited="PreviewResizeHandle_PointerExited"
-                            PointerPressed="PreviewResizeLeftHandle_PointerPressed"
-                            PointerMoved="PreviewResizeHandle_PointerMoved"
-                            PointerReleased="PreviewResizeHandle_PointerReleased"/>
-                        <Border x:Name="PreviewResizeBottomHandle"
-                            Height="8"
-                            VerticalAlignment="Bottom"
-                            Background="Transparent"
-                            PointerEntered="PreviewResizeBottomHandle_PointerEntered"
-                            PointerExited="PreviewResizeHandle_PointerExited"
-                            PointerPressed="PreviewResizeBottomHandle_PointerPressed"
-                            PointerMoved="PreviewResizeHandle_PointerMoved"
-                            PointerReleased="PreviewResizeHandle_PointerReleased"/>
-                        <Border x:Name="PreviewResizeCornerHandle"
-                            Width="14"
-                            Height="14"
-                            HorizontalAlignment="Left"
-                            VerticalAlignment="Bottom"
-                            Background="Transparent"
-                            PointerEntered="PreviewResizeCornerHandle_PointerEntered"
-                            PointerExited="PreviewResizeHandle_PointerExited"
-                            PointerPressed="PreviewResizeCornerHandle_PointerPressed"
-                            PointerMoved="PreviewResizeHandle_PointerMoved"
-                            PointerReleased="PreviewResizeHandle_PointerReleased"/>
-                    </Grid>
-                </Border>
-                <Border x:Name="FrameRangeBorder"                 
-                    Padding="10"
-                    CornerRadius="0 0 8 8"
-                    Background="{ThemeResource AcrylicBackgroundFillColorBaseBrush}"
-                    BorderBrush="{ThemeResource ControlStrokeColorOnAccentTertiaryBrush}"
-                    Margin="0 -6 0 0"
-                    BorderThickness="1"
-                    HorizontalAlignment="Right">
-                    <Border CornerRadius="4">
-                        <StackPanel Spacing="0" Orientation="Horizontal">
-                            <local:CustomNumberBox x:Name="FromNumberBox"
-                                Width="45"
-                                MinWidth="0"
-                                PlaceholderText="0" CornerRadius="4 0 0 4"
-                                Minimum="0" Maximum="9999"/>
-                            <Border Background="{ThemeResource SurfaceStrokeColorDefaultBrush}"
-                                Margin="-1 -1 -1 0"
-                                BorderThickness="1"
-                                BorderBrush="{ThemeResource TextControlElevationBorderBrush}"
-                                Padding="2">
-                                <TextBlock Text="-" VerticalAlignment="Center" Padding="0 0 0 3"/>
-                            </Border>
-
-                            <local:CustomNumberBox x:Name="ToNumberBox" CornerRadius="0 4 4 0"
-                                Width="45"           
-                                MinWidth="0"
-                                PlaceholderText="n"
-                                Minimum="0" Maximum="9999"/>
-                        </StackPanel>
+                            VerticalAlignment="Stretch" />
                     </Border>
-                </Border>
-            </StackPanel>
-    
-                <Border
-                    Margin="10"
-                    Padding="10"
-                    CornerRadius="8"
-                    Background="{ThemeResource AcrylicBackgroundFillColorBaseBrush}"
-                    BorderBrush="{ThemeResource ControlStrokeColorOnAccentTertiaryBrush}"
-                    BorderThickness="1"
-                    HorizontalAlignment="Right"
-                    VerticalAlignment="Bottom">
-                    <StackPanel Spacing="12" Orientation="Horizontal">
-                        <Button Click="CenterOriginButton_Click" HorizontalAlignment="Stretch">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon Glyph="&#xE777;" FontSize="12"/>
-                                <TextBlock Text="Recenter"/>
-                            </StackPanel>
-                        </Button>
-                        <local:CustomNumberBox x:Name="ZoomNumberBox" PlaceholderText="100" Minimum="10" Maximum="1800"/>
+                    <Border
+                        x:Name="PreviewResizeLeftHandle"
+                        Width="8"
+                        HorizontalAlignment="Left"
+                        Background="Transparent"
+                        PointerEntered="PreviewResizeLeftHandle_PointerEntered"
+                        PointerExited="PreviewResizeHandle_PointerExited"
+                        PointerMoved="PreviewResizeHandle_PointerMoved"
+                        PointerPressed="PreviewResizeLeftHandle_PointerPressed"
+                        PointerReleased="PreviewResizeHandle_PointerReleased" />
+                    <Border
+                        x:Name="PreviewResizeBottomHandle"
+                        Height="8"
+                        VerticalAlignment="Bottom"
+                        Background="Transparent"
+                        PointerEntered="PreviewResizeBottomHandle_PointerEntered"
+                        PointerExited="PreviewResizeHandle_PointerExited"
+                        PointerMoved="PreviewResizeHandle_PointerMoved"
+                        PointerPressed="PreviewResizeBottomHandle_PointerPressed"
+                        PointerReleased="PreviewResizeHandle_PointerReleased" />
+                    <Border
+                        x:Name="PreviewResizeCornerHandle"
+                        Width="14"
+                        Height="14"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Bottom"
+                        Background="Transparent"
+                        PointerEntered="PreviewResizeCornerHandle_PointerEntered"
+                        PointerExited="PreviewResizeHandle_PointerExited"
+                        PointerMoved="PreviewResizeHandle_PointerMoved"
+                        PointerPressed="PreviewResizeCornerHandle_PointerPressed"
+                        PointerReleased="PreviewResizeHandle_PointerReleased" />
+                </Grid>
+            </Border>
+            <Border
+                x:Name="FrameRangeBorder"
+                Margin="0,-6,0,0"
+                Padding="10"
+                HorizontalAlignment="Right"
+                Background="{ThemeResource AcrylicBackgroundFillColorBaseBrush}"
+                BorderBrush="{ThemeResource ControlStrokeColorOnAccentTertiaryBrush}"
+                BorderThickness="1"
+                CornerRadius="0 0 8 8">
+                <Border CornerRadius="4">
+                    <StackPanel Orientation="Horizontal" Spacing="0">
+                        <local:CustomNumberBox
+                            x:Name="FromNumberBox"
+                            Width="45"
+                            MinWidth="0"
+                            CornerRadius="4 0 0 4"
+                            Maximum="9999"
+                            Minimum="0"
+                            PlaceholderText="0" />
+                        <Border
+                            Margin="-1,-1,-1,0"
+                            Padding="2"
+                            Background="{ThemeResource SurfaceStrokeColorDefaultBrush}"
+                            BorderBrush="{ThemeResource TextControlElevationBorderBrush}"
+                            BorderThickness="1">
+                            <TextBlock
+                                Padding="0,0,0,3"
+                                VerticalAlignment="Center"
+                                Text="-" />
+                        </Border>
+
+                        <local:CustomNumberBox
+                            x:Name="ToNumberBox"
+                            Width="45"
+                            MinWidth="0"
+                            CornerRadius="0 4 4 0"
+                            Maximum="9999"
+                            Minimum="0"
+                            PlaceholderText="n" />
                     </StackPanel>
                 </Border>
-            <Border
-                    Margin="10"
-                    Padding="14 14 14 14"
-                    CornerRadius="8"
-                    Background="{ThemeResource AcrylicBackgroundFillColorBaseBrush}"
-                    BorderBrush="{ThemeResource ControlStrokeColorOnAccentTertiaryBrush}"
-                    BorderThickness="1"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Bottom">
-                <StackPanel Spacing="12" Orientation="Horizontal">
-                    <TextBlock Text="Previous frame behind" VerticalAlignment="Center"/>
-                    <ToggleSwitch x:Name="ShowPreviousToggleSwitch" Margin="0 -8 0 -8" MinWidth="0"/>
-                </StackPanel>
             </Border>
+        </StackPanel>
+
+        <Border
+            Margin="10"
+            Padding="10"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            Background="{ThemeResource AcrylicBackgroundFillColorBaseBrush}"
+            BorderBrush="{ThemeResource ControlStrokeColorOnAccentTertiaryBrush}"
+            BorderThickness="1"
+            CornerRadius="8">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <Button HorizontalAlignment="Stretch" Click="CenterOriginButton_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontSize="12" Glyph="&#xE777;" />
+                        <TextBlock Text="Recenter" />
+                    </StackPanel>
+                </Button>
+                <local:CustomNumberBox
+                    x:Name="ZoomNumberBox"
+                    Maximum="1800"
+                    Minimum="10"
+                    PlaceholderText="100" />
+            </StackPanel>
+        </Border>
+        <Border
+            Margin="10"
+            Padding="14,14,14,14"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Bottom"
+            Background="{ThemeResource AcrylicBackgroundFillColorBaseBrush}"
+            BorderBrush="{ThemeResource ControlStrokeColorOnAccentTertiaryBrush}"
+            BorderThickness="1"
+            CornerRadius="8">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock VerticalAlignment="Center" Text="Previous frame behind" />
+                <ToggleSwitch
+                    x:Name="ShowPreviousToggleSwitch"
+                    MinWidth="0"
+                    Margin="0,-8,0,-8" />
+            </StackPanel>
+        </Border>
 
 
-        <Border x:Name="FramesLoadingBorder" Background="{ThemeResource SmokeFillColorDefaultBrush}" AllowFocusOnInteraction="True" CornerRadius="0 0 0 0">
-            <ProgressRing/>
+        <Border
+            x:Name="FramesLoadingBorder"
+            AllowFocusOnInteraction="True"
+            Background="{ThemeResource SmokeFillColorDefaultBrush}"
+            CornerRadius="0 0 0 0">
+            <ProgressRing />
         </Border>
     </Grid>
-  
+
 </UserControl>
