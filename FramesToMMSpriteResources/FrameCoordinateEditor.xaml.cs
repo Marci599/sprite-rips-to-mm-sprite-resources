@@ -39,6 +39,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private long _lastPreviewStep = -1;
     private readonly Stopwatch _previewStopwatch = new();
     private readonly object _previewRenderStateLock = new();
+    private readonly object _skiaRenderLock = new();
     private PreviewRenderState _previewRenderState = PreviewRenderState.Empty;
     private SubjectConfig _subjectConfig = new();
     private string? _animationConfigName = null;
@@ -342,8 +343,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
     }
 
     public void UpdateVisuals()
-    { 
-        CoordinateCanvas.Invalidate();
+    {
+        lock (_skiaRenderLock)
+        {
+            CoordinateCanvas.Invalidate();
+        }
+
         UpdateZoomControls();
     }
 
@@ -819,7 +824,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
                 oldRenderState.Dispose();
             }
 
-            AnimationPreviewCanvas.Invalidate();
+            lock (_skiaRenderLock)
+            {
+                AnimationPreviewCanvas.Invalidate();
+            }
             return;
         }
 
@@ -849,7 +857,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
             oldRenderState.Dispose();
         }
 
-        AnimationPreviewCanvas.Invalidate();
+        lock (_skiaRenderLock)
+        {
+            AnimationPreviewCanvas.Invalidate();
+        }
     }
 
  
@@ -863,9 +874,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
         int width = e.Info.Width;
         int height = e.Info.Height;
 
-        canvas.Clear();
+        lock (_skiaRenderLock)
+        {
+            canvas.Clear();
 
-        float zoom = GetSubjectInterfaceConfig().EditorCanvas.Zoom;
+            float zoom = GetSubjectInterfaceConfig().EditorCanvas.Zoom;
         var pan = GetSubjectInterfaceConfig().EditorCanvas.Pan;
         float axisX = width / 2f + pan.X;
         float axisY = height / 2f + pan.Y;
@@ -938,7 +951,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         canvas.DrawLine(0f, axisY, width, axisY, _xAxisPaint);
 
-        canvas.DrawLine(axisX, 0f, axisX, height, _yAxisPaint);    
+        canvas.DrawLine(axisX, 0f, axisX, height, _yAxisPaint);
+        }
     }
 
     private void AnimationPreviewCanvas_PaintSurface(object? sender, SKPaintGLSurfaceEventArgs e)
@@ -947,9 +961,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
         int width = e.Info.Width;
         int height = e.Info.Height;
 
-        lock (_previewRenderStateLock)
+        lock (_skiaRenderLock)
         {
-            PreviewRenderState renderState = _previewRenderState;
+            lock (_previewRenderStateLock)
+            {
+                PreviewRenderState renderState = _previewRenderState;
 
             canvas.Clear();
 
@@ -988,6 +1004,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
             canvas.DrawLine(0f, axisY, width, axisY, previewXAxisPaint);
             canvas.DrawLine(axisX, 0f, axisX, height, previewYAxisPaint);
+            }
         }
     }
 
