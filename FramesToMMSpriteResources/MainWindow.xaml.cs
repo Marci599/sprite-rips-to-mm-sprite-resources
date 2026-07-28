@@ -2975,8 +2975,8 @@ namespace FramesToMMSpriteResources
 
         public static string GetCurrentVersion()
         {
-            var version = Package.Current.Id.Version;
-            return $"{version.Major}.{version.Minor}.{version.Build}";
+            //var version = Package.Current.Id.Version;
+            return $"";
         }
 
         public static bool IsNewer(string latest, string current)
