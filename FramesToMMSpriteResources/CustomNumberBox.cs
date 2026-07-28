@@ -92,6 +92,9 @@ namespace FramesToMMSpriteResources
 
         private void CustomNumberBox_TextChanged(object sender, TextChangedEventArgs e)
         {
+            if (suppressTextChanged)
+                return;
+
             isTextValid = true;
             if (string.IsNullOrWhiteSpace(Text))
             {

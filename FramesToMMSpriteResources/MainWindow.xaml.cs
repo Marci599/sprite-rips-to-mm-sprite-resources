@@ -1366,7 +1366,7 @@ namespace FramesToMMSpriteResources
 
             PopulateAlsoKnownAsList();
             AlsoKnownAsListView.ItemsSource = AlsoKnownAsEntries;
-            CheckAlsoKnownAsAddButtonState();
+            CheckAlsoKnownAsAddButtonState(subjectConfig);
 
 
 
@@ -2117,20 +2117,20 @@ namespace FramesToMMSpriteResources
 
         private void AlsoKnownAsTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
-            CheckAlsoKnownAsAddButtonState();
+            var subjConf = GetCurrentAnimationSubjectConfig();
+            CheckAlsoKnownAsAddButtonState(subjConf);
 
             var animConf = subjConf.AnimationConfigs[(TreeViewControl.SelectedNode.Content as TreeItem)!.Text];
-            (animConf.InterfaceConfig as AnimationInterfaceConfig)!.AlsoKnownAs = text;  
+            (animConf.InterfaceConfig as AnimationInterfaceConfig)!.AlsoKnownAs = AlsoKnownAsTextBox.Text;  
         }
 
-        void CheckAlsoKnownAsAddButtonState()
+        void CheckAlsoKnownAsAddButtonState(SubjectConfig subjConf)
         {
-            var subjConf = GetCurrentAnimationSubjectConfig();
-            string text = AlsoKnownAsTextBox.Text;
-            bool isAllowedToAdd = !string.IsNullOrWhiteSpace(text);
+     
+            bool isAllowedToAdd = !string.IsNullOrWhiteSpace(AlsoKnownAsTextBox.Text);
             foreach ((string animationName, AnimationConfig animationConfig) in subjConf.AnimationConfigs!)
             {
-                if (animationName == text || (animationConfig.AlsoKnownAs != null && animationConfig.AlsoKnownAs.ContainsKey(text)))
+                if (animationName == AlsoKnownAsTextBox.Text || (animationConfig.AlsoKnownAs != null && animationConfig.AlsoKnownAs.ContainsKey(AlsoKnownAsTextBox.Text)))
                     isAllowedToAdd = false;
             }
             AlsoKnownAsAddButton.IsEnabled = isAllowedToAdd;
