@@ -833,7 +833,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
                 previewCanvas.Pan,
                 rangeFrom,
                 rangeTo,
-                Math.Max(1, animationConfig.Delay));
+                Math.Max(1, animationConfig.Delay),
+                new SKColor(lightA, lightA, lightA, 255),
+                new SKColor(lightB, lightB, lightB, 255),
+                _xAxisPaint.Color,
+                _yAxisPaint.Color);
         }
 
         AnimationPreviewCanvas.Invalidate();
@@ -940,47 +944,68 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
             canvas.Clear();
 
-        float zoom = renderState.Zoom;
-        var pan = renderState.Pan;
-        float axisX = width / 2f + pan.X;
-        float axisY = height / 2f + pan.Y;
+            float zoom = renderState.Zoom;
+            var pan = renderState.Pan;
+            float axisX = width / 2f + pan.X;
+            float axisY = height / 2f + pan.Y;
 
-        using SKPaint previewCheckerboardPaint = new() { IsAntialias = false, Shader = _checkerboardShader };
-        DrawCheckerboard(canvas, width, height, axisX, axisY, zoom, previewCheckerboardPaint);
+            DrawPreviewCheckerboard(canvas, width, height, axisX, axisY, zoom, renderState.CheckerboardLightColor, renderState.CheckerboardDarkColor);
 
-        if (renderState.SpriteFrames.Length == 0)
-        {
-            return;
-        }
+            if (renderState.SpriteFrames.Length == 0)
+            {
+                return;
+            }
 
-        int frameCount = renderState.RangeTo + 1 - renderState.RangeFrom;
-        if (frameCount <= 0)
-        {
-            return;
-        }
+            int frameCount = renderState.RangeTo + 1 - renderState.RangeFrom;
+            if (frameCount <= 0)
+            {
+                return;
+            }
 
-        double elapsedSeconds = _previewStopwatch.Elapsed.TotalSeconds;
-        long previewStep = (long)(elapsedSeconds * 60.0 / renderState.DelayInTicks);
-        int localFrameIndex = (int)(previewStep % frameCount);
-        int previewFrameIndex = Math.Clamp(localFrameIndex + renderState.RangeFrom, renderState.RangeFrom, renderState.RangeTo);
+            double elapsedSeconds = _previewStopwatch.Elapsed.TotalSeconds;
+            long previewStep = (long)(elapsedSeconds * 60.0 / renderState.DelayInTicks);
+            int localFrameIndex = (int)(previewStep % frameCount);
+            int previewFrameIndex = Math.Clamp(localFrameIndex + renderState.RangeFrom, renderState.RangeFrom, renderState.RangeTo);
 
-        _previewFrameIndex = localFrameIndex;
-        _lastPreviewStep = previewStep;
+            IntVector2 previewOffset = previewFrameIndex < renderState.FrameConfigs.Length
+                ? renderState.FrameConfigs[previewFrameIndex].Offset
+                : new IntVector2();
 
-        IntVector2 previewOffset = previewFrameIndex < renderState.FrameConfigs.Length
-            ? renderState.FrameConfigs[previewFrameIndex].Offset
-            : new IntVector2();
+            using SKPaint previewSpritePaint = new() { IsAntialias = false };
+            DrawFrame(canvas, renderState.SpriteFrames, previewFrameIndex, previewOffset, zoom, axisX, axisY, width, height, 1f, previewSpritePaint);
 
-        using SKPaint previewSpritePaint = new() { IsAntialias = false };
-        DrawFrame(canvas, renderState.SpriteFrames, previewFrameIndex, previewOffset, zoom, axisX, axisY, width, height, 1f, previewSpritePaint);
+            using SKPaint previewXAxisPaint = new() { IsAntialias = false, StrokeWidth = 1f, Color = renderState.XAxisColor };
+            using SKPaint previewYAxisPaint = new() { IsAntialias = false, StrokeWidth = 1f, Color = renderState.YAxisColor };
 
-        canvas.DrawLine(0f, axisY, width, axisY, _xAxisPaint);
-
-        canvas.DrawLine(axisX, 0f, axisX, height, _yAxisPaint);
+            canvas.DrawLine(0f, axisY, width, axisY, previewXAxisPaint);
+            canvas.DrawLine(axisX, 0f, axisX, height, previewYAxisPaint);
         }
     }
 
 
+
+
+    private static void DrawPreviewCheckerboard(SKCanvas canvas, int width, int height, float axisX, float axisY, float zoom, SKColor lightColor, SKColor darkColor)
+    {
+        float tileSize = Math.Max(1f, 4f * zoom);
+
+        using SKBitmap checkerboardUnitBitmap = new(2, 2, SKColorType.Bgra8888, SKAlphaType.Premul);
+        checkerboardUnitBitmap.SetPixel(0, 0, lightColor);
+        checkerboardUnitBitmap.SetPixel(1, 1, lightColor);
+        checkerboardUnitBitmap.SetPixel(1, 0, darkColor);
+        checkerboardUnitBitmap.SetPixel(0, 1, darkColor);
+
+        using SKShader checkerboardShader = checkerboardUnitBitmap.ToShader(SKShaderTileMode.Repeat, SKShaderTileMode.Repeat);
+        using SKPaint checkerboardPaint = new() { IsAntialias = false, Shader = checkerboardShader };
+
+        canvas.Save();
+        canvas.Translate(axisX, axisY);
+        canvas.Scale(tileSize, tileSize);
+        canvas.DrawRect(
+            new SKRect(-axisX / tileSize, -axisY / tileSize, (width - axisX) / tileSize, (height - axisY) / tileSize),
+            checkerboardPaint);
+        canvas.Restore();
+    }
 
     private void DrawCheckerboard(SKCanvas canvas, int width, int height, float axisX, float axisY, float zoom, SKPaint? paintOverride = null)
     {
@@ -1162,8 +1187,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
         Vector2 Pan,
         int RangeFrom,
         int RangeTo,
-        int DelayInTicks)
+        int DelayInTicks,
+        SKColor CheckerboardLightColor,
+        SKColor CheckerboardDarkColor,
+        SKColor XAxisColor,
+        SKColor YAxisColor)
     {
-        public static PreviewRenderState Empty { get; } = new([], [], 1f, Vector2.Zero, 0, -1, 1);
+        public static PreviewRenderState Empty { get; } = new([], [], 1f, Vector2.Zero, 0, -1, 1, SKColors.Transparent, SKColors.Transparent, SKColors.Transparent, SKColors.Transparent);
     }
 }
