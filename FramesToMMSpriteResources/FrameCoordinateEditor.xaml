@@ -33,6 +33,8 @@
                         BorderThickness="1">
                         <skia:SKSwapChainPanel
                             x:Name="AnimationPreviewCanvas"
+                            DrawInBackground="True"
+                            EnableRenderLoop="True"
                             HorizontalAlignment="Stretch"
                             VerticalAlignment="Stretch" />
                     </Border>

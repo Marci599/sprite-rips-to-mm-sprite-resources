@@ -33,11 +33,12 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private const float MaxZoom = 18.0f;
     private int _selectedFrame;
     private bool _isUpdatingZoomControls;
-    private readonly DispatcherTimer _previewTimer = new();
     public List<SpriteFrame> PreviewSpriteFrames = [];
     private int _previewFrameIndex;
     private long _lastPreviewStep = -1;
     private readonly Stopwatch _previewStopwatch = new();
+    private readonly object _previewRenderStateLock = new();
+    private PreviewRenderState _previewRenderState = PreviewRenderState.Empty;
     private SubjectConfig _subjectConfig = new();
     private string? _animationConfigName = null;
     private const float MinPreviewZoom = 0.05f;
@@ -105,9 +106,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         ]);
         SetCheckeredColors();
   
-        _previewTimer.Interval = TimeSpan.FromSeconds(1.0 / 60.0);
-        _previewTimer.Tick -= PreviewTimer_Tick;
-        _previewTimer.Tick += PreviewTimer_Tick;
         _nudgeHoldTimer.Interval = TimeSpan.FromSeconds(1.0 / 60.0);
         _nudgeHoldTimer.Tick -= NudgeHoldTimer_Tick;
         _nudgeHoldTimer.Tick += NudgeHoldTimer_Tick;
@@ -226,6 +224,11 @@ public sealed partial class FrameCoordinateEditor : UserControl
     public void LoadAnimation(List<SpriteFrame> spriteFrames, SubjectConfig subjectConfig, string? animationConfigName, SKColor? backgroundSKColor)
     {
         UnsubscribeCanvases();
+        lock (_previewRenderStateLock)
+        {
+            _previewRenderState = PreviewRenderState.Empty;
+        }
+
         foreach (var frame in PreviewSpriteFrames)
         {
             frame.WriteableBitmap?.Dispose();
@@ -254,8 +257,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
             ToNumberBox.PlaceholderText = maxFrames.ToString();
             ToNumberBox.Maximum = maxFrames;
             FromNumberBox.Maximum = maxFrames;
-            _previewTimer.Start();
-
             ShowPreviousToggleSwitch.IsOn = MainWindow.ProgramConfig.ShowPreviousFrameBehind;
             ZoomNumberBox.Text = (GetSubjectInterfaceConfig().EditorCanvas.Zoom * 100).ToString();
 
@@ -322,7 +323,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
         else
         {
-            _previewTimer.Stop();
             _previewStopwatch.Stop();
         }
 
@@ -805,46 +805,37 @@ public sealed partial class FrameCoordinateEditor : UserControl
         return getCurrentAnimationInterfaceConfig().Range.To;
     }
 
-    private void PreviewTimer_Tick(object? sender, object e)
-    {
-        if (PreviewSpriteFrames.Count == 0)
-        {
-            _previewTimer.Stop();
-            _previewStopwatch.Stop();
-            return;
-        }
-
-        int frameCount = GetPreviewFrameCount();
-        if (frameCount <= 0)
-        {
-            return;
-        }
-
-        int delayInTicks = Math.Max(1, getCurrentAnimationConfig().Delay);
-        long previewStep = (long)(_previewStopwatch.Elapsed.TotalSeconds * 60.0 / delayInTicks);
-        if (previewStep == _lastPreviewStep)
-        {
-            return;
-        }
-
-        _lastPreviewStep = previewStep;
-        int nextFrameIndex = (int)(previewStep % frameCount);
-        if (nextFrameIndex == _previewFrameIndex)
-        {
-            return;
-        }
-
-        _previewFrameIndex = nextFrameIndex;
-        UpdateAnimationPreviewFrame();
-    }
-
-    private int GetPreviewFrameCount()
-    {
-        return GetCorrectRangeToValue() + 1 - getCurrentAnimationInterfaceConfig().Range.From;
-    }
-
     private void UpdateAnimationPreviewFrame()
     {
+        if (_subjectConfig.AnimationConfigs == null || _animationConfigName == null || !_subjectConfig.AnimationConfigs.ContainsKey(_animationConfigName))
+        {
+            lock (_previewRenderStateLock)
+            {
+                _previewRenderState = PreviewRenderState.Empty;
+            }
+
+            AnimationPreviewCanvas.Invalidate();
+            return;
+        }
+
+        var previewCanvas = GetSubjectInterfaceConfig().PreviewCanvas;
+        var animationConfig = getCurrentAnimationConfig();
+        var animationInterfaceConfig = getCurrentAnimationInterfaceConfig();
+        int rangeFrom = Math.Clamp(animationInterfaceConfig.Range.From, 0, Math.Max(PreviewSpriteFrames.Count - 1, 0));
+        int rangeTo = Math.Clamp(GetCorrectRangeToValue(), rangeFrom, Math.Max(PreviewSpriteFrames.Count - 1, 0));
+
+        lock (_previewRenderStateLock)
+        {
+            _previewRenderState = new PreviewRenderState(
+                PreviewSpriteFrames.ToArray(),
+                animationConfig.FrameCongfigs.ToArray(),
+                previewCanvas.Zoom,
+                previewCanvas.Pan,
+                rangeFrom,
+                rangeTo,
+                Math.Max(1, animationConfig.Delay));
+        }
+
         AnimationPreviewCanvas.Invalidate();
     }
 
@@ -943,67 +934,87 @@ public sealed partial class FrameCoordinateEditor : UserControl
         int width = e.Info.Width;
         int height = e.Info.Height;
 
-        canvas.Clear();
+        lock (_previewRenderStateLock)
+        {
+            PreviewRenderState renderState = _previewRenderState;
 
-        float zoom = GetSubjectInterfaceConfig().PreviewCanvas.Zoom;
-        var pan = GetSubjectInterfaceConfig().PreviewCanvas.Pan;
+            canvas.Clear();
+
+        float zoom = renderState.Zoom;
+        var pan = renderState.Pan;
         float axisX = width / 2f + pan.X;
         float axisY = height / 2f + pan.Y;
 
-        DrawCheckerboard(canvas, width, height, axisX, axisY, zoom);
+        using SKPaint previewCheckerboardPaint = new() { IsAntialias = false, Shader = _checkerboardShader };
+        DrawCheckerboard(canvas, width, height, axisX, axisY, zoom, previewCheckerboardPaint);
 
-        if (PreviewSpriteFrames.Count == 0)
+        if (renderState.SpriteFrames.Length == 0)
         {
             return;
         }
 
-        int previewFrameIndex = Math.Clamp(_previewFrameIndex + getCurrentAnimationInterfaceConfig().Range.From, getCurrentAnimationInterfaceConfig().Range.From, GetCorrectRangeToValue());
-     
-     
-        
-            IntVector2 previewOffset = previewFrameIndex < getCurrentAnimationConfig().FrameCongfigs.Count
-                ? getCurrentAnimationConfig().FrameCongfigs[previewFrameIndex].Offset
-                : new IntVector2();
-            DrawFrame(canvas, previewFrameIndex, previewOffset, zoom, axisX, axisY, width, height, 1f);
-        
+        int frameCount = renderState.RangeTo + 1 - renderState.RangeFrom;
+        if (frameCount <= 0)
+        {
+            return;
+        }
 
+        double elapsedSeconds = _previewStopwatch.Elapsed.TotalSeconds;
+        long previewStep = (long)(elapsedSeconds * 60.0 / renderState.DelayInTicks);
+        int localFrameIndex = (int)(previewStep % frameCount);
+        int previewFrameIndex = Math.Clamp(localFrameIndex + renderState.RangeFrom, renderState.RangeFrom, renderState.RangeTo);
 
+        _previewFrameIndex = localFrameIndex;
+        _lastPreviewStep = previewStep;
 
+        IntVector2 previewOffset = previewFrameIndex < renderState.FrameConfigs.Length
+            ? renderState.FrameConfigs[previewFrameIndex].Offset
+            : new IntVector2();
+
+        using SKPaint previewSpritePaint = new() { IsAntialias = false };
+        DrawFrame(canvas, renderState.SpriteFrames, previewFrameIndex, previewOffset, zoom, axisX, axisY, width, height, 1f, previewSpritePaint);
 
         canvas.DrawLine(0f, axisY, width, axisY, _xAxisPaint);
 
         canvas.DrawLine(axisX, 0f, axisX, height, _yAxisPaint);
+        }
     }
 
 
 
-    private void DrawCheckerboard(SKCanvas canvas, int width, int height, float axisX, float axisY, float zoom)
+    private void DrawCheckerboard(SKCanvas canvas, int width, int height, float axisX, float axisY, float zoom, SKPaint? paintOverride = null)
     {
         float tileSize = Math.Max(1f, 4f * zoom);
-        _checkerboardPaint.Shader = _checkerboardShader;
+        SKPaint checkerboardPaint = paintOverride ?? _checkerboardPaint;
+        checkerboardPaint.Shader = _checkerboardShader;
         canvas.Save();
         canvas.Translate(axisX, axisY);
         canvas.Scale(tileSize, tileSize);
         canvas.DrawRect(
             new SKRect(-axisX / tileSize, -axisY / tileSize, (width - axisX) / tileSize, (height - axisY) / tileSize),
-            _checkerboardPaint);
+            checkerboardPaint);
         canvas.Restore();
     }
 
     private SKRect DrawFrame(SKCanvas canvas, int spriteFrameIndex, IntVector2 offset, float zoom, float axisX, float axisY, int viewportWidth, int viewportHeight, float alpha, SKPaint? overridePaint = null)
     {
+        return DrawFrame(canvas, PreviewSpriteFrames, spriteFrameIndex, offset, zoom, axisX, axisY, viewportWidth, viewportHeight, alpha, overridePaint);
+    }
 
-        float width = Math.Max(1f, PreviewSpriteFrames[spriteFrameIndex].OriginalSize.X * zoom);
-        float height = Math.Max(1f, PreviewSpriteFrames[spriteFrameIndex].OriginalSize.Y * zoom);
+    private SKRect DrawFrame(SKCanvas canvas, IReadOnlyList<SpriteFrame> spriteFrames, int spriteFrameIndex, IntVector2 offset, float zoom, float axisX, float axisY, int viewportWidth, int viewportHeight, float alpha, SKPaint? overridePaint = null)
+    {
+
+        float width = Math.Max(1f, spriteFrames[spriteFrameIndex].OriginalSize.X * zoom);
+        float height = Math.Max(1f, spriteFrames[spriteFrameIndex].OriginalSize.Y * zoom);
         float x = axisX + (offset.X * zoom);
         float y = axisY - (offset.Y * zoom);
         SKRect destRect = new(x, y, x + width, y + height);
 
         SKRect croppedDestRect;
-        if (PreviewSpriteFrames[spriteFrameIndex].OriginalSize.Y != PreviewSpriteFrames[spriteFrameIndex].WriteableBitmap.Info.Size.Height || PreviewSpriteFrames[spriteFrameIndex].OriginalSize.X != PreviewSpriteFrames[spriteFrameIndex].WriteableBitmap.Info.Size.Width)
+        if (spriteFrames[spriteFrameIndex].OriginalSize.Y != spriteFrames[spriteFrameIndex].WriteableBitmap.Info.Size.Height || spriteFrames[spriteFrameIndex].OriginalSize.X != spriteFrames[spriteFrameIndex].WriteableBitmap.Info.Size.Width)
         {
-            float cx = axisX + ((offset.X + PreviewSpriteFrames[spriteFrameIndex].CroppedRect.Left) * zoom);
-            float cy = axisY - ((offset.Y - PreviewSpriteFrames[spriteFrameIndex].CroppedRect.Top) * zoom);
+            float cx = axisX + ((offset.X + spriteFrames[spriteFrameIndex].CroppedRect.Left) * zoom);
+            float cy = axisY - ((offset.Y - spriteFrames[spriteFrameIndex].CroppedRect.Top) * zoom);
             croppedDestRect = new(cx, cy, cx + width, cy + height);
         }
         else
@@ -1019,8 +1030,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
  
         SKRect clippedDest = SKRect.Intersect(croppedDestRect, viewportRect);
-        float invScaleX = PreviewSpriteFrames[spriteFrameIndex].OriginalSize.X / width;
-        float invScaleY = PreviewSpriteFrames[spriteFrameIndex].OriginalSize.Y / height;
+        float invScaleX = spriteFrames[spriteFrameIndex].OriginalSize.X / width;
+        float invScaleY = spriteFrames[spriteFrameIndex].OriginalSize.Y / height;
         SKRect sourceRect = new(
             (clippedDest.Left - croppedDestRect.Left) * invScaleX,
             (clippedDest.Top - croppedDestRect.Top) * invScaleY,
@@ -1031,7 +1042,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         paint.Color = new SKColor(255, 255, 255, (byte)(alpha * 255f));
  
-        canvas.DrawBitmap(PreviewSpriteFrames[spriteFrameIndex].WriteableBitmap, sourceRect, clippedDest, paint);
+        canvas.DrawBitmap(spriteFrames[spriteFrameIndex].WriteableBitmap, sourceRect, clippedDest, paint);
 
         return destRect;
         
@@ -1068,6 +1079,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
      
         getCurrentAnimationInterfaceConfig().Range.From = (int)fromValue!;
         ToNumberBox.Minimum = getCurrentAnimationInterfaceConfig().Range.From;
+        UpdateAnimationPreviewFrame();
     }
 
     private void ToNumberBox_TextChanged(float? toValue)
@@ -1078,11 +1090,13 @@ public sealed partial class FrameCoordinateEditor : UserControl
         {
             getCurrentAnimationInterfaceConfig().Range.To = -1;
             FromNumberBox.Maximum = max;
+            UpdateAnimationPreviewFrame();
             return;
         }
 
         getCurrentAnimationInterfaceConfig().Range.To = (int)toValue;
         FromNumberBox.Maximum = (double)toValue;
+        UpdateAnimationPreviewFrame();
     }
 
     private void ApplyHeldNudgeKeys()
@@ -1139,5 +1153,17 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
 
         ApplyHeldNudgeKeys();
+    }
+
+    private sealed record PreviewRenderState(
+        SpriteFrame[] SpriteFrames,
+        FrameConfig[] FrameConfigs,
+        float Zoom,
+        Vector2 Pan,
+        int RangeFrom,
+        int RangeTo,
+        int DelayInTicks)
+    {
+        public static PreviewRenderState Empty { get; } = new([], [], 1f, Vector2.Zero, 0, -1, 1);
     }
 }
