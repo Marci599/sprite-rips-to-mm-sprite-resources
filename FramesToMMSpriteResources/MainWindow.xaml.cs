@@ -26,8 +26,6 @@ using System.Threading.Tasks;
 using Windows.ApplicationModel;
 using Windows.Storage.Pickers;
 
-//TODO: SHIFT RANGE SELECT
-
 namespace FramesToMMSpriteResources
 {
 
@@ -75,7 +73,12 @@ namespace FramesToMMSpriteResources
         bool _isHierarchyError = true;
 
         private static bool _isCtrlHeld = false;
+        private static bool _isShiftHeld = false;
         public static bool IsCtrlHeld => _isCtrlHeld;
+        public static bool IsShiftHeld => _isShiftHeld ||
+                                         IsVirtualKeyDown(Windows.System.VirtualKey.Shift) ||
+                                         IsVirtualKeyDown(Windows.System.VirtualKey.LeftShift) ||
+                                         IsVirtualKeyDown(Windows.System.VirtualKey.RightShift);
 
         [DllImport("user32.dll")]
         private static extern short GetAsyncKeyState(int vKey);
@@ -949,6 +952,14 @@ namespace FramesToMMSpriteResources
 
             var selectedNodesCount = ProgramConfig.SelectedNodes?.Count ?? 0;
 
+            if (IsShiftHeld && TrySelectSiblingRange(TreeViewControl.SelectedNode, node))
+            {
+                TreeViewControl.SelectedNode = node;
+                ChangeConfigPanelIfNecessary(node, true);
+                WaitThenSelect(node);
+                return;
+            }
+
             bool isMultiSelectScenario =
                 selectedNodesCount > 1 ||
                 (selectedNodesCount == 1 && IsCtrlHeld && TreeViewControl.SelectedNode != node);
@@ -987,6 +998,51 @@ namespace FramesToMMSpriteResources
                 TreeViewControl.SelectedNode = node;
                 ChangeConfigPanelIfNecessary(node, true);
             }
+        }
+
+
+        private bool TrySelectSiblingRange(TreeViewNode? anchorNode, TreeViewNode targetNode)
+        {
+            if (anchorNode == null || anchorNode == targetNode || anchorNode.Parent != targetNode.Parent)
+            {
+                return false;
+            }
+
+            IList<TreeViewNode> siblings = targetNode.Parent?.Children ?? TreeViewControl.RootNodes;
+            int anchorIndex = siblings.IndexOf(anchorNode);
+            int targetIndex = siblings.IndexOf(targetNode);
+            if (anchorIndex < 0 || targetIndex < 0)
+            {
+                return false;
+            }
+
+            ClearAllTreeItemSelections();
+            ProgramConfig.SelectedNodes = [];
+            ProgramConfig.SelectedNodePath = GetParentNodePath(targetNode);
+
+            int firstIndex = Math.Min(anchorIndex, targetIndex);
+            int lastIndex = Math.Max(anchorIndex, targetIndex);
+            for (int i = firstIndex; i <= lastIndex; i++)
+            {
+                var item = (TreeItem)siblings[i].Content!;
+                item.IsSelected = true;
+                _selectedTreeItems.Add(item);
+                ProgramConfig.SelectedNodes.Add(item.Text);
+            }
+
+            RemoveMovementButton.IsEnabled = ProgramConfig.SelectedNodes.Count > 1;
+            return true;
+        }
+
+        private static List<string> GetParentNodePath(TreeViewNode node)
+        {
+            List<string> path = [];
+            for (TreeViewNode? parent = node.Parent; parent != null; parent = parent.Parent)
+            {
+                path.Insert(0, ((TreeItem)parent.Content!).Text);
+            }
+
+            return path;
         }
 
         async void WaitThenSelect(TreeViewNode node)
@@ -2773,6 +2829,7 @@ namespace FramesToMMSpriteResources
         private void ClearKeyboardState()
         {
             _isCtrlHeld = false;
+            _isShiftHeld = false;
             FrameCoordinateEditorControl.ClearNudgeKeyState();
         }
 
@@ -2781,6 +2838,9 @@ namespace FramesToMMSpriteResources
             _isCtrlHeld = IsVirtualKeyDown(Windows.System.VirtualKey.Control) ||
                           IsVirtualKeyDown(Windows.System.VirtualKey.LeftControl) ||
                           IsVirtualKeyDown(Windows.System.VirtualKey.RightControl);
+            _isShiftHeld = IsVirtualKeyDown(Windows.System.VirtualKey.Shift) ||
+                           IsVirtualKeyDown(Windows.System.VirtualKey.LeftShift) ||
+                           IsVirtualKeyDown(Windows.System.VirtualKey.RightShift);
 
             bool isFrameEditorOpen =
                 FramePanel.Visibility == Visibility.Visible &&
@@ -2824,6 +2884,14 @@ namespace FramesToMMSpriteResources
                 return;
             }
 
+            if (e.Key == Windows.System.VirtualKey.Shift ||
+                e.Key == Windows.System.VirtualKey.LeftShift ||
+                e.Key == Windows.System.VirtualKey.RightShift)
+            {
+                _isShiftHeld = true;
+                return;
+            }
+
             bool isFrameEditorOpen =
                 FramePanel.Visibility == Visibility.Visible &&
                 TreeViewControl.SelectedNode != null &&
@@ -2843,6 +2911,13 @@ namespace FramesToMMSpriteResources
                 e.Key == Windows.System.VirtualKey.RightControl)
             {
                 _isCtrlHeld = false;
+            }
+
+            if (e.Key == Windows.System.VirtualKey.Shift ||
+                e.Key == Windows.System.VirtualKey.LeftShift ||
+                e.Key == Windows.System.VirtualKey.RightShift)
+            {
+                _isShiftHeld = false;
             }
 
             FrameCoordinateEditorControl.HandleNudgeKeyUp(e.Key);
