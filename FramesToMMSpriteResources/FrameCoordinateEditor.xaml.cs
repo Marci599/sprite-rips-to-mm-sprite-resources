@@ -34,6 +34,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private bool _isUpdatingZoomControls;
     private readonly object _previewRenderLock = new();
     public List<SpriteFrame> PreviewSpriteFrames = [];
+    private readonly List<PreviewRenderFrame> _previewRenderFrames = [];
     private int _previewFrameIndex;
     private long _lastPreviewStep = -1;
     private readonly Stopwatch _previewStopwatch = new();
@@ -84,6 +85,26 @@ public sealed partial class FrameCoordinateEditor : UserControl
     SKPaint _yAxisPaint = new() { IsAntialias = false, StrokeWidth = 1f };
     SKPaint _borderPaint = new() { IsAntialias = false, Style = SKPaintStyle.Stroke, StrokeWidth = 1f};
     SKPaint _secondaryBorderPaint = new() { IsAntialias = false, Style = SKPaintStyle.Stroke, StrokeWidth = 1f, Color = SKColors.Gray.WithAlpha(170) };
+
+
+    private sealed class PreviewRenderFrame : IDisposable
+    {
+        public PreviewRenderFrame(SKBitmap bitmap, SKRectI croppedRect, IntVector2 originalSize)
+        {
+            Bitmap = bitmap;
+            CroppedRect = croppedRect;
+            OriginalSize = originalSize;
+        }
+
+        public SKBitmap Bitmap { get; }
+        public SKRectI CroppedRect { get; }
+        public IntVector2 OriginalSize { get; }
+
+        public void Dispose()
+        {
+            Bitmap.Dispose();
+        }
+    }
 
     private enum ResizeDirection
     {
@@ -227,6 +248,17 @@ public sealed partial class FrameCoordinateEditor : UserControl
             foreach (var frame in PreviewSpriteFrames)
             {
                 frame.WriteableBitmap?.Dispose();
+            }
+
+            foreach (var frame in _previewRenderFrames)
+            {
+                frame.Dispose();
+            }
+
+            _previewRenderFrames.Clear();
+            foreach (var frame in spriteFrames)
+            {
+                _previewRenderFrames.Add(new PreviewRenderFrame(frame.WriteableBitmap.Copy(), frame.CroppedRect, frame.OriginalSize));
             }
 
             PreviewSpriteFrames = spriteFrames;
@@ -922,9 +954,9 @@ public sealed partial class FrameCoordinateEditor : UserControl
             float axisX = width / 2f + pan.X;
             float axisY = height / 2f + pan.Y;
 
-            DrawCheckerboard(canvas, width, height, axisX, axisY, zoom);
+            DrawPreviewCheckerboard(canvas, width, height, axisX, axisY, zoom);
 
-            if (PreviewSpriteFrames.Count == 0)
+            if (_previewRenderFrames.Count == 0)
             {
                 return;
             }
@@ -949,11 +981,78 @@ public sealed partial class FrameCoordinateEditor : UserControl
                 ? getCurrentAnimationConfig().FrameCongfigs[previewFrameIndex].Offset
                 : new IntVector2();
 
-            DrawFrame(canvas, previewFrameIndex, previewOffset, zoom, axisX, axisY, width, height, 1f);
+            DrawPreviewFrame(canvas, previewFrameIndex, previewOffset, zoom, axisX, axisY, width, height);
 
-            canvas.DrawLine(0f, axisY, width, axisY, _xAxisPaint);
-            canvas.DrawLine(axisX, 0f, axisX, height, _yAxisPaint);
+            using SKPaint xAxisPaint = new() { IsAntialias = false, StrokeWidth = 1f, Color = _xAxisPaint.Color };
+            using SKPaint yAxisPaint = new() { IsAntialias = false, StrokeWidth = 1f, Color = _yAxisPaint.Color };
+            canvas.DrawLine(0f, axisY, width, axisY, xAxisPaint);
+            canvas.DrawLine(axisX, 0f, axisX, height, yAxisPaint);
         }
+    }
+
+    private void DrawPreviewCheckerboard(SKCanvas canvas, int width, int height, float axisX, float axisY, float zoom)
+    {
+        using SKBitmap checkerboardBitmap = new(2, 2, SKColorType.Bgra8888, SKAlphaType.Premul);
+        checkerboardBitmap.SetPixel(0, 0, new SKColor(lightA, lightA, lightA, 255));
+        checkerboardBitmap.SetPixel(1, 1, new SKColor(lightA, lightA, lightA, 255));
+        checkerboardBitmap.SetPixel(1, 0, new SKColor(lightB, lightB, lightB, 255));
+        checkerboardBitmap.SetPixel(0, 1, new SKColor(lightB, lightB, lightB, 255));
+        using SKShader checkerboardShader = checkerboardBitmap.ToShader(SKShaderTileMode.Repeat, SKShaderTileMode.Repeat);
+        using SKPaint checkerboardPaint = new() { IsAntialias = false, Shader = checkerboardShader };
+
+        float tileSize = Math.Max(1f, 4f * zoom);
+        canvas.Save();
+        canvas.Translate(axisX, axisY);
+        canvas.Scale(tileSize, tileSize);
+        canvas.DrawRect(
+            new SKRect(-axisX / tileSize, -axisY / tileSize, (width - axisX) / tileSize, (height - axisY) / tileSize),
+            checkerboardPaint);
+        canvas.Restore();
+    }
+
+    private void DrawPreviewFrame(SKCanvas canvas, int spriteFrameIndex, IntVector2 offset, float zoom, float axisX, float axisY, int viewportWidth, int viewportHeight)
+    {
+        if ((uint)spriteFrameIndex >= (uint)_previewRenderFrames.Count)
+        {
+            return;
+        }
+
+        PreviewRenderFrame frame = _previewRenderFrames[spriteFrameIndex];
+        float width = Math.Max(1f, frame.OriginalSize.X * zoom);
+        float height = Math.Max(1f, frame.OriginalSize.Y * zoom);
+        float x = axisX + (offset.X * zoom);
+        float y = axisY - (offset.Y * zoom);
+        SKRect destRect = new(x, y, x + width, y + height);
+
+        SKRect croppedDestRect;
+        if (frame.OriginalSize.Y != frame.Bitmap.Info.Size.Height || frame.OriginalSize.X != frame.Bitmap.Info.Size.Width)
+        {
+            float cx = axisX + ((offset.X + frame.CroppedRect.Left) * zoom);
+            float cy = axisY - ((offset.Y - frame.CroppedRect.Top) * zoom);
+            croppedDestRect = new(cx, cy, cx + width, cy + height);
+        }
+        else
+        {
+            croppedDestRect = destRect;
+        }
+
+        SKRect viewportRect = new(0, 0, viewportWidth, viewportHeight);
+        if (!croppedDestRect.IntersectsWith(viewportRect))
+        {
+            return;
+        }
+
+        SKRect clippedDest = SKRect.Intersect(croppedDestRect, viewportRect);
+        float invScaleX = frame.OriginalSize.X / width;
+        float invScaleY = frame.OriginalSize.Y / height;
+        SKRect sourceRect = new(
+            (clippedDest.Left - croppedDestRect.Left) * invScaleX,
+            (clippedDest.Top - croppedDestRect.Top) * invScaleY,
+            (clippedDest.Right - croppedDestRect.Left) * invScaleX,
+            (clippedDest.Bottom - croppedDestRect.Top) * invScaleY);
+
+        using SKPaint spritePaint = new() { IsAntialias = false, Color = SKColors.White };
+        canvas.DrawBitmap(frame.Bitmap, sourceRect, clippedDest, spritePaint);
     }
 
 
