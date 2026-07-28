@@ -34,7 +34,9 @@
                         <skia:SKSwapChainPanel
                             x:Name="AnimationPreviewCanvas"
                             HorizontalAlignment="Stretch"
-                            VerticalAlignment="Stretch" />
+                            VerticalAlignment="Stretch"
+                            DrawInBackground="True"
+                            EnableRenderLoop="True" />
                     </Border>
                     <Border
                         x:Name="PreviewResizeLeftHandle"

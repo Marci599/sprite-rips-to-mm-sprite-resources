@@ -13,7 +13,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Numerics;
-using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Globalization;
 using Windows.Globalization.NumberFormatting;
 
@@ -33,7 +32,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
     private const float MaxZoom = 18.0f;
     private int _selectedFrame;
     private bool _isUpdatingZoomControls;
-    private readonly DispatcherTimer _previewTimer = new();
+    private readonly object _previewRenderLock = new();
     public List<SpriteFrame> PreviewSpriteFrames = [];
     private int _previewFrameIndex;
     private long _lastPreviewStep = -1;
@@ -105,9 +104,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         ]);
         SetCheckeredColors();
   
-        _previewTimer.Interval = TimeSpan.FromSeconds(1.0 / 60.0);
-        _previewTimer.Tick -= PreviewTimer_Tick;
-        _previewTimer.Tick += PreviewTimer_Tick;
         _nudgeHoldTimer.Interval = TimeSpan.FromSeconds(1.0 / 60.0);
         _nudgeHoldTimer.Tick -= NudgeHoldTimer_Tick;
         _nudgeHoldTimer.Tick += NudgeHoldTimer_Tick;
@@ -226,19 +222,20 @@ public sealed partial class FrameCoordinateEditor : UserControl
     public void LoadAnimation(List<SpriteFrame> spriteFrames, SubjectConfig subjectConfig, string? animationConfigName, SKColor? backgroundSKColor)
     {
         UnsubscribeCanvases();
-        foreach (var frame in PreviewSpriteFrames)
+        lock (_previewRenderLock)
         {
-            frame.WriteableBitmap?.Dispose();
-        }
+            foreach (var frame in PreviewSpriteFrames)
+            {
+                frame.WriteableBitmap?.Dispose();
+            }
 
-        PreviewSpriteFrames = spriteFrames;
-  
- 
-        _previewFrameIndex = 0;
-        _lastPreviewStep = -1;
-        _previewStopwatch.Restart();
-        _subjectConfig = subjectConfig;
-        _animationConfigName = animationConfigName;
+            PreviewSpriteFrames = spriteFrames;
+            _previewFrameIndex = 0;
+            _lastPreviewStep = -1;
+            _previewStopwatch.Restart();
+            _subjectConfig = subjectConfig;
+            _animationConfigName = animationConfigName;
+        }
 
 
 
@@ -254,7 +251,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
             ToNumberBox.PlaceholderText = maxFrames.ToString();
             ToNumberBox.Maximum = maxFrames;
             FromNumberBox.Maximum = maxFrames;
-            _previewTimer.Start();
+            AnimationPreviewCanvas.EnableRenderLoop = true;
 
             ShowPreviousToggleSwitch.IsOn = MainWindow.ProgramConfig.ShowPreviousFrameBehind;
             ZoomNumberBox.Text = (GetSubjectInterfaceConfig().EditorCanvas.Zoom * 100).ToString();
@@ -322,7 +319,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         }
         else
         {
-            _previewTimer.Stop();
+            AnimationPreviewCanvas.EnableRenderLoop = false;
             _previewStopwatch.Stop();
         }
 
@@ -805,39 +802,6 @@ public sealed partial class FrameCoordinateEditor : UserControl
         return getCurrentAnimationInterfaceConfig().Range.To;
     }
 
-    private void PreviewTimer_Tick(object? sender, object e)
-    {
-        if (PreviewSpriteFrames.Count == 0)
-        {
-            _previewTimer.Stop();
-            _previewStopwatch.Stop();
-            return;
-        }
-
-        int frameCount = GetPreviewFrameCount();
-        if (frameCount <= 0)
-        {
-            return;
-        }
-
-        int delayInTicks = Math.Max(1, getCurrentAnimationConfig().Delay);
-        long previewStep = (long)(_previewStopwatch.Elapsed.TotalSeconds * 60.0 / delayInTicks);
-        if (previewStep == _lastPreviewStep)
-        {
-            return;
-        }
-
-        _lastPreviewStep = previewStep;
-        int nextFrameIndex = (int)(previewStep % frameCount);
-        if (nextFrameIndex == _previewFrameIndex)
-        {
-            return;
-        }
-
-        _previewFrameIndex = nextFrameIndex;
-        UpdateAnimationPreviewFrame();
-    }
-
     private int GetPreviewFrameCount()
     {
         return GetCorrectRangeToValue() + 1 - getCurrentAnimationInterfaceConfig().Range.From;
@@ -845,7 +809,10 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void UpdateAnimationPreviewFrame()
     {
-        AnimationPreviewCanvas.Invalidate();
+        if (!AnimationPreviewCanvas.EnableRenderLoop)
+        {
+            AnimationPreviewCanvas.Invalidate();
+        }
     }
 
  
@@ -855,6 +822,8 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
     private void CoordinateCanvas_PaintSurface(object? sender, SKPaintGLSurfaceEventArgs e)
     {
+        lock (_previewRenderLock)
+        {
         SKCanvas canvas = e.Surface.Canvas;
         int width = e.Info.Width;
         int height = e.Info.Height;
@@ -934,45 +903,57 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
         canvas.DrawLine(0f, axisY, width, axisY, _xAxisPaint);
 
-        canvas.DrawLine(axisX, 0f, axisX, height, _yAxisPaint);    
+        canvas.DrawLine(axisX, 0f, axisX, height, _yAxisPaint);
+        }
     }
 
     private void AnimationPreviewCanvas_PaintSurface(object? sender, SKPaintGLSurfaceEventArgs e)
     {
-        SKCanvas canvas = e.Surface.Canvas;
-        int width = e.Info.Width;
-        int height = e.Info.Height;
-
-        canvas.Clear();
-
-        float zoom = GetSubjectInterfaceConfig().PreviewCanvas.Zoom;
-        var pan = GetSubjectInterfaceConfig().PreviewCanvas.Pan;
-        float axisX = width / 2f + pan.X;
-        float axisY = height / 2f + pan.Y;
-
-        DrawCheckerboard(canvas, width, height, axisX, axisY, zoom);
-
-        if (PreviewSpriteFrames.Count == 0)
+        lock (_previewRenderLock)
         {
-            return;
-        }
+            SKCanvas canvas = e.Surface.Canvas;
+            int width = e.Info.Width;
+            int height = e.Info.Height;
 
-        int previewFrameIndex = Math.Clamp(_previewFrameIndex + getCurrentAnimationInterfaceConfig().Range.From, getCurrentAnimationInterfaceConfig().Range.From, GetCorrectRangeToValue());
-     
-     
-        
+            canvas.Clear();
+
+            float zoom = GetSubjectInterfaceConfig().PreviewCanvas.Zoom;
+            var pan = GetSubjectInterfaceConfig().PreviewCanvas.Pan;
+            float axisX = width / 2f + pan.X;
+            float axisY = height / 2f + pan.Y;
+
+            DrawCheckerboard(canvas, width, height, axisX, axisY, zoom);
+
+            if (PreviewSpriteFrames.Count == 0)
+            {
+                return;
+            }
+
+            int frameCount = GetPreviewFrameCount();
+            if (frameCount <= 0)
+            {
+                return;
+            }
+
+            int delayInTicks = Math.Max(1, getCurrentAnimationConfig().Delay);
+            long previewStep = (long)(_previewStopwatch.Elapsed.TotalSeconds * 60.0 / delayInTicks);
+            if (previewStep != _lastPreviewStep)
+            {
+                _lastPreviewStep = previewStep;
+                _previewFrameIndex = (int)(previewStep % frameCount);
+            }
+
+            int rangeFrom = getCurrentAnimationInterfaceConfig().Range.From;
+            int previewFrameIndex = Math.Clamp(_previewFrameIndex + rangeFrom, rangeFrom, GetCorrectRangeToValue());
             IntVector2 previewOffset = previewFrameIndex < getCurrentAnimationConfig().FrameCongfigs.Count
                 ? getCurrentAnimationConfig().FrameCongfigs[previewFrameIndex].Offset
                 : new IntVector2();
+
             DrawFrame(canvas, previewFrameIndex, previewOffset, zoom, axisX, axisY, width, height, 1f);
-        
 
-
-
-
-        canvas.DrawLine(0f, axisY, width, axisY, _xAxisPaint);
-
-        canvas.DrawLine(axisX, 0f, axisX, height, _yAxisPaint);
+            canvas.DrawLine(0f, axisY, width, axisY, _xAxisPaint);
+            canvas.DrawLine(axisX, 0f, axisX, height, _yAxisPaint);
+        }
     }
 
 
