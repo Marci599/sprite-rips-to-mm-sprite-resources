@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Globalization;
@@ -226,7 +227,9 @@ public sealed partial class FrameCoordinateEditor : UserControl
         UnsubscribeCanvases();
         lock (_previewRenderStateLock)
         {
+            PreviewRenderState oldRenderState = _previewRenderState;
             _previewRenderState = PreviewRenderState.Empty;
+            oldRenderState.Dispose();
         }
 
         foreach (var frame in PreviewSpriteFrames)
@@ -811,7 +814,9 @@ public sealed partial class FrameCoordinateEditor : UserControl
         {
             lock (_previewRenderStateLock)
             {
+                PreviewRenderState oldRenderState = _previewRenderState;
                 _previewRenderState = PreviewRenderState.Empty;
+                oldRenderState.Dispose();
             }
 
             AnimationPreviewCanvas.Invalidate();
@@ -824,20 +829,24 @@ public sealed partial class FrameCoordinateEditor : UserControl
         int rangeFrom = Math.Clamp(animationInterfaceConfig.Range.From, 0, Math.Max(PreviewSpriteFrames.Count - 1, 0));
         int rangeTo = Math.Clamp(GetCorrectRangeToValue(), rangeFrom, Math.Max(PreviewSpriteFrames.Count - 1, 0));
 
+        var renderState = new PreviewRenderState(
+            PreviewSpriteFrames.Select(PreviewSpriteRenderFrame.FromSpriteFrame).ToArray(),
+            animationConfig.FrameCongfigs.ToArray(),
+            previewCanvas.Zoom,
+            previewCanvas.Pan,
+            rangeFrom,
+            rangeTo,
+            Math.Max(1, animationConfig.Delay),
+            new SKColor(lightA, lightA, lightA, 255),
+            new SKColor(lightB, lightB, lightB, 255),
+            _xAxisPaint.Color,
+            _yAxisPaint.Color);
+
         lock (_previewRenderStateLock)
         {
-            _previewRenderState = new PreviewRenderState(
-                PreviewSpriteFrames.ToArray(),
-                animationConfig.FrameCongfigs.ToArray(),
-                previewCanvas.Zoom,
-                previewCanvas.Pan,
-                rangeFrom,
-                rangeTo,
-                Math.Max(1, animationConfig.Delay),
-                new SKColor(lightA, lightA, lightA, 255),
-                new SKColor(lightB, lightB, lightB, 255),
-                _xAxisPaint.Color,
-                _yAxisPaint.Color);
+            PreviewRenderState oldRenderState = _previewRenderState;
+            _previewRenderState = renderState;
+            oldRenderState.Dispose();
         }
 
         AnimationPreviewCanvas.Invalidate();
@@ -951,7 +960,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
             DrawPreviewCheckerboard(canvas, width, height, axisX, axisY, zoom, renderState.CheckerboardLightColor, renderState.CheckerboardDarkColor);
 
-            if (renderState.SpriteFrames.Length == 0)
+            if (renderState.Frames.Length == 0)
             {
                 return;
             }
@@ -972,7 +981,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
                 : new IntVector2();
 
             using SKPaint previewSpritePaint = new() { IsAntialias = false };
-            DrawFrame(canvas, renderState.SpriteFrames, previewFrameIndex, previewOffset, zoom, axisX, axisY, width, height, 1f, previewSpritePaint);
+            DrawPreviewFrame(canvas, renderState.Frames, previewFrameIndex, previewOffset, zoom, axisX, axisY, width, height, previewSpritePaint);
 
             using SKPaint previewXAxisPaint = new() { IsAntialias = false, StrokeWidth = 1f, Color = renderState.XAxisColor };
             using SKPaint previewYAxisPaint = new() { IsAntialias = false, StrokeWidth = 1f, Color = renderState.YAxisColor };
@@ -1019,6 +1028,49 @@ public sealed partial class FrameCoordinateEditor : UserControl
             new SKRect(-axisX / tileSize, -axisY / tileSize, (width - axisX) / tileSize, (height - axisY) / tileSize),
             checkerboardPaint);
         canvas.Restore();
+    }
+
+
+    private static SKRect DrawPreviewFrame(SKCanvas canvas, IReadOnlyList<PreviewSpriteRenderFrame> frames, int spriteFrameIndex, IntVector2 offset, float zoom, float axisX, float axisY, int viewportWidth, int viewportHeight, SKPaint paint)
+    {
+        PreviewSpriteRenderFrame frame = frames[spriteFrameIndex];
+        float width = Math.Max(1f, frame.OriginalSize.X * zoom);
+        float height = Math.Max(1f, frame.OriginalSize.Y * zoom);
+        float x = axisX + (offset.X * zoom);
+        float y = axisY - (offset.Y * zoom);
+        SKRect destRect = new(x, y, x + width, y + height);
+
+        SKRect croppedDestRect;
+        if (frame.OriginalSize.Y != frame.Bitmap.Info.Size.Height || frame.OriginalSize.X != frame.Bitmap.Info.Size.Width)
+        {
+            float cx = axisX + ((offset.X + frame.CroppedRect.Left) * zoom);
+            float cy = axisY - ((offset.Y - frame.CroppedRect.Top) * zoom);
+            croppedDestRect = new(cx, cy, cx + width, cy + height);
+        }
+        else
+        {
+            croppedDestRect = destRect;
+        }
+
+        SKRect viewportRect = new(0, 0, viewportWidth, viewportHeight);
+        if (!croppedDestRect.IntersectsWith(viewportRect))
+        {
+            return croppedDestRect;
+        }
+
+        SKRect clippedDest = SKRect.Intersect(croppedDestRect, viewportRect);
+        float invScaleX = frame.OriginalSize.X / width;
+        float invScaleY = frame.OriginalSize.Y / height;
+        SKRect sourceRect = new(
+            (clippedDest.Left - croppedDestRect.Left) * invScaleX,
+            (clippedDest.Top - croppedDestRect.Top) * invScaleY,
+            (clippedDest.Right - croppedDestRect.Left) * invScaleX,
+            (clippedDest.Bottom - croppedDestRect.Top) * invScaleY);
+
+        paint.Color = SKColors.White;
+        canvas.DrawBitmap(frame.Bitmap, sourceRect, clippedDest, paint);
+
+        return destRect;
     }
 
     private SKRect DrawFrame(SKCanvas canvas, int spriteFrameIndex, IntVector2 offset, float zoom, float axisX, float axisY, int viewportWidth, int viewportHeight, float alpha, SKPaint? overridePaint = null)
@@ -1180,8 +1232,21 @@ public sealed partial class FrameCoordinateEditor : UserControl
         ApplyHeldNudgeKeys();
     }
 
+    private sealed record PreviewSpriteRenderFrame(SKBitmap Bitmap, SKRectI CroppedRect, IntVector2 OriginalSize) : IDisposable
+    {
+        public static PreviewSpriteRenderFrame FromSpriteFrame(SpriteFrame frame)
+        {
+            return new PreviewSpriteRenderFrame(frame.WriteableBitmap.Copy(), frame.CroppedRect, frame.OriginalSize);
+        }
+
+        public void Dispose()
+        {
+            Bitmap.Dispose();
+        }
+    }
+
     private sealed record PreviewRenderState(
-        SpriteFrame[] SpriteFrames,
+        PreviewSpriteRenderFrame[] Frames,
         FrameConfig[] FrameConfigs,
         float Zoom,
         Vector2 Pan,
@@ -1191,8 +1256,21 @@ public sealed partial class FrameCoordinateEditor : UserControl
         SKColor CheckerboardLightColor,
         SKColor CheckerboardDarkColor,
         SKColor XAxisColor,
-        SKColor YAxisColor)
+        SKColor YAxisColor) : IDisposable
     {
         public static PreviewRenderState Empty { get; } = new([], [], 1f, Vector2.Zero, 0, -1, 1, SKColors.Transparent, SKColors.Transparent, SKColors.Transparent, SKColors.Transparent);
+
+        public void Dispose()
+        {
+            if (ReferenceEquals(this, Empty))
+            {
+                return;
+            }
+
+            foreach (PreviewSpriteRenderFrame frame in Frames)
+            {
+                frame.Dispose();
+            }
+        }
     }
 }
