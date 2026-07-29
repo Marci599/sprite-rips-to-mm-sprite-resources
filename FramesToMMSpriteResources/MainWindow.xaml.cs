@@ -63,7 +63,12 @@ namespace FramesToMMSpriteResources
         };
 
         //VARIABLES
-        public static string WorkingPath = AppContext.BaseDirectory;
+        static string GetExePath()
+        {
+            return Path.GetDirectoryName(Environment.ProcessPath);
+        }
+
+        public static string WorkingPath = GetExePath();
 
         public static ProgramConfig ProgramConfig;
 
@@ -205,12 +210,11 @@ namespace FramesToMMSpriteResources
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
             InitializeComponent();
 
-            if(!File.Exists(Path.Combine(GetUserConfigDirectory(), CONFIG_FILENAME)))
-            {
-                AppWindow.Resize(new Windows.Graphics.SizeInt32(1000, 625));
-            }
      
-            AppWindow.SetIcon("Assets/icon.ico");
+            AppWindow.Resize(new Windows.Graphics.SizeInt32(1000, 625));
+            
+     
+            AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "icon.ico"));
 
             AppWindow.TitleBar.PreferredTheme = TitleBarTheme.UseDefaultAppMode;
 
@@ -548,7 +552,7 @@ namespace FramesToMMSpriteResources
             GeneratePathTextBox.TextChanged -= GeneratePathTextBox_TextChanged;
             IsHdCheckBox.Click -= ClickIsHdCheckBox;
 
-            WorkingPath = AppContext.BaseDirectory;
+            WorkingPath = GetExePath();
             if (!string.IsNullOrWhiteSpace(ProgramConfig.WorkingPath))
             {
                 WorkingPath = ProgramConfig.WorkingPath;
@@ -2766,7 +2770,7 @@ namespace FramesToMMSpriteResources
 
         private async void ProgramDirectoryButton_Click(object sender, RoutedEventArgs e)
         {
-            var exeDir = AppContext.BaseDirectory;
+            var exeDir = GetExePath();
             await Windows.System.Launcher.LaunchUriAsync(new Uri("file:///" + exeDir.Replace('\\', '/')));
         }
 

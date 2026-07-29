@@ -7,6 +7,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -295,16 +296,38 @@ namespace FramesToMMSpriteResources
                 frameIndex += spritesCountMultiplied;
             }
 
-            void AddWaterMark(string path)
+            void AddWaterMarkPath(string path)
             {
             
 
                 var watermark = SKBitmap.Decode(path)
                     ?? throw new InvalidOperationException("Failed to load watermark.");
 
+                AddWaterMark(watermark);
+            }
+
+            void AddWaterMarkAssembly(string path)
+            {
+                using Stream stream = Assembly.GetExecutingAssembly()
+                    .GetManifestResourceStream("FramesToMMSpriteResources.Assets.WaterMark.png")
+                    ?? throw new InvalidOperationException("Watermark resource not found.");
+
+                using var memoryStream = new MemoryStream();
+                stream.CopyTo(memoryStream);
+
+                memoryStream.Position = 0;
+
+                var watermark = SKBitmap.Decode(memoryStream)
+                    ?? throw new InvalidOperationException("Failed to load watermark.");
+
+                AddWaterMark(watermark);
+            }
+
+            void AddWaterMark(SKBitmap sKBitMap)
+            {
                 processedSprites.Add(new ProcessedSprite(
-                    watermark,
-                    new IntVector2(watermark.Width, watermark.Height),
+                    sKBitMap,
+                    new IntVector2(sKBitMap.Width, sKBitMap.Height),
                     new IntVector2(0, 0),
                     new IntVector2(0, 0),
                     0,
@@ -312,17 +335,19 @@ namespace FramesToMMSpriteResources
                     null));
             }
 
-            if(processedSprites.Count > 20)
+
+
+            if (processedSprites.Count > 20)
             {
                 if (programConfig.AssetConfig.Note != "Marci599 is cool")
                 {
-                    AddWaterMark(Path.Combine(AppContext.BaseDirectory, "Assets", "WaterMark.png"));
+                    AddWaterMarkAssembly("FramesToMMSpriteResources.Assets.WaterMark.png");
                 }
 
                 string path = Path.Combine(MainWindow.GetUserConfigDirectory(), "WaterMark.png");
                 if (File.Exists(path))
                 {
-                    AddWaterMark(path);
+                    AddWaterMarkPath(path);
                 }
 
             }

@@ -22,7 +22,7 @@ namespace FramesToMMSpriteResources
         public DateTime? LastUpdateCheck { get; set; }
 
         [JsonPropertyName("show_previous_frame_behind")]
-        public bool ShowPreviousFrameBehind = true;
+        public bool ShowPreviousFrameBehind = false;
 
         [JsonIgnore]
         public AssetConfig? AssetConfig = null;
