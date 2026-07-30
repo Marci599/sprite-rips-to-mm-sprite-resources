@@ -229,10 +229,8 @@ namespace FramesToMMSpriteResources
             HeaderBreadcrumbBar.ItemsSource = BreadcrumbItems;
             HeaderBreadcrumbBar.ItemClicked += BreadcrumbBar_ItemClicked;
 
-            ProcessingCardControl.GetCropSpritesCheckBox.Click -= CropSpritesCheckBox_Click;
             ProcessingCardControl.GetCropSpritesCheckBox.Click += CropSpritesCheckBox_Click;
 
-            ProcessingOverwriteCardControl.GetCropSpritesCheckBox.Click -= CropSpritesOverwriteCheckBox_Click;
             ProcessingOverwriteCardControl.GetCropSpritesCheckBox.Click += CropSpritesOverwriteCheckBox_Click;
 
             ProgramNameTextBlock.Text += GetCurrentVersion(); 
@@ -246,7 +244,16 @@ namespace FramesToMMSpriteResources
                     handledEventsToo: true);
             }
 
-        
+
+#if INSTALLER
+            UninstallButton.Visibility = Visibility.Visible;
+            UninstallButton.Click += UninstallButton_Click;
+            WorkingPathTextBox.PlaceholderText = "Missing";
+#else
+            RemoveProgramTipText.Visibility = Visibility.Visible;
+            WorkingPathTextBox.PlaceholderText = "Default";
+#endif
+
         }
 
         private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
@@ -391,14 +398,9 @@ namespace FramesToMMSpriteResources
                 return false;
             }
 
-            try
-            {
-                return !File.Exists(Path.Combine(path, "FramesToMMSpriteResources.dll")) && AreSubjectsCorrect(path);
-            }
-            catch
-            {
-                return false;
-            }
+     
+            return AreSubjectsCorrect(path);
+        
         }
 
         private void AddWorkingPathToHistoryIfValid(string? path)
@@ -552,11 +554,16 @@ namespace FramesToMMSpriteResources
             GeneratePathTextBox.TextChanged -= GeneratePathTextBox_TextChanged;
             IsHdCheckBox.Click -= ClickIsHdCheckBox;
 
+#if INSTALLER
+            WorkingPath = ProgramConfig.WorkingPath;
+#else
             WorkingPath = GetExePath();
             if (!string.IsNullOrWhiteSpace(ProgramConfig.WorkingPath))
             {
                 WorkingPath = ProgramConfig.WorkingPath;
             }
+#endif
+
 
             AddWorkingPathToHistoryIfValid(ProgramConfig.WorkingPath);
 
@@ -582,9 +589,9 @@ namespace FramesToMMSpriteResources
             }
   
             var firstLevelFiles = Directory.GetFiles(WorkingPath);
-          
-            if (!firstLevelFiles.Contains(Path.Combine(WorkingPath, "FramesToMMSpriteResources.dll")) && AreSubjectsCorrect())
-            {            
+
+            if (AreSubjectsCorrect())
+            {
                 SetUpSubjectTreeViewAndConfigs();
                 TreeViewPlaceHolderStackPanel.Visibility = Visibility.Collapsed;
 
@@ -2672,11 +2679,13 @@ namespace FramesToMMSpriteResources
                 GeneratePathTextBox.Text = folder.Path;
             }
         }
-
+#if INSTALLER
         private async void UninstallButton_Click(object sender, RoutedEventArgs e)
         {
             await Windows.System.Launcher.LaunchUriAsync(new Uri("ms-settings:appsfeatures"));
         }
+#endif
+
 
         private async void TreeViewControl_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
@@ -2770,7 +2779,12 @@ namespace FramesToMMSpriteResources
 
         private async void ProgramDirectoryButton_Click(object sender, RoutedEventArgs e)
         {
-            var exeDir = GetExePath();
+#if INSTALLER
+          var exeDir = GetExePath();
+#else
+            var exeDir = AppContext.BaseDirectory;
+#endif
+
             await Windows.System.Launcher.LaunchUriAsync(new Uri("file:///" + exeDir.Replace('\\', '/')));
         }
 

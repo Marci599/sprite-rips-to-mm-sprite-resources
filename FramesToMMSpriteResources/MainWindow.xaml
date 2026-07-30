@@ -1076,7 +1076,7 @@
                                                             x:Name="UninstallButton"
                                                             Grid.Column="1"
                                                             VerticalAlignment="Bottom"
-                                                            Click="UninstallButton_Click">
+                                                            Visibility="Collapsed">
                                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                                 <FontIcon FontSize="14" Glyph="&#xE74D;" />
                                                                 <TextBlock Text="Uninstall" />
@@ -1103,6 +1103,11 @@
                                                             </StackPanel>
                                                         </Button>
                                                     </controls:WrapPanel>
+                                                    <TextBlock
+                                                        x:Name="RemoveProgramTipText"
+                                                        Style="{StaticResource HelperTextStyle}"
+                                                        Text="To completely remove the program, remove the contents of the Directories above, then remove this .exe file."
+                                                        Visibility="Collapsed" />
                                                 </StackPanel>
 
                                             </StackPanel>
