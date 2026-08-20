@@ -802,11 +802,11 @@ namespace FramesToMMSpriteResources
                     .ToArray();
             }
 
-            // Apply skip filter: if Skip = 1, take every 2nd file (0, 2, 4, 6...); if Skip = 2, take every 3rd (0, 3, 6...)
-            if (animationConfig.Skip > 0)
+            // Apply step filter: if Skip = 1, take every file (0,1,2...); if Skip = 2, take every 2nd file (0,2,4...); if Skip = 3, take every 3rd (0,3,6...)
+            if (animationConfig.Skip > 1)
             {
                 paths = paths
-                    .Where((_, index) => index % (animationConfig.Skip + 1) == 0)
+                    .Where((_, index) => index % animationConfig.Skip == 0)
                     .ToArray();
             }
 

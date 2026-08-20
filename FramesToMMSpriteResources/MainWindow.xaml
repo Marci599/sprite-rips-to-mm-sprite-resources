@@ -446,7 +446,7 @@
                                                         Header="Step"
                                                         Maximum="5000"
                                                         Minimum="1"
-                                                        PlaceholderText="0" />
+                                                        PlaceholderText="1" />
                                                     <TextBlock
                                                         Margin="0,-8,0,0"
                                                         Style="{StaticResource HelperTextStyle}"
