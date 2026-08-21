@@ -27,6 +27,7 @@ using Windows.ApplicationModel;
 using Windows.Storage.Pickers;
 
 //TODO: SHIFT RANGE SELECT
+//TODO: STARTUP MISSING WORKING DIRECTORY PATH ERROR HANDLING
 
 namespace FramesToMMSpriteResources
 {

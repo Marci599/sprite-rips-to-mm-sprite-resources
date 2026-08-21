@@ -1,12 +1,17 @@
-﻿<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+﻿<Wix
+	xmlns="http://wixtoolset.org/schemas/v4/wxs"
+	xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+	 >
 
 	<Package
-	  Id="FramesToMMSpriteResources"
+	  Id="FramesToSpriteResources"
 	  Name="Frames to MM Sprite Resources"
 	  Manufacturer="Marci599"
 	  Version="1.0.0"
 	  UpgradeCode="{47a224ca-6c65-4630-8eb6-51583a78e505}">
-
+		<ui:WixUI
+			  Id="WixUI_InstallDir"
+			  InstallDirectory="INSTALLFOLDER" />
 		<MajorUpgrade
 		  DowngradeErrorMessage="A newer version of Frames to MM Sprite Resources is already installed." />
 
@@ -14,8 +19,14 @@
 
 		<StandardDirectory Id="ProgramFiles64Folder">
 			<Directory
-			  Id="INSTALLFOLDER"
-			  Name="FramesToMMSpriteResources" />
+			  Id="PUBLISHERFOLDER"
+			  Name="Marci599">
+
+				<Directory
+				  Id="INSTALLFOLDER"
+				  Name="FramesToSpriteResources" />
+
+			</Directory>
 		</StandardDirectory>
 
 		<StandardDirectory Id="ProgramMenuFolder">
@@ -27,6 +38,7 @@
 		<Feature Id="MainFeature" Title="Frames to MM Sprite Resources">
 			<ComponentGroupRef Id="ApplicationFiles" />
 			<ComponentRef Id="ApplicationShortcut" />
+			<ComponentRef Id="DesktopShortcut" />
 		</Feature>
 
 	</Package>
@@ -47,7 +59,6 @@
 				<Shortcut
 				  Id="ApplicationStartMenuShortcut"
 				  Name="Frames to MM Sprite Resources"
-				  Description="Generate Mario Multiverse sprite resources"
 				  Target="[INSTALLFOLDER]FramesToMMSpriteResources.exe"
 				  WorkingDirectory="INSTALLFOLDER" />
 
@@ -57,8 +68,29 @@
 
 				<RegistryValue
 				  Root="HKCU"
-				  Key="Software\Marci599\FramesToMMSpriteResources"
+				  Key="Software\Marci599\FramesToSpriteResources"
 				  Name="Installed"
+				  Type="integer"
+				  Value="1"
+				  KeyPath="yes" />
+
+			</Component>
+		</DirectoryRef>
+	</Fragment>
+	<Fragment>
+		<DirectoryRef Id="DesktopFolder">
+			<Component Id="DesktopShortcut">
+
+				<Shortcut
+				  Id="ApplicationDesktopShortcut"
+				  Name="Frames to MM Sprite Resources"
+				  Target="[INSTALLFOLDER]FramesToMMSpriteResources.exe"
+				  WorkingDirectory="INSTALLFOLDER" />
+
+				<RegistryValue
+				  Root="HKCU"
+				  Key="Software\Marci599\FramesToMMSpriteResources"
+				  Name="DesktopShortcutInstalled"
 				  Type="integer"
 				  Value="1"
 				  KeyPath="yes" />
