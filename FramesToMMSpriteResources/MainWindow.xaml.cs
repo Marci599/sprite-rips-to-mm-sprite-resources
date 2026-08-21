@@ -245,13 +245,14 @@ namespace FramesToMMSpriteResources
             }
 
 
-#if INSTALLER
-            UninstallButton.Visibility = Visibility.Visible;
-            UninstallButton.Click += UninstallButton_Click;
-            WorkingPathTextBox.PlaceholderText = "Missing";
+#if PORTABLE
+        RemoveProgramTipText.Visibility = Visibility.Visible;
+        WorkingPathTextBox.PlaceholderText = "Default";
+      
 #else
-            RemoveProgramTipText.Visibility = Visibility.Visible;
-            WorkingPathTextBox.PlaceholderText = "Default";
+        UninstallButton.Visibility = Visibility.Visible;
+        UninstallButton.Click += UninstallButton_Click;
+        WorkingPathTextBox.PlaceholderText = "Missing";
 #endif
 
         }
@@ -554,14 +555,14 @@ namespace FramesToMMSpriteResources
             GeneratePathTextBox.TextChanged -= GeneratePathTextBox_TextChanged;
             IsHdCheckBox.Click -= ClickIsHdCheckBox;
 
-#if INSTALLER
-            WorkingPath = ProgramConfig.WorkingPath;
-#else
+#if PORTABLE
             WorkingPath = GetExePath();
             if (!string.IsNullOrWhiteSpace(ProgramConfig.WorkingPath))
             {
                 WorkingPath = ProgramConfig.WorkingPath;
             }
+#else
+            WorkingPath = ProgramConfig.WorkingPath;
 #endif
 
 
@@ -2679,7 +2680,7 @@ namespace FramesToMMSpriteResources
                 GeneratePathTextBox.Text = folder.Path;
             }
         }
-#if INSTALLER
+#if !PORTABLE
         private async void UninstallButton_Click(object sender, RoutedEventArgs e)
         {
             await Windows.System.Launcher.LaunchUriAsync(new Uri("ms-settings:appsfeatures"));
@@ -2779,10 +2780,11 @@ namespace FramesToMMSpriteResources
 
         private async void ProgramDirectoryButton_Click(object sender, RoutedEventArgs e)
         {
-#if INSTALLER
-          var exeDir = GetExePath();
+
+#if PORTABLE
+           var exeDir = AppContext.BaseDirectory;
 #else
-            var exeDir = AppContext.BaseDirectory;
+           var exeDir = GetExePath();     
 #endif
 
             await Windows.System.Launcher.LaunchUriAsync(new Uri("file:///" + exeDir.Replace('\\', '/')));
@@ -2994,7 +2996,7 @@ namespace FramesToMMSpriteResources
         public static string GetCurrentVersion()
         {
             //var version = Package.Current.Id.Version;
-            return $"";
+            return $"1.999.999";
         }
 
         public static bool IsNewer(string latest, string current)

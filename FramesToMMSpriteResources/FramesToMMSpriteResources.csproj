@@ -30,6 +30,25 @@
 		<EnableDefaultNoneItems>false</EnableDefaultNoneItems>
 		<EnableDefaultAssets>false</EnableDefaultAssets>
 		<Platforms>x64</Platforms>
+
+		<!--<Configuration>Release</Configuration>-->
+		
+		<PublishProtocol>FileSystem</PublishProtocol>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+
+		<SelfContained>false</SelfContained>
+
+		<WindowsPackageType>None</WindowsPackageType>
+		<WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+
+		<PublishSingleFile>false</PublishSingleFile>
+		<PublishTrimmed>false</PublishTrimmed>
+		<DebugType>None</DebugType>
+		<DebugSymbols>false</DebugSymbols>
+		<CopyDebugSymbolFilesFromPackages>false</CopyDebugSymbolFilesFromPackages>
+		<CopyDocumentationFilesFromPackages>false</CopyDocumentationFilesFromPackages>
+
+		<IncludeSymbols>false</IncludeSymbols>
 	</PropertyGroup>
   <ItemGroup>
     <Page Remove="ColorPanel.xaml" />
@@ -84,10 +103,7 @@
   -->
   <!-- Publish Properties -->
   <PropertyGroup>
-    <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
-    <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
-    <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
-    <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
+
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>   
   </PropertyGroup>
   <ItemGroup>

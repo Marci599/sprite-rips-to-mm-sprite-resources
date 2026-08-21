@@ -1,0 +1,70 @@
+﻿<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+	<Package
+	  Id="FramesToMMSpriteResources"
+	  Name="Frames to MM Sprite Resources"
+	  Manufacturer="Marci599"
+	  Version="1.0.0"
+	  UpgradeCode="{47a224ca-6c65-4630-8eb6-51583a78e505}">
+
+		<MajorUpgrade
+		  DowngradeErrorMessage="A newer version of Frames to MM Sprite Resources is already installed." />
+
+		<MediaTemplate EmbedCab="yes" />
+
+		<StandardDirectory Id="ProgramFiles64Folder">
+			<Directory
+			  Id="INSTALLFOLDER"
+			  Name="FramesToMMSpriteResources" />
+		</StandardDirectory>
+
+		<StandardDirectory Id="ProgramMenuFolder">
+			<Directory
+			  Id="ApplicationProgramsFolder"
+			  Name="Frames to MM Sprite Resources" />
+		</StandardDirectory>
+
+		<Feature Id="MainFeature" Title="Frames to MM Sprite Resources">
+			<ComponentGroupRef Id="ApplicationFiles" />
+			<ComponentRef Id="ApplicationShortcut" />
+		</Feature>
+
+	</Package>
+
+	<Fragment>
+		<ComponentGroup
+		  Id="ApplicationFiles"
+		  Directory="INSTALLFOLDER">
+
+			<Files Include="$(var.AppPublishDir)**" />
+
+		</ComponentGroup>
+	</Fragment>
+	<Fragment>
+		<DirectoryRef Id="ApplicationProgramsFolder">
+			<Component Id="ApplicationShortcut">
+
+				<Shortcut
+				  Id="ApplicationStartMenuShortcut"
+				  Name="Frames to MM Sprite Resources"
+				  Description="Generate Mario Multiverse sprite resources"
+				  Target="[INSTALLFOLDER]FramesToMMSpriteResources.exe"
+				  WorkingDirectory="INSTALLFOLDER" />
+
+				<RemoveFolder
+				  Id="RemoveApplicationProgramsFolder"
+				  On="uninstall" />
+
+				<RegistryValue
+				  Root="HKCU"
+				  Key="Software\Marci599\FramesToMMSpriteResources"
+				  Name="Installed"
+				  Type="integer"
+				  Value="1"
+				  KeyPath="yes" />
+
+			</Component>
+		</DirectoryRef>
+	</Fragment>
+
+</Wix>

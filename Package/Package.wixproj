@@ -1,0 +1,28 @@
+﻿<Project Sdk="WixToolset.Sdk/7.0.0">
+
+	<PropertyGroup>
+		<AcceptEula>wix7</AcceptEula>
+		<OutputName>FramesToMMSpriteResources</OutputName>
+		<OutputType>Package</OutputType>
+		<Platform>x64</Platform>
+		<Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
+
+		<AppPublishDir>$(MSBuildProjectDirectory)\..\FramesToMMSpriteResources\bin\$(Configuration)\net10.0-windows10.0.22000.0\win-x64\publish\</AppPublishDir>
+
+		<DefineConstants>
+			AppPublishDir=$(AppPublishDir)
+		</DefineConstants>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\FramesToMMSpriteResources\FramesToMMSpriteResources.csproj" />
+	</ItemGroup>
+
+	<Target Name="PublishApplication" BeforeTargets="Compile">
+		<MSBuild
+		  Projects="..\FramesToMMSpriteResources\FramesToMMSpriteResources.csproj"
+		  Targets="Publish"
+		  Properties="Configuration=$(Configuration);Platform=x64;RuntimeIdentifier=win-x64;PublishDir=$(AppPublishDir)" />
+	</Target>
+
+</Project>
