@@ -105,6 +105,10 @@
 			<ComponentRef Id="DesktopShortcut" />
 		</Feature>
 
+		<WixVariable Id="WixUIBannerBmp" Value="Assets\bannertop.png" />
+
+		<WixVariable Id="WixUIDialogBmp" Value="Assets\bannerleft.png" />
+
 	</Package>
 
 	<Fragment>

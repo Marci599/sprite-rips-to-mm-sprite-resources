@@ -19,6 +19,7 @@ using System.IO;
 using System.Linq;
 using System.Media;
 using System.Numerics;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
@@ -27,7 +28,6 @@ using Windows.ApplicationModel;
 using Windows.Storage.Pickers;
 
 //TODO: SHIFT RANGE SELECT
-//TODO: STARTUP MISSING WORKING DIRECTORY PATH ERROR HANDLING
 
 namespace FramesToMMSpriteResources
 {
@@ -203,12 +203,15 @@ namespace FramesToMMSpriteResources
             CheckForAllowGenerating();
             CheckForAllowFrameEditing();
         }
-
+        string appVersion;
 
         [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(TreeItem))]
         public MainWindow()
         {
             CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+
+            appVersion = GetCurrentVersion();
+
             InitializeComponent();
 
      
@@ -234,7 +237,7 @@ namespace FramesToMMSpriteResources
 
             ProcessingOverwriteCardControl.GetCropSpritesCheckBox.Click += CropSpritesOverwriteCheckBox_Click;
 
-            ProgramNameTextBlock.Text += GetCurrentVersion(); 
+            ProgramNameTextBlock.Text += appVersion == "9.9.9" ? "?.?.?" : appVersion;
         
             AppWindow.Closing += AppWindow_Closing;
 
@@ -297,17 +300,24 @@ namespace FramesToMMSpriteResources
             if (IsWindowActive) return;
 
             ProgramConfig = LoadProgramConfig();
+
+            WorkingPathTextBox.TextChanged -= WorkingPathTextBox_TextChanged;
+            WorkingPathTextBox.Text = ProgramConfig.WorkingPath;
+            WorkingPathTextBox.TextChanged += WorkingPathTextBox_TextChanged;
+
             if (_isActivated)
             {
+    
                 //ClickTipText.Text = "Loading...";
                 ReloadTreeViewAndConfigs();
             }
             else
             {
+         
                 //InitialBorderText.Text = "Loading...";
                 SetUpTreeViewAndConfigs();
                 InitialBorder.Visibility = Visibility.Collapsed;
-                CheckForUpdateIfNeeded();
+                CheckForUpdate();
 
                 if (TreeViewControl.SelectedNode != null)
                 {
@@ -324,14 +334,13 @@ namespace FramesToMMSpriteResources
             ReduceFileSizeCheckBox.IsChecked = ProgramConfig.ReduceFileSize;
             ReduceFileSizeCheckBox.Click += ReduceFileSizeCheckBox_Click;
 
-            WorkingPathTextBox.TextChanged -= WorkingPathTextBox_TextChanged;
-            WorkingPathTextBox.Text = ProgramConfig.WorkingPath;
-            WorkingPathTextBox.TextChanged += WorkingPathTextBox_TextChanged;
 
+         
             IsWindowActive = true;
             IsPanelChangeInProgress = false;
 
             SyncKeyboardState();
+
         }
 
         private void AppWindow_Closing(AppWindow sender, AppWindowClosingEventArgs args)
@@ -347,6 +356,8 @@ namespace FramesToMMSpriteResources
 
         private async void WorkingPathTextBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
         {
+            if (ProgramConfig.WorkingPath == sender.Text) return;
+            
             SaveAllConfigs();
             ProgramConfig.WorkingPath = sender.Text;
             AddWorkingPathToHistoryIfValid(sender.Text);
@@ -356,6 +367,7 @@ namespace FramesToMMSpriteResources
                 sender.IsSuggestionListOpen = true;
             }
             FrameCoordinateEditorControl.UnloadAnimation();
+
             ReloadTreeViewAndConfigs();
         }
 
@@ -363,6 +375,7 @@ namespace FramesToMMSpriteResources
         {
             if (args.SelectedItem is string path)
             {
+            
                 sender.Text = path;
             }
         }
@@ -536,6 +549,7 @@ namespace FramesToMMSpriteResources
 
         void SetUpTreeViewAndConfigs()
         {
+   
             _isHierarchyError = false;
                               
             TreeViewControl.ItemInvoked -= TreeViewControl_ItemInvoked;
@@ -561,22 +575,37 @@ namespace FramesToMMSpriteResources
             if (!string.IsNullOrWhiteSpace(ProgramConfig.WorkingPath))
             {
                 WorkingPath = ProgramConfig.WorkingPath;
+                AddWorkingPathToHistoryIfValid(ProgramConfig.WorkingPath);
             }
 #else
             WorkingPath = ProgramConfig.WorkingPath;
-#endif
-
-
-            AddWorkingPathToHistoryIfValid(ProgramConfig.WorkingPath);
-
-            if (!Directory.Exists(WorkingPath))
+            if (!string.IsNullOrWhiteSpace(ProgramConfig.WorkingPath))
+            {
+                AddWorkingPathToHistoryIfValid(ProgramConfig.WorkingPath);
+            }
+            else
             {
                 _isHierarchyError = true;
-                SetInfoBar(InfoBarSeverity.Error, "Working direcotry path is incorrect", $"{WorkingPath} does not exist", false);
                 TreeViewPlaceHolderButton.Visibility = Visibility.Collapsed;
                 TreeViewPlaceHolderStackPanel.Visibility = Visibility.Visible;
                 TreeViewPlaceHolderText.Text = "Cannot display hierarchy";
                 OpenSettingsAndHideGeneratePanelImmediately();
+                return;
+            }
+#endif
+
+
+      
+
+            if (!Directory.Exists(WorkingPath))
+            {
+                _isHierarchyError = true;
+                
+                TreeViewPlaceHolderButton.Visibility = Visibility.Collapsed;
+                TreeViewPlaceHolderStackPanel.Visibility = Visibility.Visible;
+                TreeViewPlaceHolderText.Text = "Cannot display hierarchy";
+                OpenSettingsAndHideGeneratePanelImmediately();
+                SetInfoBar(InfoBarSeverity.Error, "Working directory path is incorrect", $"{WorkingPath} does not exist", false);
                 return;
             }
 
@@ -2964,40 +2993,59 @@ namespace FramesToMMSpriteResources
         }
 
 
-        void CheckForUpdateIfNeeded()
+        async void CheckForUpdate()
         {
             var now = DateTime.UtcNow;
 
-            if (ProgramConfig.LastUpdateCheck.HasValue)
+            if (!ProgramConfig.LastUpdateCheck.HasValue || ProgramConfig.LastUpdateCheck.Value.Date != now.Date)
             {
-                var lastCheck = ProgramConfig.LastUpdateCheck.Value;
+                string? latest = await UpdateChecker.GetLatestVersionAsync();
+                if (latest != null)
+                {
+                    ProgramConfig.LatestVersion = latest;
+                }
+            }     
 
-                if (lastCheck.Date == now.Date)
-                    return;
+            if (ProgramConfig.LatestVersion != null && IsNewer(ProgramConfig.LatestVersion, appVersion))
+            {       
+                UpdateBadge.Visibility = Visibility.Visible;
+                UpdateInfoBar.IsOpen = true;              
             }
 
             ProgramConfig.LastUpdateCheck = now;
-
-            CheckForUpdateAsync();
         }
 
-        async void CheckForUpdateAsync()
+
+        private string GetCurrentVersion()
         {
-            string current = GetCurrentVersion();
+            var asm = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
 
-            string? latest = await UpdateChecker.GetLatestVersionAsync();
+    
+            var info = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
 
-            if (latest != null && IsNewer(latest, current))
+            if (string.IsNullOrEmpty(info))
             {
-                UpdateBadge.Visibility = Visibility.Visible;
-                UpdateInfoBar.IsOpen = true;
+                try
+                {
+                    var fvi = FileVersionInfo.GetVersionInfo(asm.Location);
+                    info = !string.IsNullOrEmpty(fvi.ProductVersion) ? fvi.ProductVersion : fvi.FileVersion;
+                }
+                catch
+                {
+                   
+                }
             }
-        }
 
-        public static string GetCurrentVersion()
-        {
-            //var version = Package.Current.Id.Version;
-            return $"1.999.999";
+            if (string.IsNullOrEmpty(info))
+            {
+                info = asm.GetName().Version?.ToString() ?? "unknown";
+            }
+
+         
+            var plusIndex = info.IndexOf('+');
+            if (plusIndex >= 0) info = info.Substring(0, plusIndex);
+
+            return info;
         }
 
         public static bool IsNewer(string latest, string current)

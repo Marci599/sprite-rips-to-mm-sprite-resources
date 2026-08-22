@@ -21,6 +21,9 @@ namespace FramesToMMSpriteResources
         [JsonPropertyName("last_update_check")]
         public DateTime? LastUpdateCheck { get; set; }
 
+        [JsonPropertyName("new_version")]
+        public string? LatestVersion { get; set; }
+
         [JsonPropertyName("show_previous_frame_behind")]
         public bool ShowPreviousFrameBehind = false;
 
