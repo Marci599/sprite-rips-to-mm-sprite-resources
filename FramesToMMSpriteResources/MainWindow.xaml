@@ -386,6 +386,7 @@
                                                             <x:String>Default</x:String>
                                                             <x:String>Loop</x:String>
                                                             <x:String>No loop</x:String>
+                                                            <x:String>Ping-pong</x:String>
                                                         </ComboBox>
 
 
@@ -594,6 +595,7 @@
                                                                 </DataTemplate>
                                                             </ListView.ItemTemplate>
                                                         </ListView>
+                                                        <TextBlock Style="{StaticResource HelperTextStyle}" Text="If multiple animations are the same, add their name here" />
                                                     </StackPanel>
 
 
