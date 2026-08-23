@@ -1,0 +1,133 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		
+		<Version>2.0.0</Version>
+		<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+		<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+
+		<TargetFramework>net10.0-windows10.0.22000.0</TargetFramework>
+		<TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+
+		<EnableMsixTooling>true</EnableMsixTooling>
+
+		<OutputType>WinExe</OutputType>
+		<RootNamespace>FramesToMMSpriteResources</RootNamespace>
+		<ApplicationManifest>app.manifest</ApplicationManifest>
+
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+
+		<UseWinUI>true</UseWinUI>
+
+		<Nullable>enable</Nullable>
+		<LangVersion>13.0</LangVersion>
+
+		<DebugType>None</DebugType>
+		<DebugSymbols>false</DebugSymbols>
+
+		<ApplicationIcon>Assets\icon.ico</ApplicationIcon>
+		<SatelliteResourceLanguages>en-US</SatelliteResourceLanguages>
+		<IncludeSatelliteResourceLanguages>false</IncludeSatelliteResourceLanguages>
+		<CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
+		<EnableDefaultNoneItems>false</EnableDefaultNoneItems>
+		<EnableDefaultAssets>false</EnableDefaultAssets>
+		<Platforms>x64</Platforms>
+
+		<!--<Configuration>Release</Configuration>-->
+		
+		<PublishProtocol>FileSystem</PublishProtocol>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+
+		<SelfContained>false</SelfContained>
+
+		<WindowsPackageType>None</WindowsPackageType>
+		<WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+
+		<PublishSingleFile>false</PublishSingleFile>
+		<PublishTrimmed>false</PublishTrimmed>
+		<DebugType>None</DebugType>
+		<DebugSymbols>false</DebugSymbols>
+		<CopyDebugSymbolFilesFromPackages>false</CopyDebugSymbolFilesFromPackages>
+		<CopyDocumentationFilesFromPackages>false</CopyDocumentationFilesFromPackages>
+
+		<IncludeSymbols>false</IncludeSymbols>
+	</PropertyGroup>
+  <ItemGroup>
+    <Page Remove="ColorPanel.xaml" />
+    <Page Remove="Controls\CardGroup.xaml" />
+    <Page Remove="Styles.xaml" />
+	  
+  </ItemGroup>
+  <ItemGroup>
+	<EmbeddedResource Include="Assets\WaterMark.png" />
+	<Content Include="Assets\Tools\oxipng.exe">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+	  <Content Include="Assets\icon.ico">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Assets\Square44x44Logo.scale-200.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Assets\Square150x150Logo.scale-200.png">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.Primitives" Version="8.2.251219" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2526" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.3.1" />
+    <PackageReference Include="SkiaSharp" Version="4.150.1" />
+    <PackageReference Include="SkiaSharp.Views.WinUI" Version="3.119.2" />
+    <PackageReference Include="System.Windows.Extensions" Version="10.0.10" />
+
+	  <PackageReference Update="Microsoft.WindowsAppSDK.AI" ExcludeAssets="all" />
+	  <PackageReference Update="Microsoft.Windows.AI.MachineLearning" ExcludeAssets="all" />
+	  <PackageReference Update="Microsoft.WindowsAppSDK.ML" ExcludeAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="ColorPanel.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </None>
+    <None Update="Controls\CardGroup.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </None>
+    <None Update="Styles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </None>
+  </ItemGroup>
+  <!--
+    Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
+    Explorer "Package and Publish" context menu entry to be enabled for this project even if
+    the Windows App SDK Nuget package has not yet been restored.
+  -->
+  <!-- Publish Properties -->
+  <PropertyGroup>
+
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>   
+  </PropertyGroup>
+  <ItemGroup>
+    <TrimmerRootDescriptor Include="ILLink.Descriptors.xml" />
+  </ItemGroup>
+	<Target Name="RemovePdbFiles" AfterTargets="Publish">
+		<ItemGroup>
+			<PdbFiles Include="$(PublishDir)**\*.pdb" />
+		</ItemGroup>
+
+		<Delete Files="@(PdbFiles)" />
+	</Target>
+	<Target Name="RemoveUnusedFiles" AfterTargets="Publish">
+		<ItemGroup>
+			<FilesToRemove Include="$(PublishDir)**\*onnxruntime*" />
+			<FilesToRemove Include="$(PublishDir)**\*AI*" />
+			<FilesToRemove Include="$(PublishDir)**\*ML*" />
+			<FilesToRemove Include="$(PublishDir)**\*WebView*" />
+			<FilesToRemove Include="$(PublishDir)**\*OAuth*" />
+			<FilesToRemove Include="$(PublishDir)**\*Tensors*" />
+		</ItemGroup>
+
+		<Delete Files="@(FilesToRemove)" />
+	</Target>
+</Project>

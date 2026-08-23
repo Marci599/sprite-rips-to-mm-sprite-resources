@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "FramesToMMSpriteResources (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "FramesToMMSpriteResources (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

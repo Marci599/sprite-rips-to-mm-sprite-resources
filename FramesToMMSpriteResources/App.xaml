@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Application
+    x:Class="FramesToMMSpriteResources.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:FramesToMMSpriteResources">
+    <Application.Resources>
+        
+        <ResourceDictionary>
+            
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+            
+            </ResourceDictionary.MergedDictionaries>
+            <!-- Converters -->
+    
+                <!-- Shared styles to reduce repetition in the app XAML -->
+                <Style x:Key="CardBorderStyle" TargetType="Border">
+                    <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+                    <Setter Property="CornerRadius" Value="8" />
+                    <Setter Property="Padding" Value="16 8 16 16" />
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+                    <Setter Property="BorderThickness" Value="1"/>
+            </Style>
+
+                <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                    <Setter Property="FontSize" Value="16" />
+                    <Setter Property="TextWrapping" Value="Wrap" />
+                </Style>
+
+                <Style x:Key="GroupDividerStyle" TargetType="Rectangle">
+                    <Setter Property="HorizontalAlignment" Value="Stretch" />
+                    <Setter Property="Height" Value="1" />
+                <Setter Property="Fill" Value="{ThemeResource ControlStrongStrokeColorDisabledBrush}" />
+                    <Setter Property="Margin" Value="-16,0,-16,0" />
+                </Style>
+
+                <Style x:Key="HelperTextStyle" TargetType="TextBlock">
+                    <Setter Property="Foreground" Value="Gray" />
+                    <Setter Property="FontSize" Value="12" />
+                    <Setter Property="TextWrapping" Value="Wrap" />
+                </Style>
+
+
+            <Style TargetType="CheckBox" BasedOn="{StaticResource DefaultCheckBoxStyle}">
+                
+            </Style>
+
+      
+            <Style TargetType="TextBlock">
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+            
+            <Style x:Key="TreeLikeNavToggleButtonStyle" TargetType="ToggleButton">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Foreground" Value="{ThemeResource SystemControlForegroundBaseHighBrush}" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Padding" Value="8,6" />
+                <Setter Property="HorizontalContentAlignment" Value="Left" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Grid x:Name="RootGrid" Background="Transparent" MinHeight="40">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Content area that stays visually transparent when selected -->
+                                <Border x:Name="ContentBorder"
+                                        Grid.Column="1"
+                                        Background="Transparent"
+                                        Padding="{TemplateBinding Padding}"
+                                        MinHeight="40"
+                                        CornerRadius="4">
+                                    <ContentPresenter x:Name="ContentPresenter"
+                                                      Content="{TemplateBinding Content}"
+                                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                      VerticalAlignment="Center"
+                                                      Foreground="{TemplateBinding Foreground}" />
+                                </Border>
+
+                                <!-- Left selection stripe is placed on top so it doesn't shift layout -->
+                                <Rectangle x:Name="SelectionStripe"
+                                           Grid.ColumnSpan="2"
+                                           Fill="{ThemeResource AccentFillColorDefaultBrush}"
+                                   
+                                           HorizontalAlignment="Left"
+                                           VerticalAlignment="Stretch"
+                                           Height="16"
+                                           Width="3" 
+                                           Visibility="{Binding IsChecked, RelativeSource={RelativeSource TemplatedParent}}"
+                                           RadiusX="1" RadiusY="1"/>
+
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <Storyboard>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentBorder" Storyboard.TargetProperty="Background">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <Storyboard>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentBorder" Storyboard.TargetProperty="Background">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SubtleFillColorTertiaryBrush}" />
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </VisualState>
+                                    </VisualStateGroup>
+
+                                   
+                                </VisualStateManager.VisualStateGroups>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="HyperlinkButtonAsButtonStyle" TargetType="HyperlinkButton">
+                <Setter Property="Foreground" Value="{ThemeResource ButtonForeground}" />
+                <Setter Property="Background" Value="{ThemeResource ButtonBackground}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource ButtonBorderBrush}" />
+                <Setter Property="BorderThickness" Value="{ThemeResource ButtonBorderThemeThickness}" />
+                <Setter Property="Padding" Value="{ThemeResource ButtonPadding}" />
+                <Setter Property="UseSystemFocusVisuals" Value="True"/>
+
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="HyperlinkButton">
+                            <Grid>
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal"/>
+
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="BackgroundBorder.Background" Value="{ThemeResource ButtonBackgroundPointerOver}" />
+                                                <Setter Target="BackgroundBorder.BorderBrush" Value="{ThemeResource ButtonBorderBrushPointerOver}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="BackgroundBorder.Background" Value="{ThemeResource ButtonBackgroundPressed}" />
+                                                <Setter Target="BackgroundBorder.BorderBrush" Value="{ThemeResource ButtonBorderBrushPressed}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+
+                                        <VisualState x:Name="Disabled">
+                                            <VisualState.Setters>
+                                                <Setter Target="BackgroundBorder.Background" Value="{ThemeResource ButtonBackgroundDisabled}" />
+                                                <Setter Target="BackgroundBorder.BorderBrush" Value="{ThemeResource ButtonBorderBrushDisabled}" />
+                                                <Setter Target="ContentPresenter.Foreground" Value="{ThemeResource ButtonForegroundDisabled}" />
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+
+                                <Border x:Name="BackgroundBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{ThemeResource ControlCornerRadius}">
+
+                                    <ContentPresenter
+                            x:Name="ContentPresenter"
+                            Content="{TemplateBinding Content}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Padding="{TemplateBinding Padding}" />
+                                </Border>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

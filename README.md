@@ -1,58 +1,68 @@
 ## About
 
-Created by Marci599 for Mario Multiverse (created by neoarc)
+Created by Marci599 for Mario Multiverse.<br/>
+Mario Multiverse (SFMB) created by neoarc.
 
-This tool can be used to automatically generate spritesheet resources from individual recorded frames.
+This tool can be used to automatically generate spritesheet resources from individual recorded / rendered frames.
 
 **Before using it, make sure to familiarize yourself with the game’s theme creation process, as this will help you understand how sprite sheet resources work.**
 
 Let's say you want to use sprites from existing 3D games (like NSMB, NSMBWii or NSMBU), or if you want to implement your own 3D renders into MM, this tool can significantly speed up the implementation process.
 
-Download latest version here: [Releases](https://github.com/Marci599/sprite-rips-to-mm-sprite-resources/releases)
-
-If you don't want to download the 25 MB .exe, use the python files from the source code.
+**Download** latest version here: [Releases](https://github.com/Marci599/sprite-rips-to-mm-sprite-resources/releases)
 
 ## How to use
 
-![Animation2](https://github.com/user-attachments/assets/898ad1a7-28e2-4b4d-a899-ae5f3af36b0a)
+### Setup
 
-If you are **not** planning to work with different Game Themes, structure your files as follows:
+1. After installing the program, launch it and set the `Working directory path` to the directory where your folders and files will be located. (for example create a new empty folder inside your Mario Multiverse folder named `FTMMSRAssets` and set the path in the program to that folder.)
+
+2. Press `Generate hierarchy` and an example directory will be generated inside your folder.
+
+3. Rename your folders, create new ones, or remove them accordingly, then put your frames inside the animation folders. Make sure that their names include ordering numbers (for example: `frame001.png`, `frame002.png`, ...)
+    
+This is how your folders and files should look like.
 ```
-<Name>
-├─ FramesToMMSpriteResources.exe
+<FTMMSRAssets>
 ├─ <SubjectName>
-│  └─ raw
-│     ├─ <AnimationName>
-│     │  ├─ frame001.png
-│     │  └─ frame002.png
-│     ├─ <AnimationName>
-│     └─ <AnimationName>
+│  ├─ <AnimationName>
+│  │  ├─ frame001.png
+│  │  └─ frame002.png
+│  ├─ <AnimationName>
+│  └─ <AnimationName>
 ├─ <SubjectName>
 └─ <SubjectName>
 ```
 
-If you plan to work with different Game Themes, then structure your files as follows:
-```
-<Name>
-├─ FramesToMMSpriteResources.exe
-├─ <GameThemeName>
-│  ├─ <SubjectName>
-│  │  └─ raw
-│  │     ├─ <AnimationName>
-│  │     │  ├─ frame001.png
-│  │     │  └─ frame002.png
-│  │     ├─ <AnimationName>
-│  │     └─ <AnimationName>
-│  ├─ <SubjectName>
-│  └─ <SubjectName>
-├─ <GameThemeName>
-└─ <GameThemeName>
-```
-
 You can download this example that contains a subject with raw frames: [V_Yoshi](https://github.com/Marci599/sprite-rips-to-mm-sprite-resources/blob/master/example.zip)
-- Unzip it and put V_Yoshi next to the pragram.
-- Note that the Jump aniamtions is just a placeholder.
+- Unzip it and put V_Yoshi inside your assets folder.
+- Note that the Jump animation is just a placeholder.
 
-After setup, launch the program, select a theme (if you set up your layout for themes), then select a subject, configure options, and use 'Save & Generate' to create the spritesheet resources into `<SubjectName>/generated`.
+### Watermark
 
-For best results, if your subject moves around in the raw recording and you want to resize it, adjust each raw frame so it appears stationary before generating the spritesheet.
+To automatically add your own watermark to the spritesheets, open your `Local App Data Directory` and put your watermark there named `WaterMark.png`.
+- Watermarks only appear if the spritesheet contains more than 20 frames.
+
+To remove the built in watermark, contact me.
+
+### Controls
+
+#### Tree view
+
+- <b>Select:</b> `LMB`
+- <b>Open in file explorer:</b> `RMB`
+- <b>Multiselect:</b> Hold `CTRL`
+- <b>Select all sibling:</b> `CTRL` + `A`
+- <b>Change selected sibling:</b> `Q` `D`
+You can select a range of siblings by holding `CTRL` and `Q` or `D`
+
+#### Frame offset editor
+
+- <b>Move canvas:</b> `RMB`
+- <b>Zoom canvas:</b> Scroll `MMB`
+- <b>Move frame:</b> `W` `A` `S` `D` (+`SHIFT` for added speed) / `LMB`
+- <b>Toggle previous frame:</b> `R`
+
+### Generating
+
+Select a subject, and press `Generate <SubjectName>` to create the spritesheet resources into your output or assets.

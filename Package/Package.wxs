@@ -1,0 +1,153 @@
+<Wix
+	xmlns="http://wixtoolset.org/schemas/v4/wxs"
+	xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+	 >
+
+	<Package
+	  Id="FramesToSpriteResources"
+	  Name="Frames to MM Sprite Resources"
+	  Manufacturer="Marci599"
+	  Version="1.0.0"
+	  UpgradeCode="{47a224ca-6c65-4630-8eb6-51583a78e505}">
+		<Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+		<Property
+		  Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT"
+		  Value="Start Frames to MM Sprite Resources" />
+		<Property Id="INSTALLDESKTOPSHORTCUT" Value="1" />
+		<Property Id="INSTALLSTARTMENUSHORTCUT" Value="1" />
+
+		<ui:WixUI
+			  Id="WixUI_InstallDir"
+			  InstallDirectory="INSTALLFOLDER" />
+		<UI>
+			<Publish
+			  Dialog="WelcomeDlg"
+			  Control="Next"
+			  Event="NewDialog"
+			  Value="InstallDirDlg"
+			  Condition="1"
+			  Order="2" />
+			<Publish
+			  Dialog="InstallDirDlg"
+			  Control="Back"
+			  Event="NewDialog"
+			  Value="WelcomeDlg"
+			  Condition="1"
+			  Order="2" />
+		</UI>
+		<CustomAction
+		  Id="LaunchApplication"
+		  Directory="INSTALLFOLDER"
+		  ExeCommand="&quot;[INSTALLFOLDER]FramesToMMSpriteResources.exe&quot;"
+		  Execute="immediate"
+		  Impersonate="yes"
+		  Return="asyncNoWait" />
+		<UI>
+			<Publish
+			  Dialog="ExitDialog"
+			  Control="Finish"
+			  Event="DoAction"
+			  Value="LaunchApplication"
+			  Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
+		</UI>
+		<MajorUpgrade
+		  DowngradeErrorMessage="A newer version of Frames to MM Sprite Resources is already installed." />
+
+		<MediaTemplate EmbedCab="yes" />
+
+		<StandardDirectory Id="ProgramFiles64Folder">
+			<Directory
+			  Id="PUBLISHERFOLDER"
+			  Name="Marci599">
+
+				<Directory
+				  Id="INSTALLFOLDER"
+				  Name="FramesToSpriteResources" />
+
+			</Directory>
+		</StandardDirectory>
+
+		<StandardDirectory Id="ProgramMenuFolder">
+			<Directory
+			  Id="ApplicationProgramsFolder"
+			  Name="Frames to MM Sprite Resources" />
+		</StandardDirectory>
+
+		<StandardDirectory Id="DesktopFolder">
+			<Component
+			  Id="DesktopShortcut"
+			  Guid="*"
+			  Condition="INSTALLDESKTOPSHORTCUT = 1">
+
+				<Shortcut
+				  Id="ApplicationDesktopShortcut"
+				  Name="Frames to MM Sprite Resources"
+				  Target="[INSTALLFOLDER]FramesToMMSpriteResources.exe"
+				  WorkingDirectory="INSTALLFOLDER" />
+
+				<RemoveFolder
+				  Id="RemoveDesktopFolder"
+				  On="uninstall" />
+
+				<RegistryValue
+				  Root="HKCU"
+				  Key="Software\Marci599\FramesToMMSpriteResources"
+				  Name="DesktopShortcutInstalled"
+				  Type="integer"
+				  Value="1"
+				  KeyPath="yes" />
+
+			</Component>
+		</StandardDirectory>
+
+		<Feature Id="MainFeature" Title="Frames to MM Sprite Resources">
+			<ComponentGroupRef Id="ApplicationFiles" />
+			<ComponentRef Id="ApplicationShortcut" />
+			<ComponentRef Id="DesktopShortcut" />
+		</Feature>
+
+		<WixVariable Id="WixUIBannerBmp" Value="Assets\bannertop.png" />
+
+		<WixVariable Id="WixUIDialogBmp" Value="Assets\bannerleft.png" />
+
+	</Package>
+
+	<Fragment>
+		<ComponentGroup
+		  Id="ApplicationFiles"
+		  Directory="INSTALLFOLDER">
+
+			<Files Include="$(var.AppPublishDir)**" />
+
+		</ComponentGroup>
+	</Fragment>
+	<Fragment>
+		<DirectoryRef Id="ApplicationProgramsFolder">
+			<Component
+			  Id="ApplicationShortcut"
+			  Guid="*"
+			  Condition="INSTALLSTARTMENUSHORTCUT = 1">
+
+				<Shortcut
+				  Id="ApplicationStartMenuShortcut"
+				  Name="Frames to MM Sprite Resources"
+				  Target="[INSTALLFOLDER]FramesToMMSpriteResources.exe"
+				  WorkingDirectory="INSTALLFOLDER" />
+
+				<RemoveFolder
+				  Id="RemoveApplicationProgramsFolder"
+				  On="uninstall" />
+
+				<RegistryValue
+				  Root="HKCU"
+				  Key="Software\Marci599\FramesToSpriteResources"
+				  Name="Installed"
+				  Type="integer"
+				  Value="1"
+				  KeyPath="yes" />
+
+			</Component>
+		</DirectoryRef>
+	</Fragment>
+
+</Wix>
