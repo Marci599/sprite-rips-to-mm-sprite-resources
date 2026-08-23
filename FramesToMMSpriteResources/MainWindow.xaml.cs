@@ -480,8 +480,8 @@ namespace FramesToMMSpriteResources
         {
             try
             {
-                var json = JsonSerializer.Serialize(classToSave, jsonOptions);
-                File.WriteAllText(filePath, json);
+                var bytes = JsonSerializer.SerializeToUtf8Bytes(classToSave, jsonOptions);
+                File.WriteAllBytes(filePath, bytes);
             }
             catch (Exception ex)
             {
@@ -497,10 +497,11 @@ namespace FramesToMMSpriteResources
             {
                 if (!File.Exists(filePath))
                     return new T();
+                var bytes = File.ReadAllBytes(filePath);
+                if (bytes == null || bytes.Length == 0)
+                    return new T();
 
-                var json = File.ReadAllText(filePath);
-                var obj = JsonSerializer.Deserialize<T>(json, jsonOptions);
-
+                var obj = JsonSerializer.Deserialize<T>(bytes, jsonOptions);
                 return obj ?? new T();
             }
             catch (Exception ex)
@@ -710,7 +711,7 @@ namespace FramesToMMSpriteResources
 
                             animationConfig.FrameCongfigs ??= [];
 
-                            var frameFiles = Directory.EnumerateFiles(animationDir, "*.png");
+                            var frameFiles = Directory.GetFiles(animationDir, "*.png");
                             foreach (var frameFile in frameFiles)
                             {
                                 string fileName = Path.GetFileNameWithoutExtension(frameFile);
