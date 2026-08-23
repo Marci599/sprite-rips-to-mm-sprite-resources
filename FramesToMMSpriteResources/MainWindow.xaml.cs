@@ -685,6 +685,7 @@ namespace FramesToMMSpriteResources
                 {        
                     SubjectConfig subjectConfig = LoadJson<SubjectConfig>(Path.Combine(subjectDir, CONFIG_FILENAME));
                     subjectConfig.InterfaceConfig = LoadJson<SubjectInterfaceConfig>(Path.Combine(subjectDir, INTERFACE_CONFIG_FILENAME));
+                    subjectConfig.Processing ??= (ProcessingConfig)ProgramConfig.AssetConfig!.ProcessingDefault.Clone();
 
                     var subjectTreeItem = new TreeItem(subjectName, ItemDepth.Subject);
                     var subjectTreeViewNode = new TreeViewNode { Content = subjectTreeItem, IsExpanded = subjectConfig.InterfaceConfig.IsExpanded };
@@ -1310,7 +1311,6 @@ namespace FramesToMMSpriteResources
             NoteTextBox.TextChanged -= NoteTextBox_ValueChanged;
 
             subjectConfig.Export ??= new SubjectExportConfig();
-            subjectConfig.Processing ??= (ProcessingConfig)ProgramConfig.AssetConfig!.ProcessingDefault.Clone();
 
             ProcessingCardControl.GetRemoveBackgroundCheckBox.IsChecked = subjectConfig.Processing.RemoveBackground;
             ProcessingCardControl.GetCropLeftCheckBox.IsChecked = subjectConfig.Processing.CropLeft;
