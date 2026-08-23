@@ -515,7 +515,7 @@ namespace FramesToMMSpriteResources
 
         public static string GetUserConfigDirectory()
         {
-            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FramesToSpriteResources");
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Marci599","FramesToSpriteResources");
             if (!Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
             return dir;
