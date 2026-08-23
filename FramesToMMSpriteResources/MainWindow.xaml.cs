@@ -2634,7 +2634,7 @@ namespace FramesToMMSpriteResources
             Directory.CreateDirectory(Path.Combine(subject2Path, "Anim1"));
             Directory.CreateDirectory(Path.Combine(subject2Path, "Anim2"));
 
-            SetInfoBar(InfoBarSeverity.Success, "Example generated", "Rename your folders, create new ones, or remove them accordingly, then put your frames inside the aniamtion folders");
+            SetInfoBar(InfoBarSeverity.Success, "Example generated", "Rename your folders, create new ones, or remove them accordingly, then put your frames inside the animation folders");
        
             ReloadTreeViewAndConfigs();
         }
