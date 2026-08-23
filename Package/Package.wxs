@@ -14,6 +14,7 @@
 		  Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT"
 		  Value="Start Frames to MM Sprite Resources after installation" />
 		<Property Id="INSTALLDESKTOPSHORTCUT" Value="1" />
+		<Property Id="INSTALLSTARTMENUSHORTCUT" Value="1" />
 
 		<ui:WixUI
 			  Id="WixUI_InstallDir"
