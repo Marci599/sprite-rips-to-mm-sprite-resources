@@ -1,3 +1,5 @@
+# Sorry, I changed the readme too soon. I will release the new version tomorrow.
+
 ## About
 
 Created by Marci599 for Mario Multiverse.<br/>
@@ -38,6 +40,9 @@ You can download this example that contains a subject with raw frames: [V_Yoshi]
 - Unzip it and put V_Yoshi inside your assets folder.
 - Note that the Jump animation is just a placeholder.
 
+### Understand how this program manages your files
+Right now, when the window gets unfocused, it saves everything, and the next time the inside of the window gets clicked, it reloads everything. This can get a little slow with big projects, and it creates another issue as well: If there is a copying (or any file / folder related) process in the background that finishes while the program is focused, it's not going to detect those changes until the program gets unfocused, and clicked inside again. This is something I want to change in the future.
+
 ### Watermark
 
 To automatically add your own watermark to the spritesheets, open your `Local App Data Directory` and put your watermark there named `WaterMark.png`.
@@ -54,6 +59,7 @@ To remove the built in watermark, contact me.
 - <b>Multiselect:</b> Hold `CTRL`
 - <b>Select all sibling:</b> `CTRL` + `A`
 - <b>Change selected sibling:</b> `Q` `D`
+  
 You can select a range of siblings by holding `CTRL` and `Q` or `D`
 
 #### Frame offset editor
