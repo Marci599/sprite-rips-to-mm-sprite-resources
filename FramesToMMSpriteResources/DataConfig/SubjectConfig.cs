@@ -17,7 +17,7 @@ namespace FramesToMMSpriteResources
         public string Note;
 
         [JsonPropertyName("processing")]
-        public ProcessingConfig Processing;
+        public ProcessingConfig? Processing;
 
         [JsonPropertyName("export")]
         public SubjectExportConfig Export = new();

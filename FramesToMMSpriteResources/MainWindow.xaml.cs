@@ -31,17 +31,15 @@ using Windows.Storage.Pickers;
 
 namespace FramesToMMSpriteResources
 {
-
-
     public sealed partial class MainWindow : Window
     {
         private static readonly object[] _temp =
-{
-    new CountToVisibilityConverter(),
-    new BoolToVisibilityConverter(),
-    new DepthToIconGlyphConverter(),
-    new DepthToMarginConverter()
-};
+        {
+            new CountToVisibilityConverter(),
+            new BoolToVisibilityConverter(),
+            new DepthToIconGlyphConverter(),
+            new DepthToMarginConverter()
+        };
 
         //PROGRAM CONFIG
         private static readonly string CONFIG_FILENAME = "config.json";
@@ -1421,7 +1419,7 @@ namespace FramesToMMSpriteResources
             }
             else
             {
-                configToSetFrom = subjectConfig.Processing;
+                configToSetFrom = subjectConfig.Processing??new();
                 RemoveOverwriteButton.Visibility = Visibility.Collapsed;
             }
 
