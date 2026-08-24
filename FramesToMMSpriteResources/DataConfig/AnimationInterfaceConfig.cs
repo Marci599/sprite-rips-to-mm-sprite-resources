@@ -55,7 +55,7 @@ namespace FramesToMMSpriteResources.DataConfig
         public RangeConfig(int from, int to)
         {
             From = from;
-            From = to;
+            To = to;
         }
     }
 }

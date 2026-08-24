@@ -305,6 +305,7 @@
 
                                                     </Grid>
                                                     <TextBlock
+                                                        x:Name="AutoSizeHelperText"
                                                         Margin="0,-8,0,0"
                                                         Style="{StaticResource HelperTextStyle}"
                                                         Text="For automatic sizing, leave it blank" />
@@ -425,7 +426,10 @@
 
                                                             </Button>
                                                         </controls:WrapPanel>
-                                                        <TextBlock Style="{StaticResource HelperTextStyle}" Text="To crop, you can import your frames to NickeManarin/ScreenToGif do it there, and save back here" />
+                                                        <TextBlock
+                                                            x:Name="CropHelperText"
+                                                            Style="{StaticResource HelperTextStyle}"
+                                                            Text="To crop, you can import your frames to NickeManarin/ScreenToGif do it there, and save back here" />
 
 
                                                     </StackPanel>
@@ -449,6 +453,7 @@
                                                         Minimum="1"
                                                         PlaceholderText="1" />
                                                     <TextBlock
+                                                        x:Name="SkipStepsHelperText"
                                                         Margin="0,-8,0,0"
                                                         Style="{StaticResource HelperTextStyle}"
                                                         Text="Steps entered amount of frames and draws the next, then steps again. Can increase speed or reduce framerate." />
@@ -477,7 +482,10 @@
                                                                 PlaceholderText="0" />
 
                                                         </Grid>
-                                                        <TextBlock Style="{StaticResource HelperTextStyle}" Text="Adjusts the offset of every frame after processing" />
+                                                        <TextBlock
+                                                            x:Name="AnimationOffsetHelperText"
+                                                            Style="{StaticResource HelperTextStyle}"
+                                                            Text="Adjusts the offset of every frame after processing" />
                                                     </StackPanel>
 
 
@@ -497,11 +505,17 @@
                                                                 Grid.Column="1"
                                                                 Content="Y axis" />
                                                         </Grid>
-                                                        <TextBlock Style="{StaticResource HelperTextStyle}" Text="If enabled, the offsets will be adjusted to account for any cropping that was done" />
+                                                        <TextBlock
+                                                            x:Name="RecoverOffsetsEnabledHelperText"
+                                                            Style="{StaticResource HelperTextStyle}"
+                                                            Text="If enabled, the offsets will be adjusted to account for any cropping that was done" />
                                                     </StackPanel>
                                                     <StackPanel Spacing="4">
                                                         <CheckBox x:Name="RegenerateCheckBox" Content="Regenerate frame properties" />
-                                                        <TextBlock Style="{StaticResource HelperTextStyle}" Text="If disabled, offsets and sub-positions won't be overwritten" />
+                                                        <TextBlock
+                                                            x:Name="RecoverOffsetsDisabledHelperText"
+                                                            Style="{StaticResource HelperTextStyle}"
+                                                            Text="If disabled, offsets and sub-positions won't be overwritten" />
                                                     </StackPanel>
                                                     <StackPanel Spacing="4">
                                                         <Grid ColumnSpacing="-1">
@@ -527,6 +541,28 @@
                                                                 <FontIcon FontSize="14" Glyph="&#xE710;" />
                                                             </Button>
                                                         </Grid>
+
+                                                        <Grid
+                                                            x:Name="ListViewHeaderGrid"
+                                                            Margin="32,2,0,0"
+                                                            ColumnSpacing="-1">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="45" />
+                                                                <ColumnDefinition Width="12" />
+                                                                <ColumnDefinition Width="45" />
+                                                                <ColumnDefinition Width="32" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock
+                                                                Grid.Column="0"
+                                                                Text="Animation name"
+                                                                TextWrapping="NoWrap" />
+                                                            <TextBlock Grid.Column="1" Text="From" />
+
+
+                                                            <TextBlock Grid.Column="3" Text="To" />
+
+                                                        </Grid>
                                                         <ListView
                                                             x:Name="AlsoKnownAsListView"
                                                             MaxHeight="150"
@@ -545,23 +581,26 @@
                                                                             <ColumnDefinition Width="Auto" />
                                                                             <ColumnDefinition Width="Auto" />
                                                                         </Grid.ColumnDefinitions>
-                                                                        <TextBox
+                                                                        <local:CustomTextBox
                                                                             Grid.Column="0"
                                                                             CornerRadius="4 0 0 4"
+                                                                            DataContextChanged="AlsoKnownAsEditTextBox_DataContextChanged"
                                                                             GotFocus="AlsoKnownAsEditTextBox_GotFocus"
-                                                                            KeyDown="AlsoKnownAsEditTextBox_KeyDown"
+                                                                            Loaded="CustomTextBox_Loaded"
                                                                             LostFocus="AlsoKnownAsEditTextBox_LostFocus"
-                                                                            Text="{Binding Name, Mode=TwoWay}" />
+                                                                            ValueChanged="CustomTextBox_ValueChanged" />
                                                                         <local:CustomNumberBox
                                                                             Grid.Column="1"
                                                                             Width="45"
                                                                             MinWidth="0"
                                                                             CornerRadius="0"
+                                                                            DataContextChanged="AlsoFromCustomNumberBox_DataContextChanged"
                                                                             Minimum="0"
                                                                             PlaceholderText="0"
-                                                                            Text="{Binding Range.From, Mode=TwoWay}" />
+                                                                            ValueChanged="AlsoFromCustomNumberBox_ValueChanged" />
                                                                         <Border
                                                                             Grid.Column="2"
+                                                                            Width="12"
                                                                             Margin="0,-1,0,0"
                                                                             Padding="2"
                                                                             Background="{ThemeResource SurfaceStrokeColorDefaultBrush}"
@@ -578,9 +617,10 @@
                                                                             Width="45"
                                                                             MinWidth="0"
                                                                             CornerRadius="0 0 0 0"
+                                                                            DataContextChanged="AlsoToCustomNumberBox_DataContextChanged"
                                                                             Minimum="-1"
                                                                             PlaceholderText="-1"
-                                                                            Text="{Binding Range.To, Mode=TwoWay}" />
+                                                                            ValueChanged="AlsoToCustomNumberBox_ValueChanged" />
                                                                         <Button
                                                                             x:Name="RemoveButton"
                                                                             Grid.Column="4"
@@ -595,7 +635,10 @@
                                                                 </DataTemplate>
                                                             </ListView.ItemTemplate>
                                                         </ListView>
-                                                        <TextBlock Style="{StaticResource HelperTextStyle}" Text="If multiple animations are the same, add their name here. (-1 means use every frame)" />
+                                                        <TextBlock
+                                                            x:Name="AlsoKnownAsHelperText"
+                                                            Style="{StaticResource HelperTextStyle}"
+                                                            Text="If multiple animations are the same, add their name here. (-1 means until last frame)" />
                                                     </StackPanel>
 
 
@@ -855,7 +898,7 @@
                                                 </Grid>
                                             </StackPanel>
                                         </Border>
-                                        <Border Padding="16,8,16,8" Style="{StaticResource CardBorderStyle}">
+                                        <Border Style="{StaticResource CardBorderStyle}">
                                             <StackPanel Spacing="12">
                                                 <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Remove movement" />
                                                 <Rectangle Style="{StaticResource GroupDividerStyle}" />
@@ -890,6 +933,7 @@
                                                     </Button>
                                                 </Grid>
                                                 <TextBlock
+                                                    x:Name="RemoveMovementHelperText"
                                                     Margin="0,-8,0,0"
                                                     Style="{StaticResource HelperTextStyle}"
                                                     Text="Select frames you want to remove movement between" />
@@ -1028,10 +1072,16 @@
                                                         CornerRadius="0 0 4 4"
                                                         Style="{StaticResource CardBorderStyle}">
                                                         <StackPanel Spacing="12">
-                                                            <TextBlock Style="{StaticResource HelperTextStyle}" Text="Please provide a path where your folders and files will be located or are already located" />
+                                                            <TextBlock
+                                                                x:Name="WorkingPathHelperText"
+                                                                Style="{StaticResource HelperTextStyle}"
+                                                                Text="Please provide a path where your folders and files will be located or are already located" />
                                                             <StackPanel MaxWidth="1000" Spacing="4">
                                                                 <CheckBox x:Name="IsHdCheckBox" Content="Is HD" />
-                                                                <TextBlock Style="{StaticResource HelperTextStyle}" Text="If enabled @2x pngs will be generated and .sprites files will be adjusted for that" />
+                                                                <TextBlock
+                                                                    x:Name="HdPngHelperText"
+                                                                    Style="{ThemeResource HelperTextStyle}"
+                                                                    Text="If enabled @2x pngs will be generated and .sprites files will be adjusted for that" />
                                                             </StackPanel>
                                                             <Grid ColumnSpacing="0">
                                                                 <Grid.ColumnDefinitions>
@@ -1066,7 +1116,11 @@
                                                 </StackPanel>
 
 
-
+                                                <ToggleSwitch
+                                                    x:Name="HintsToggle"
+                                                    Header="Hints under input fields"
+                                                    OffContent="Hide"
+                                                    OnContent="Show" />
 
                                                 <StackPanel Spacing="8">
                                                     <TextBlock Text="Manage program" />
@@ -1189,6 +1243,7 @@
                                             TextTrimming="CharacterEllipsis"
                                             TextWrapping="NoWrap" />
                                         <TextBlock
+                                            x:Name="ReduceFileSizeHelperText"
                                             Grid.Column="1"
                                             Style="{StaticResource HelperTextStyle}"
                                             Text="If enabled, expect a bit slower generation"

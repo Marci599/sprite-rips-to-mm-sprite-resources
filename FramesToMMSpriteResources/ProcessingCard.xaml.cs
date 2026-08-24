@@ -16,6 +16,27 @@ public sealed partial class ProcessingCard : UserControl
     {
         InitializeComponent();
 
+        Func<string, string> hashtag = (s =>
+        {
+            s = s.Trim();
+            if (!s.StartsWith('#'))
+            {
+                s = '#' + s;
+            }
+            return s;
+        });
+
+        GetColorTextBox.FormatText = hashtag;
+
+        GetColorTextBox.CheckRule = (s =>
+        {
+          
+
+            if (s.StartsWith('#'))
+                s = s[1..];
+
+            return ColorHelper.CanParse(s, out uint _);
+        });
 
     }
 
@@ -34,8 +55,12 @@ public sealed partial class ProcessingCard : UserControl
     public CustomNumberBox GetResizeTextBox { get => ResizeTextBox; }
     public ComboBox GetSamplingComboBox { get => SamplingComboBox; }
     public ComboBox GetMipmapComboBox { get => MipmapComboBox; }
-    public TextBox GetColorTextBox { get => ColorTextBox; }
+    public CustomTextBox GetColorTextBox { get => ColorTextBox; }
     public CustomNumberBox GetThresholdTextBox { get => ThresholdTextBox; }
+
+    public TextBlock GetProcessingColorHelperText { get => ProcessingColorHelperText; }
+    public TextBlock GetProcessingCroppingHelperText1 { get => ProcessingCroppingHelperText1; }
+    public TextBlock GetProcessingCroppingHelperText2 { get => ProcessingCroppingHelperText2; }
 
     public void UpdateColorPreview()
     {

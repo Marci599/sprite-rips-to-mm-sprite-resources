@@ -457,7 +457,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
         _isUpdatingZoomControls = false;
     }
 
-    private void ZoomNumberBox_TextChanged(float? zoomValue)
+    private void ZoomNumberBox_TextChanged(object sender, float? zoomValue)
     {
  
         if (_isUpdatingZoomControls)
@@ -872,7 +872,7 @@ public sealed partial class FrameCoordinateEditor : UserControl
             return;
         }
 
-        ColorHelper.TryParse(_subjectConfig.Processing.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
+        ColorHelper.TryParse(_subjectConfig.Processing!.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
 
         if (MainWindow.ProgramConfig.ShowPreviousFrameBehind)
         {
@@ -1062,14 +1062,14 @@ public sealed partial class FrameCoordinateEditor : UserControl
 
  
 
-    private void FromNumberBox_TextChanged(float? fromValue)
+    private void FromNumberBox_TextChanged(object sender, float? fromValue)
     {
      
         getCurrentAnimationInterfaceConfig().Range.From = (int)fromValue!;
         ToNumberBox.Minimum = getCurrentAnimationInterfaceConfig().Range.From;
     }
 
-    private void ToNumberBox_TextChanged(float? toValue)
+    private void ToNumberBox_TextChanged(object sender, float? toValue)
     {
   
         var max = Math.Max(PreviewSpriteFrames.Count - 1, 0);

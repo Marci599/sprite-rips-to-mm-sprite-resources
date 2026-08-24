@@ -33,10 +33,10 @@ namespace FramesToMMSpriteResources
     public class ProcessingConfig : ICloneable
     {
         [JsonPropertyName("background_color")]
-        public string? BackgroundColor = "#00FF00";
+        public string BackgroundColor = "#00FF00";
 
         [JsonPropertyName("color_threshold")]
-        public int ColorTreshold = 100;
+        public int ColorThreshold = 100;
 
         [JsonPropertyName("remove_background")]
         public bool RemoveBackground = true;
@@ -64,10 +64,10 @@ namespace FramesToMMSpriteResources
 
         public ProcessingConfig() { }
 
-        public ProcessingConfig(string? backgroundColor, int colorTreshold, bool removeBackground, float resizeToPercent, int filterMode, int mipmapMode, bool cropLeft, bool cropTop, bool cropRight, bool cropBottom)
+        public ProcessingConfig(string backgroundColor, int colorTreshold, bool removeBackground, float resizeToPercent, int filterMode, int mipmapMode, bool cropLeft, bool cropTop, bool cropRight, bool cropBottom)
         {
             BackgroundColor = backgroundColor;
-            ColorTreshold = colorTreshold;
+            ColorThreshold = colorTreshold;
             RemoveBackground = removeBackground;
             ResizeToPercent = resizeToPercent;
             FilterMode = filterMode;
@@ -83,7 +83,7 @@ namespace FramesToMMSpriteResources
             return new ProcessingConfig
             {
                 BackgroundColor = this.BackgroundColor,
-                ColorTreshold = this.ColorTreshold,
+                ColorThreshold = this.ColorThreshold,
                 RemoveBackground = this.RemoveBackground,
                 ResizeToPercent = this.ResizeToPercent,
                 FilterMode = this.FilterMode,

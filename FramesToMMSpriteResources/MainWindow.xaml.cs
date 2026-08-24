@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.WinUI;
 using FramesToMMSpriteResources.DataConfig;
+using Microsoft.ML.OnnxRuntime;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -26,6 +27,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Windows.ApplicationModel;
 using Windows.Storage.Pickers;
+using static System.Net.Mime.MediaTypeNames;
 
 //TODO: SHIFT RANGE SELECT
 
@@ -273,7 +275,7 @@ namespace FramesToMMSpriteResources
                 ClickTipText.Text = "Click on window content to load";
                 ClickTipText.Visibility = Visibility.Visible;
                
-                Debug.WriteLine("DEACTIVATE");
+ 
 
                 IsWindowActive = false;
 
@@ -293,7 +295,7 @@ namespace FramesToMMSpriteResources
             ActivateProgram();
         }
    
-        async void ActivateProgram()
+        void ActivateProgram()
         {
             if (IsWindowActive) return;
 
@@ -315,6 +317,8 @@ namespace FramesToMMSpriteResources
                 //InitialBorderText.Text = "Loading...";
                 SetUpTreeViewAndConfigs();
                 InitialBorder.Visibility = Visibility.Collapsed;
+
+
                 CheckForUpdate();
 
                 if (TreeViewControl.SelectedNode != null)
@@ -323,6 +327,8 @@ namespace FramesToMMSpriteResources
                 }
 
                 _isActivated = true;
+
+
             }
             ClickTipText.Visibility = Visibility.Collapsed;
 
@@ -332,12 +338,52 @@ namespace FramesToMMSpriteResources
             ReduceFileSizeCheckBox.IsChecked = ProgramConfig.ReduceFileSize;
             ReduceFileSizeCheckBox.Click += ReduceFileSizeCheckBox_Click;
 
+            HintsToggle.Toggled -= HintsToggle_Toggled;
+            HintsToggle.IsOn = ProgramConfig.ShowHints;
+            ToggleTips(HintsToggle.IsOn);
+            HintsToggle.Toggled += HintsToggle_Toggled;
 
-         
             IsWindowActive = true;
             IsPanelChangeInProgress = false;
 
             SyncKeyboardState();
+
+        }
+
+        private void HintsToggle_Toggled(object sender, RoutedEventArgs e)
+        {
+            var ts = (sender as ToggleSwitch)!;
+            ToggleTips(ts.IsOn);
+    
+            ProgramConfig.ShowHints = ts.IsOn;
+        }
+
+        void ToggleTips(bool isOn)
+        {
+            var visibility = Visibility.Visible;
+            if (!isOn)
+            {
+                visibility = Visibility.Collapsed;
+            }
+            AutoSizeHelperText.Visibility = visibility;
+            CropHelperText.Visibility = visibility;
+            SkipStepsHelperText.Visibility = visibility;
+            AnimationOffsetHelperText.Visibility = visibility;
+            RecoverOffsetsEnabledHelperText.Visibility = visibility;
+            AlsoKnownAsHelperText.Visibility = visibility;
+            RemoveMovementHelperText.Visibility = visibility;
+
+            WorkingPathHelperText.Visibility = visibility;
+            HdPngHelperText.Visibility = visibility;
+            RecoverOffsetsDisabledHelperText.Visibility = visibility;
+
+            ProcessingCardControl.GetProcessingColorHelperText.Visibility = visibility;
+            ProcessingCardControl.GetProcessingCroppingHelperText1.Visibility = visibility;
+            ProcessingCardControl.GetProcessingCroppingHelperText2.Visibility = visibility;
+
+            ProcessingOverwriteCardControl.GetProcessingColorHelperText.Visibility = visibility;
+            ProcessingOverwriteCardControl.GetProcessingCroppingHelperText1.Visibility = visibility;
+            ProcessingOverwriteCardControl.GetProcessingCroppingHelperText2.Visibility = visibility;
 
         }
 
@@ -1172,7 +1218,7 @@ namespace FramesToMMSpriteResources
 
         async void ChangeConfigPanelAsync(TreeViewNode node, bool animate = true, bool nowGenerated = false)
         {
-
+            startedEditingListViewOnce = false;
             UIElement panelToShow = HelpPanel;
 
             ItemDepth depth = (node.Content as TreeItem)!.Depth;
@@ -1302,7 +1348,7 @@ namespace FramesToMMSpriteResources
             ProcessingCardControl.GetResizeTextBox.ValueChanged -= ResizeTextBox_ValueChanged;
             ProcessingCardControl.GetSamplingComboBox.SelectionChanged -= SamplingComboBox_SelectionChanged;
             ProcessingCardControl.GetMipmapComboBox.SelectionChanged -= MipmapComboBox_SelectionChanged;
-            ProcessingCardControl.GetColorTextBox.TextChanged -= ColorTextBox_TextChanged;
+            ProcessingCardControl.GetColorTextBox.ValueChanged -= ColorTextBox_TextChanged;
             ProcessingCardControl.GetColorTextBox.TextChanged -= ProcessingCardControl.ColorTextBox_TextChanged;
             ProcessingCardControl.GetThresholdTextBox.ValueChanged -= ThresholdTextBox_ValueChanged;
 
@@ -1323,13 +1369,13 @@ namespace FramesToMMSpriteResources
             ProcessingCardControl.GetSamplingComboBox.SelectedIndex = subjectConfig.Processing.FilterMode;
             ProcessingCardControl.GetMipmapComboBox.SelectedIndex = subjectConfig.Processing.MipmapMode;
 
-            ProcessingCardControl.GetThresholdTextBox.Value = subjectConfig.Processing.ColorTreshold;
+            ProcessingCardControl.GetThresholdTextBox.Value = subjectConfig.Processing.ColorThreshold;
             SheetWidthTextBox.Value = subjectConfig.Export.Width;
             SheetHeightTextBox.Value = subjectConfig.Export.Height;
 
             NoteTextBox.Text = subjectConfig.Note;
 
-            ProcessingCardControl.GetColorTextBox.Text = subjectConfig.Processing.BackgroundColor ?? "";
+            ProcessingCardControl.GetColorTextBox.Value = subjectConfig.Processing.BackgroundColor;
             ProcessingCardControl.UpdateColorPreview();
 
             ProcessingCardControl.GetRemoveBackgroundCheckBox.Click += ClickRemoveBackground;
@@ -1341,7 +1387,7 @@ namespace FramesToMMSpriteResources
             ProcessingCardControl.GetResizeTextBox.ValueChanged += ResizeTextBox_ValueChanged;
             ProcessingCardControl.GetSamplingComboBox.SelectionChanged += SamplingComboBox_SelectionChanged;
             ProcessingCardControl.GetMipmapComboBox.SelectionChanged += MipmapComboBox_SelectionChanged;
-            ProcessingCardControl.GetColorTextBox.TextChanged += ColorTextBox_TextChanged;
+            ProcessingCardControl.GetColorTextBox.ValueChanged += ColorTextBox_TextChanged;
             ProcessingCardControl.GetColorTextBox.TextChanged += ProcessingCardControl.ColorTextBox_TextChanged;
             ProcessingCardControl.GetThresholdTextBox.ValueChanged += ThresholdTextBox_ValueChanged;
 
@@ -1382,7 +1428,7 @@ namespace FramesToMMSpriteResources
 
             LoopTypeComboBox.SelectedIndex = animationConfig.LoopType;
 
-            SkipTextBox.Value = animationConfig.Skip;
+            SkipTextBox.Value = animationConfig.Step;
 
             AnimationOffsetXTextBox.Value = animationConfig.Offset.Value.X;
             AnimationOffsetYTextBox.Value = animationConfig.Offset.Value.Y;
@@ -1439,7 +1485,7 @@ namespace FramesToMMSpriteResources
             ProcessingOverwriteCardControl.GetResizeTextBox.ValueChanged -= ResizeOverwriteTextBox_ValueChanged;
             ProcessingOverwriteCardControl.GetSamplingComboBox.SelectionChanged -= SamplingOverwriteComboBox_SelectionChanged;
             ProcessingOverwriteCardControl.GetMipmapComboBox.SelectionChanged -= MipmapOverwriteComboBox_SelectionChanged;
-            ProcessingOverwriteCardControl.GetColorTextBox.TextChanged -= ColorOverwriteTextBox_TextChanged;
+            ProcessingOverwriteCardControl.GetColorTextBox.ValueChanged -= ColorOverwriteTextBox_TextChanged;
             ProcessingOverwriteCardControl.GetThresholdTextBox.ValueChanged -= ThresholdOverwriteTextBox_ValueChanged;
 
             ProcessingOverwriteCardControl.GetColorTextBox.TextChanged -= ProcessingOverwriteCardControl.ColorTextBox_TextChanged;
@@ -1453,8 +1499,8 @@ namespace FramesToMMSpriteResources
             ProcessingOverwriteCardControl.GetResizeTextBox.Value = configToSetFrom.ResizeToPercent;
             ProcessingOverwriteCardControl.GetSamplingComboBox.SelectedIndex = configToSetFrom.FilterMode;
             ProcessingOverwriteCardControl.GetMipmapComboBox.SelectedIndex = configToSetFrom.MipmapMode;
-            ProcessingOverwriteCardControl.GetThresholdTextBox.Value = configToSetFrom.ColorTreshold;
-            ProcessingOverwriteCardControl.GetColorTextBox.Text = configToSetFrom.BackgroundColor ?? "";
+            ProcessingOverwriteCardControl.GetThresholdTextBox.Value = configToSetFrom.ColorThreshold;
+            ProcessingOverwriteCardControl.GetColorTextBox.Value = configToSetFrom.BackgroundColor;
             ProcessingOverwriteCardControl.UpdateColorPreview();
 
 
@@ -1467,7 +1513,7 @@ namespace FramesToMMSpriteResources
             ProcessingOverwriteCardControl.GetResizeTextBox.ValueChanged += ResizeOverwriteTextBox_ValueChanged;
             ProcessingOverwriteCardControl.GetSamplingComboBox.SelectionChanged += SamplingOverwriteComboBox_SelectionChanged;
             ProcessingOverwriteCardControl.GetMipmapComboBox.SelectionChanged += MipmapOverwriteComboBox_SelectionChanged;
-            ProcessingOverwriteCardControl.GetColorTextBox.TextChanged += ColorOverwriteTextBox_TextChanged;
+            ProcessingOverwriteCardControl.GetColorTextBox.ValueChanged += ColorOverwriteTextBox_TextChanged;
             ProcessingOverwriteCardControl.GetThresholdTextBox.ValueChanged += ThresholdOverwriteTextBox_ValueChanged;
 
             ProcessingOverwriteCardControl.GetColorTextBox.TextChanged += ProcessingOverwriteCardControl.ColorTextBox_TextChanged;
@@ -1498,7 +1544,7 @@ namespace FramesToMMSpriteResources
             bool isCancelled = false;
             if (!animationEquals)
             {
-                Debug.WriteLine(isFromFramePanel);
+   
                 if (!subjectEquals || (!isFromFramePanel && animationName != AnimationSpriteFramePath[1]))
                 {
                     FrameCoordinateEditorControl.UnloadAnimation();
@@ -1574,7 +1620,7 @@ namespace FramesToMMSpriteResources
                     processingConfig = subjectConfig.Processing;
                 }
 
-                ColorHelper.TryParse(processingConfig.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
+                ColorHelper.TryParse(processingConfig!.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
                 SKColor backgroundSKColor = new(r, g, b, a);
           
                 for (int i = 0; i < frameCount; i++)         
@@ -1602,7 +1648,7 @@ namespace FramesToMMSpriteResources
                         IntVector2 originalSize = new(skb.Width, skb.Height);
 
                         if (backgroundSKColor.Alpha != 0 && processingConfig.RemoveBackground)
-                            ColorHelper.RemoveColorWithThresholdInPlace(skb, backgroundSKColor.Red, backgroundSKColor.Green, backgroundSKColor.Blue, backgroundSKColor.Alpha, processingConfig.ColorTreshold);
+                            ColorHelper.RemoveColorWithThresholdInPlace(skb, backgroundSKColor.Red, backgroundSKColor.Green, backgroundSKColor.Blue, backgroundSKColor.Alpha, processingConfig.ColorThreshold);
 
                         var (left, top, right, bottom) = ColorHelper.RectTrimColor(skb, subjectConfig, (backgroundSKColor.Red, backgroundSKColor.Green, backgroundSKColor.Blue, backgroundSKColor.Alpha), processingConfig);
                         SKRectI rect = new(left, top, right, bottom);
@@ -1908,19 +1954,19 @@ namespace FramesToMMSpriteResources
             AlignButton_Click(HorizontalAlign.Left, VerticalAlign.Top);
         }
 
-        private void OffsetXTextBox_ValueChanged(float? number)
+        private void OffsetXTextBox_ValueChanged(object sender, float? number)
         {
             SpriteOffset_ValueChanged(new((int)number!, GetCurrentFrameConfig().Offset.Y));
             FrameCoordinateEditorControl.UpdateVisuals();
         }
 
-        private void OffsetYTextBox_ValueChanged(float? number)
+        private void OffsetYTextBox_ValueChanged(object sender, float? number)
         {
             SpriteOffset_ValueChanged(new IntVector2(GetCurrentFrameConfig().Offset.X, (int)number!));
             FrameCoordinateEditorControl.UpdateVisuals();
         }
 
-        private void MultiplyTextBox_ValueChanged(float? number)
+        private void MultiplyTextBox_ValueChanged(object sender, float? number)
         {
             GetCurrentFrameConfig().MultipyDelayBy = (int)number!;
         }
@@ -1945,12 +1991,12 @@ namespace FramesToMMSpriteResources
             GetCurrentFrameAnimationInterfaceConfig().AlignOnYAxis = (sender as CheckBox)!.IsChecked!.Value;
         }
 
-        private void DirectionTextBox_ValueChanged(float? number)
+        private void DirectionTextBox_ValueChanged(object sender, float? number)
         {
             GetCurrentFrameAnimationInterfaceConfig().Direction = (float)number!;
         }
 
-        private void SpeedTextBox_ValueChanged(float? number)
+        private void SpeedTextBox_ValueChanged(object sender, float? number)
         {
             GetCurrentFrameAnimationInterfaceConfig().Speed = (float)number!;
         }
@@ -1972,7 +2018,7 @@ namespace FramesToMMSpriteResources
             RefreshOffsetFieldVisually();
         }
 
-        private void AnimationOffsetYTextBox_ValueChanged(float? number)
+        private void AnimationOffsetYTextBox_ValueChanged(object sender, float? number)
         {
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
@@ -1980,15 +2026,15 @@ namespace FramesToMMSpriteResources
             }         
         }
 
-        private void SkipTextBox_ValueChanged(float? number)
+        private void SkipTextBox_ValueChanged(object sender, float? number)
         {
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
-                currentConfig.Skip = (int)number!;
+                currentConfig.Step = (int)number!;
             }
         }
 
-        private void AnimationOffsetXTextBox_ValueChanged(float? number)
+        private void AnimationOffsetXTextBox_ValueChanged(object sender, float? number)
         {
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
@@ -1996,7 +2042,7 @@ namespace FramesToMMSpriteResources
             }
         }
 
-        private void DelayTextBox_ValueChanged(float? number)
+        private void DelayTextBox_ValueChanged(object sender, float? number)
         {
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
@@ -2012,19 +2058,19 @@ namespace FramesToMMSpriteResources
             }
         }
 
-        private void SheetHeightTextBox_ValueChanged(float? number)
+        private void SheetHeightTextBox_ValueChanged(object sender, float? number)
         {
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
-                currentConfig.Export.Height = (int)number!;
+                currentConfig.Export.Height = (int?)number;
             }
         }
 
-        private void SheetWidthTextBox_ValueChanged(float? number)
+        private void SheetWidthTextBox_ValueChanged(object sender, float? number)
         {
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
-                currentConfig.Export.Width = (int)number!;
+                currentConfig.Export.Width = (int?)number;
             }
         }
 
@@ -2037,10 +2083,10 @@ namespace FramesToMMSpriteResources
             }
         }
 
-        private void ColorTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        private void ColorTextBox_TextChanged(object sender, string text)
         {
 
-            string backgroundColor = (sender as TextBox)!.Text;
+            string backgroundColor = (sender as CustomTextBox)!.Value;
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
                 currentConfig.Processing.BackgroundColor = backgroundColor;
@@ -2048,11 +2094,11 @@ namespace FramesToMMSpriteResources
             AnimationSpriteFramePath = new string[3];
         }
 
-        private void ThresholdTextBox_ValueChanged(float? number)
+        private void ThresholdTextBox_ValueChanged(object sender, float? number)
         {
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
-                currentConfig.Processing.ColorTreshold = (int)number!;
+                currentConfig.Processing.ColorThreshold = (int)number!;
             }
             AnimationSpriteFramePath = new string[3];
         }
@@ -2067,7 +2113,7 @@ namespace FramesToMMSpriteResources
             AnimationSpriteFramePath = new string[3];
         }
 
-        private void ResizeTextBox_ValueChanged(float? number)
+        private void ResizeTextBox_ValueChanged(object sender, float? number)
         {
             foreach (SubjectConfig currentConfig in _currentConfigs)
             {
@@ -2177,25 +2223,25 @@ namespace FramesToMMSpriteResources
             AlsoKnownAsAddButton.IsEnabled = isAllowedToAdd;
         }
 
-        private void ColorOverwriteTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        private void ColorOverwriteTextBox_TextChanged(object sender, string text)
         {
 
-            string backgroundColor = (sender as TextBox)!.Text;
+            string backgroundColor = (sender as CustomTextBox)!.Value;
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
                 currentConfig.ProcessingOverwrite ??= (ProcessingConfig)GetCurrentAnimationSubjectConfig().Processing.Clone();
-                currentConfig.ProcessingOverwrite.BackgroundColor = backgroundColor??"";
+                currentConfig.ProcessingOverwrite.BackgroundColor = backgroundColor;
             }
             AnimationSpriteFramePath = new string[3];
             RemoveOverwriteButton.Visibility = Visibility.Visible;
         }
 
-        private void ThresholdOverwriteTextBox_ValueChanged(float? number)
+        private void ThresholdOverwriteTextBox_ValueChanged(object sender, float? number)
         {
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
                 currentConfig.ProcessingOverwrite ??= (ProcessingConfig)GetCurrentAnimationSubjectConfig().Processing.Clone();
-                currentConfig.ProcessingOverwrite.ColorTreshold = (int)number!;
+                currentConfig.ProcessingOverwrite.ColorThreshold = (int)number!;
             }
             AnimationSpriteFramePath = new string[3];
             RemoveOverwriteButton.Visibility = Visibility.Visible;
@@ -2213,7 +2259,7 @@ namespace FramesToMMSpriteResources
             RemoveOverwriteButton.Visibility = Visibility.Visible;
         }
 
-        private void ResizeOverwriteTextBox_ValueChanged(float? number)
+        private void ResizeOverwriteTextBox_ValueChanged(object sender, float? number)
         {
             foreach (AnimationConfig currentConfig in _currentConfigs)
             {
@@ -3057,19 +3103,32 @@ namespace FramesToMMSpriteResources
             return latestVersion > currentVersion;
         }
 
+        void CheckIfAlsoKnownAsHeaderNeeded()
+        {
+            if(AlsoKnownAsEntries != null && AlsoKnownAsEntries.Count > 0)
+            {
+                ListViewHeaderGrid.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                ListViewHeaderGrid.Visibility = Visibility.Collapsed;
+            }
+        }
+
         private void PopulateAlsoKnownAsList()
         {
             var animConf = GetCurrentAnimationConfig();
             AlsoKnownAsEntries.Clear();
-            var defaultRange = (animConf.InterfaceConfig as AnimationInterfaceConfig)?.Range ?? new FramesToMMSpriteResources.DataConfig.RangeConfig();
+            var defaultRange = (animConf.InterfaceConfig as AnimationInterfaceConfig)?.Range ?? new RangeConfig();
             if(animConf.AlsoKnownAs != null)
             {
                 foreach (var kv in animConf.AlsoKnownAs.OrderBy(k => k.Key, StringComparer.Ordinal))
                 {
-                    var range = kv.Value ?? new FramesToMMSpriteResources.DataConfig.RangeConfig(defaultRange.From, defaultRange.To);
+                    var range = kv.Value ?? new RangeConfig(defaultRange.From, defaultRange.To);
                     AlsoKnownAsEntries.Add(new AlsoKnownAsEntry(kv.Key, range));
                 }
             }
+            CheckIfAlsoKnownAsHeaderNeeded();
         }
 
         private void AlsoKnownAsAddButton_Click(object sender, RoutedEventArgs e)
@@ -3078,12 +3137,10 @@ namespace FramesToMMSpriteResources
             if (string.IsNullOrEmpty(newItem)) return;
 
             var animConf = GetCurrentAnimationConfig();
-            if (animConf.AlsoKnownAs == null)
-            {
-                animConf.AlsoKnownAs = new Dictionary<string, FramesToMMSpriteResources.DataConfig.RangeConfig>();
-            }
+            animConf.AlsoKnownAs ??= [];
 
-            animConf.AlsoKnownAs[newItem] = new();
+            RangeConfig range = new();
+            animConf.AlsoKnownAs[newItem] = range;
 
             int insertIndex = 0;
             for (int i = 0; i < AlsoKnownAsEntries.Count; i++)
@@ -3096,8 +3153,10 @@ namespace FramesToMMSpriteResources
                 insertIndex = i + 1;
             }
 
-            AlsoKnownAsEntries.Insert(insertIndex, new AlsoKnownAsEntry(newItem, new()));
+            AlsoKnownAsEntries.Insert(insertIndex, new AlsoKnownAsEntry(newItem, range));
             AlsoKnownAsTextBox.Text = "";
+
+            ListViewHeaderGrid.Visibility = Visibility.Visible;
         }
 
         private void AlsoKnownAsRemoveButton_Click(object sender, RoutedEventArgs e)
@@ -3106,56 +3165,58 @@ namespace FramesToMMSpriteResources
             if (button?.DataContext is AlsoKnownAsEntry entry)
             {
                 var animConf = GetCurrentAnimationConfig();
-                if (animConf.AlsoKnownAs != null)
-                {
-                    animConf.AlsoKnownAs.Remove(entry.Name);
-                }
+                animConf.AlsoKnownAs?.Remove(entry.Name);
                 AlsoKnownAsEntries.Remove(entry);
             }
+
+            CheckIfAlsoKnownAsHeaderNeeded();
         }
 
+        private void CustomTextBox_Loaded(object sender, RoutedEventArgs e)
+        {
+            var textBox = (sender as CustomTextBox)!;
+        
+            textBox.CheckRule = (s =>
+            {
+                string newValue = s.Trim();
+
+                if (string.IsNullOrEmpty(newValue))
+                    return false;
+
+                var subjConf = GetCurrentAnimationSubjectConfig();
+                foreach ((string animationName, AnimationConfig animationConfig) in subjConf.AnimationConfigs!)
+                {
+                    if (animationName == newValue || (animationConfig.AlsoKnownAs != null && animationConfig.AlsoKnownAs.ContainsKey(newValue)))
+                        return false;
+                }
+
+
+                return true;
+            });
+        }
+
+
+
+        bool startedEditingListViewOnce = false;
         private void AlsoKnownAsEditTextBox_GotFocus(object sender, RoutedEventArgs e)
         {
-            var editBox = sender as TextBox;
-            if (editBox == null) return;
- 
-            editBox.Tag = (editBox.DataContext as AlsoKnownAsEntry)?.Name ?? editBox.Text;
+            startedEditingListViewOnce = true;
         }
 
         private void AlsoKnownAsEditTextBox_LostFocus(object sender, RoutedEventArgs e)
         {
-            var editBox = sender as TextBox;
-            if (editBox == null) return;
+            if (!startedEditingListViewOnce) return;
+            var editBox = (sender as CustomTextBox)!;
 
             var entry = editBox.DataContext as AlsoKnownAsEntry;
             if (entry == null) return;
 
-            string oldValue = editBox.Tag as string ?? entry.Name;
-            string newValue = editBox.Text?.Trim() ?? "";
+      
+            string newValue = editBox.Value;
 
-            if (string.IsNullOrEmpty(newValue))
-            {
-                editBox.Text = oldValue;
-                return;
-            }
 
-            if (newValue == oldValue)
-            {
-                return;
-            }
-
-            var animConf = GetCurrentAnimationConfig();
-            if (animConf.AlsoKnownAs == null) animConf.AlsoKnownAs = new Dictionary<string, FramesToMMSpriteResources.DataConfig.RangeConfig>();
-
-            if (animConf.AlsoKnownAs.ContainsKey(newValue))
-            {
-                editBox.Text = oldValue;
-                return;
-            }
-
-            var range = animConf.AlsoKnownAs.ContainsKey(oldValue) ? animConf.AlsoKnownAs[oldValue] : entry.Range;
-            animConf.AlsoKnownAs.Remove(oldValue);
-            animConf.AlsoKnownAs[newValue] = range;
+            var oldRange = entry.Range;
+    
 
             int index = AlsoKnownAsEntries.IndexOf(entry);
             if (index >= 0)
@@ -3173,35 +3234,61 @@ namespace FramesToMMSpriteResources
                     insertIndex = i + 1;
                 }
 
-                var newEntry = new AlsoKnownAsEntry(newValue, range);
+                var newEntry = new AlsoKnownAsEntry(newValue, oldRange);
                 AlsoKnownAsEntries.Insert(insertIndex, newEntry);
             }
         }
 
-        private void AlsoKnownAsEditTextBox_KeyDown(object sender, KeyRoutedEventArgs e)
+        private void CustomTextBox_ValueChanged(object sender, string text)
         {
-            if (e.Key == Windows.System.VirtualKey.Enter)
-            {
-                e.Handled = true;
-                var editBox = sender as TextBox;
-                if (editBox != null)
-                {
-                    var button = (editBox.Parent as Grid)?.Children.OfType<Button>().FirstOrDefault();
-                    if (button != null)
-                    {
-                        button.Focus(FocusState.Programmatic);
-                    }
-                }
-            }
-            else if (e.Key == Windows.System.VirtualKey.Escape)
-            {
-                e.Handled = true;
-                var editBox = sender as TextBox;
-                if (editBox != null)
-                {
-                    editBox.Text = editBox.Tag as string ?? (editBox.DataContext as AlsoKnownAsEntry)?.Name ?? "";
-                }
-            }
+            var editBox = (sender as CustomTextBox)!;
+            var entry = (editBox.DataContext as AlsoKnownAsEntry)!;  
+            var animConf = GetCurrentAnimationConfig();
+            var oldRange = animConf.AlsoKnownAs[entry.Name];
+            animConf.AlsoKnownAs.Remove(entry.Name);
+            animConf.AlsoKnownAs.Add(text, oldRange);
+            entry.Name = text;
+        }
+
+        private void AlsoKnownAsEditTextBox_DataContextChanged(FrameworkElement sender, DataContextChangedEventArgs args)
+        {
+            var textBox = (sender as CustomTextBox)!;
+            var entry = (textBox.DataContext as AlsoKnownAsEntry)!;
+            textBox.Value = entry.Name;
+        }
+
+        private void AlsoFromCustomNumberBox_DataContextChanged(FrameworkElement sender, DataContextChangedEventArgs args)
+        {
+            var textBox = (sender as CustomNumberBox)!;
+            var entry = (textBox.DataContext as AlsoKnownAsEntry)!;
+            textBox.Value = entry.Range.From;
+ 
+        }
+
+        private void AlsoFromCustomNumberBox_ValueChanged(object sender, float? value)
+        {
+            var editBox = (sender as CustomNumberBox)!;
+            var entry = (editBox.DataContext as AlsoKnownAsEntry)!;
+            var animConf = GetCurrentAnimationConfig();
+            entry.Range.From = (int)value!;
+            animConf.AlsoKnownAs[entry.Name].From = entry.Range.From;
+            
+        }
+
+        private void AlsoToCustomNumberBox_DataContextChanged(FrameworkElement sender, DataContextChangedEventArgs args)
+        {
+            var textBox = (sender as CustomNumberBox)!;
+            var entry = (textBox.DataContext as AlsoKnownAsEntry)!;
+            textBox.Value = entry.Range.To;
+        }
+
+        private void AlsoToCustomNumberBox_ValueChanged(object sender, float? value)
+        {
+            var editBox = (sender as CustomNumberBox)!;
+            var entry = (editBox.DataContext as AlsoKnownAsEntry)!;
+            var animConf = GetCurrentAnimationConfig();
+            entry.Range.To = (int)value!;
+            animConf.AlsoKnownAs[entry.Name].To = entry.Range.To;
         }
 
         private async void ProgramSaveDirectoryButton_Click(object sender, RoutedEventArgs e)
@@ -3213,5 +3300,7 @@ namespace FramesToMMSpriteResources
         {
             ProgramConfig.AssetConfig!.ProcessingDefault = (ProcessingConfig)GetCurrentSubjectConfig().Processing.Clone();
         }
+  
+
     }
 }

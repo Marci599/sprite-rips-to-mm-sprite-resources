@@ -66,7 +66,7 @@ namespace FramesToMMSpriteResources
                 SelectionStart = Text?.Length??0;
                 SelectionLength = 0;
                 suppressTextChanged = false;
-                ValueChanged?.Invoke(Value);
+                ValueChanged?.Invoke(this, Value);
             }
         }
 
@@ -76,7 +76,7 @@ namespace FramesToMMSpriteResources
         private bool isTextValid = true;
         private bool suppressTextChanged = false;
 
-        public event Action<float?>? ValueChanged;
+        public event Action<object, float?>? ValueChanged;
 
         public CustomNumberBox()
         {
@@ -99,18 +99,26 @@ namespace FramesToMMSpriteResources
             if (string.IsNullOrWhiteSpace(Text))
             {
                 Value = null;
+
+                if(Text.Length > 0)
+                {
+                    isTextValid = false;
+                }
                 return;
             }
 
             if (float.TryParse(Text, out float value))
-            {
+            {          
                 float clampedValue = (float)Math.Clamp(value, Minimum, Maximum);
-                if (value == clampedValue)
+
+                if (_value != clampedValue)
                 {
-                    Value = value;
-                    return;
-                } 
-                _value = clampedValue;
+                    _value = clampedValue;
+                    ValueChanged?.Invoke(this, _value);
+                }
+
+                if (value == clampedValue)
+                    return;       
             }
       
             isTextValid = false;

@@ -42,14 +42,14 @@ namespace FramesToMMSpriteResources
             IntVector2 size = new(src.Width, src.Height);
             var pixels = src.GetPixelSpan();
 
-            bool trimByAlpha = processingConfig.BackgroundColor == null || parsedBackgroundColor!.Value.a == 0 || processingConfig.RemoveBackground;
+            bool trimByAlpha = parsedBackgroundColor!.Value.a == 0 || processingConfig.RemoveBackground;
             int left = size.X;
             int top = size.Y;
             int right = -1;
             int bottom = -1;
             
 
-            double thr2 = processingConfig.ColorTreshold * processingConfig.ColorTreshold;
+            double thr2 = processingConfig.ColorThreshold * processingConfig.ColorThreshold;
             byte tr = parsedBackgroundColor?.r ?? 0;
             byte tg = parsedBackgroundColor?.g ?? 0;
             byte tb = parsedBackgroundColor?.b ?? 0;
@@ -155,10 +155,7 @@ namespace FramesToMMSpriteResources
             if (s.StartsWith('#'))
                 s = s[1..];
 
-            if (s.Length != 6 && s.Length != 8)
-                return false;
-
-            if (!uint.TryParse(s, System.Globalization.NumberStyles.HexNumber, null, out uint value))
+            if (!CanParse(s, out uint value))
                 return false;
 
             if (s.Length == 6)
@@ -175,6 +172,18 @@ namespace FramesToMMSpriteResources
                 b = (byte)((value >> 8) & 0xFF);
                 a = (byte)(value & 0xFF);
             }
+
+            return true;
+        }
+
+        public static bool CanParse(string s, out uint value)
+        {
+            value = 0;
+            if (s.Length != 6 && s.Length != 8)
+                return false;
+
+            if (!uint.TryParse(s, System.Globalization.NumberStyles.HexNumber, null, out value))
+                return false;
 
             return true;
         }

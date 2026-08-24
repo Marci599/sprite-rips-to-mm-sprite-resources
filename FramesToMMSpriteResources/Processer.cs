@@ -73,11 +73,10 @@ namespace FramesToMMSpriteResources
             programConfig = MainWindow.ProgramConfig;
             subjectConfig = programConfig.AssetConfig!.SubjectConfigs[subjectName];
             parsedBackgroundColor = null;
-            if (subjectConfig.Processing.BackgroundColor != null)
-            {
-                ColorHelper.TryParse(subjectConfig.Processing.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
-                parsedBackgroundColor = (r, g, b, a);
-            }
+        
+            ColorHelper.TryParse(subjectConfig.Processing.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
+            parsedBackgroundColor = (r, g, b, a);
+            
 
 
             List<ProcessedSprite> processedSprites = new();
@@ -207,7 +206,7 @@ namespace FramesToMMSpriteResources
                             currentParsedColor = parsedBackgroundColor;
                         }
                         
-                        if (!string.IsNullOrEmpty(processingConfig.BackgroundColor) && processingConfig.RemoveBackground && currentParsedColor != null)
+                        if (processingConfig.RemoveBackground && currentParsedColor != null && currentParsedColor.Value.a != 0)
                                 RemoveColorWithThreshold(working, processingConfig, currentParsedColor.Value);
 
                         if (processingConfig.ResizeToPercent != 100 && processingConfig.ResizeToPercent > 0)
@@ -769,7 +768,7 @@ namespace FramesToMMSpriteResources
           
             var (r, g, b, a) = parsedBackgroundColor;
             bool nearest = (processingConfig.FilterMode == 0 && processingConfig.MipmapMode == 0);
-            ColorHelper.RemoveColorWithThresholdInPlace(src, r, g, b, a, processingConfig.ColorTreshold, !nearest);
+            ColorHelper.RemoveColorWithThresholdInPlace(src, r, g, b, a, processingConfig.ColorThreshold, !nearest);
         }
 
 
@@ -802,11 +801,10 @@ namespace FramesToMMSpriteResources
                     .ToArray();
             }
 
-            // Apply step filter: if Skip = 1, take every file (0,1,2...); if Skip = 2, take every 2nd file (0,2,4...); if Skip = 3, take every 3rd (0,3,6...)
-            if (animationConfig.Skip > 1)
+            if (animationConfig.Step > 1)
             {
                 paths = paths
-                    .Where((_, index) => index % animationConfig.Skip == 0)
+                    .Where((_, index) => index % animationConfig.Step == 0)
                     .ToArray();
             }
 

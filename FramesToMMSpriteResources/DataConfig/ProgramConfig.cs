@@ -15,6 +15,9 @@ namespace FramesToMMSpriteResources
         [JsonPropertyName("working_path_history")]
         public List<string> WorkingPathHistory = [];
 
+        [JsonPropertyName("show_hints")]
+        public bool ShowHints = true;
+
         [JsonPropertyName("reduce_file_size")]
         public bool ReduceFileSize = false;
 
