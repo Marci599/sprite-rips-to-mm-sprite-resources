@@ -74,8 +74,11 @@ namespace FramesToMMSpriteResources
             subjectConfig = programConfig.AssetConfig!.SubjectConfigs[subjectName];
             parsedBackgroundColor = null;
         
-            ColorHelper.TryParse(subjectConfig.Processing.BackgroundColor, out byte a, out byte r, out byte g, out byte b);
-            parsedBackgroundColor = (r, g, b, a);
+            if(ColorHelper.TryParse(subjectConfig.Processing.BackgroundColor, out byte a, out byte r, out byte g, out byte b))
+            {
+                parsedBackgroundColor = (r, g, b, a);
+            }
+
             
 
 
