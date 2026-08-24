@@ -595,7 +595,7 @@
                                                                 </DataTemplate>
                                                             </ListView.ItemTemplate>
                                                         </ListView>
-                                                        <TextBlock Style="{StaticResource HelperTextStyle}" Text="If multiple animations are the same, add their name here" />
+                                                        <TextBlock Style="{StaticResource HelperTextStyle}" Text="If multiple animations are the same, add their name here. (-1 means use every frame)" />
                                                     </StackPanel>
 
 
