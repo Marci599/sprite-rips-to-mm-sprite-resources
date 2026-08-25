@@ -373,7 +373,7 @@ namespace FramesToMMSpriteResources
             AlsoKnownAsHelperText.Visibility = visibility;
             RemoveMovementHelperText.Visibility = visibility;
 
-            WorkingPathHelperText.Visibility = visibility;
+            
             HdPngHelperText.Visibility = visibility;
             RecoverOffsetsDisabledHelperText.Visibility = visibility;
 
@@ -610,6 +610,7 @@ namespace FramesToMMSpriteResources
             TreeViewControl.Collapsed += TreeViewControl_Collapsed;
 
             AssetConfigBorder.Visibility = Visibility.Collapsed;
+            WorkingPathHelperText.Visibility = Visibility.Visible;
             WorkingPathTextBox.CornerRadius = new CornerRadius(4, 0, 0, 4);
             BrowseFolderButton.CornerRadius = new CornerRadius(0, 4, 4, 0);
             GeneratePathTextBox.TextChanged -= GeneratePathTextBox_TextChanged;
@@ -709,6 +710,7 @@ namespace FramesToMMSpriteResources
         void SetUpSubjectTreeViewAndConfigs()
         {
             AssetConfigBorder.Visibility = Visibility.Visible;
+            WorkingPathHelperText.Visibility = Visibility.Collapsed;
             WorkingPathTextBox.CornerRadius = new CornerRadius(4, 0, 0, 0);
             BrowseFolderButton.CornerRadius = new CornerRadius(0, 4, 0, 0);
             ProgramConfig.AssetConfig = LoadJson<AssetConfig>(Path.Combine(WorkingPath, CONFIG_FILENAME));

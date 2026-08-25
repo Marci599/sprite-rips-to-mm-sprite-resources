@@ -7,7 +7,7 @@
 	  Id="FramesToSpriteResources"
 	  Name="Frames to MM Sprite Resources"
 	  Manufacturer="Marci599"
-	  Version="1.0.0"
+	  Version="2.0.0"
 	  UpgradeCode="{47a224ca-6c65-4630-8eb6-51583a78e505}">
 		<Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
 		<Property
@@ -91,7 +91,7 @@
 
 				<RegistryValue
 				  Root="HKCU"
-				  Key="Software\Marci599\FramesToMMSpriteResources"
+				  Key="Software\Marci599\FramesToSpriteResources"
 				  Name="DesktopShortcutInstalled"
 				  Type="integer"
 				  Value="1"

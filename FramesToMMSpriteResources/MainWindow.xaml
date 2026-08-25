@@ -1072,10 +1072,7 @@
                                                         CornerRadius="0 0 4 4"
                                                         Style="{StaticResource CardBorderStyle}">
                                                         <StackPanel Spacing="12">
-                                                            <TextBlock
-                                                                x:Name="WorkingPathHelperText"
-                                                                Style="{StaticResource HelperTextStyle}"
-                                                                Text="Please provide a path where your folders and files will be located or are already located" />
+
                                                             <StackPanel MaxWidth="1000" Spacing="4">
                                                                 <CheckBox x:Name="IsHdCheckBox" Content="Is HD" />
                                                                 <TextBlock
@@ -1111,7 +1108,11 @@
                                                         </StackPanel>
                                                     </Border>
 
-
+                                                    <TextBlock
+                                                        x:Name="WorkingPathHelperText"
+                                                        Margin="0,4,0,0"
+                                                        Style="{StaticResource HelperTextStyle}"
+                                                        Text="Please provide a path where your folders and files will be located or are already located" />
 
                                                 </StackPanel>
 
