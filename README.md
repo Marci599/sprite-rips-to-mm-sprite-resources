@@ -3,13 +3,18 @@
 Created by Marci599 for Mario Multiverse.<br/>
 Mario Multiverse (SFMB) created by neoarc.
 
-This tool can be used to automatically generate spritesheet resources from individual recorded / rendered frames.
+This tool can be used to automatically process and generate spritesheet resources from individual recorded / rendered frames.
 
 **Before using it, make sure to familiarize yourself with the game’s theme creation process, as this will help you understand how sprite sheet resources work.**
 
 Let's say you want to use sprites from existing 3D games (like NSMB, NSMBWii or NSMBU), or if you want to implement your own 3D renders into MM, this tool can significantly speed up the implementation process.
 
 **Download** latest version here: [Releases](https://github.com/Marci599/sprite-rips-to-mm-sprite-resources/releases)
+
+<img width="503" alt="image" src="https://github.com/user-attachments/assets/c4824c3a-ad3f-4cbb-b7c5-c144a999f95c" />
+<img width="503" alt="image" src="https://github.com/user-attachments/assets/5282a0bc-b22e-4fd9-ab27-02055f620c5f" />
+<img width="503" alt="image" src="https://github.com/user-attachments/assets/9984b262-b8e2-4ba0-ae0b-264bebcca090" />
+<img width="503" alt="image" src="https://github.com/user-attachments/assets/b5f8b432-7cf2-4611-b1d6-3bb516f64630" />
 
 ## How to use
 
@@ -33,6 +38,7 @@ This is how your folders and files should look like.
 ├─ <SubjectName>
 └─ <SubjectName>
 ```
+<img width="893" height="571" alt="image" src="https://github.com/user-attachments/assets/928df885-ec49-4122-9cc5-176b735407da" />
 
 You can download this example that contains a subject with raw frames: [V_Yoshi](https://github.com/Marci599/sprite-rips-to-mm-sprite-resources/blob/master/example.zip)
 - Unzip it and put V_Yoshi inside your assets folder.
@@ -70,3 +76,5 @@ You can select a range of siblings by holding `CTRL` and `Q` or `D`
 ### Generating
 
 Select a subject, and press `Generate <SubjectName>` to create the spritesheet resources into your output or assets.
+
+<img width="1006" alt="gifftmmsr2" src="https://github.com/user-attachments/assets/3f8b2c8e-5b6c-47f8-8475-4dc9be970872" />
