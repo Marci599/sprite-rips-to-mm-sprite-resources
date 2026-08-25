@@ -21,6 +21,7 @@ Let's say you want to use sprites from existing 3D games (like NSMB, NSMBWii or 
  <td width="50%"><img width="100%" alt="image" src="https://github.com/user-attachments/assets/b5f8b432-7cf2-4611-b1d6-3bb516f64630" /></td>
   </tr>
 </table>
+
 ## How to use
 
 ### Setup
