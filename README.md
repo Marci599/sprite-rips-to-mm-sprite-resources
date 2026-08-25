@@ -11,11 +11,16 @@ Let's say you want to use sprites from existing 3D games (like NSMB, NSMBWii or 
 
 **Download** latest version here: [Releases](https://github.com/Marci599/sprite-rips-to-mm-sprite-resources/releases)
 
-<img width="49%" alt="image" src="https://github.com/user-attachments/assets/c4824c3a-ad3f-4cbb-b7c5-c144a999f95c" />
-<img width="49%" alt="image" src="https://github.com/user-attachments/assets/5282a0bc-b22e-4fd9-ab27-02055f620c5f" />
-<img width="49%" alt="image" src="https://github.com/user-attachments/assets/9984b262-b8e2-4ba0-ae0b-264bebcca090" />
-<img width="49%" alt="image" src="https://github.com/user-attachments/assets/b5f8b432-7cf2-4611-b1d6-3bb516f64630" />
-
+<table>
+  <tr>
+    <td width="50%"><img width="100%" src="https://github.com/user-attachments/assets/c4824c3a-ad3f-4cbb-b7c5-c144a999f95c" /></td>
+    <td width="50%"><img width="100%" src="https://github.com/user-attachments/assets/5282a0bc-b22e-4fd9-ab27-02055f620c5f" /></td>
+  </tr>
+      <tr>
+    <td width="50%"><img width="100%" alt="image" src="https://github.com/user-attachments/assets/9984b262-b8e2-4ba0-ae0b-264bebcca090" /></td>
+ <td width="50%"><img width="100%" alt="image" src="https://github.com/user-attachments/assets/b5f8b432-7cf2-4611-b1d6-3bb516f64630" /></td>
+  </tr>
+</table>
 ## How to use
 
 ### Setup
