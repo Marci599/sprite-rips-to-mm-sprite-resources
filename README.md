@@ -1,5 +1,3 @@
-# Sorry, I changed the readme too soon. I will release the new version tomorrow.
-
 ## About
 
 Created by Marci599 for Mario Multiverse.<br/>
